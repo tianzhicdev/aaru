@@ -204,25 +204,11 @@ final class AppModel: ObservableObject {
     }
 
     func randomizeAvatar() {
-        let bodyShapes = ["slender", "athletic", "soft"]
-        let skinTones = ["amber", "olive", "ebony", "rose"]
-        let hairStyles = ["wave", "buzz", "braid", "curl"]
-        let hairColors = ["black", "brown", "copper", "silver"]
-        let eyes = ["focused", "soft", "bright", "sleepy"]
-        let tops = ["linen", "indigo", "ochre", "sage"]
-        let bottoms = ["sand", "night", "stone", "terracotta"]
-        let accessories: [String?] = [nil, "glasses", "earring", "hat"]
+        let auraColors = ["#d4af37", "#4f8fba", "#d97b66", "#6fa87a", "#9f7aea"]
 
         avatar = AvatarConfig(
-            bodyShape: bodyShapes.randomElement() ?? "slender",
-            skinTone: skinTones.randomElement() ?? "amber",
-            hairStyle: hairStyles.randomElement() ?? "wave",
-            hairColor: hairColors.randomElement() ?? "black",
-            eyes: eyes.randomElement() ?? "focused",
-            outfitTop: tops.randomElement() ?? "linen",
-            outfitBottom: bottoms.randomElement() ?? "sand",
-            accessory: accessories.randomElement() ?? nil,
-            auraColor: "#d4af37"
+            spriteId: AvatarSprites.all.randomElement() ?? "m01_explorer",
+            auraColor: auraColors.randomElement() ?? "#d4af37"
         )
     }
 

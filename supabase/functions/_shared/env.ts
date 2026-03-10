@@ -46,7 +46,7 @@ export function xaiToken(): string | undefined {
 }
 
 export function groqApiKey(): string | undefined {
-  return readEnv("GROQ_API_KEY");
+  return readEnv("GROQ_API_KEY") ?? readEnv("GROQ_TOKEN");
 }
 
 export function apnsKeyId(): string | undefined {

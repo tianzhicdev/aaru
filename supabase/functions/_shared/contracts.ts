@@ -1,4 +1,4 @@
-import { soulProfileSchema, impressionEvaluationSchema, agentPositionSchema, conversationMessageSchema, avatarConfigSchema, worldMovementEventSchema } from "../../../src/domain/schemas.ts";
+import { soulProfileSchema, impressionEvaluationSchema, agentPositionSchema, conversationMessageSchema, avatarConfigSchema, worldConfigSchema, worldMovementEventSchema } from "../../../src/domain/schemas.ts";
 import { z } from "zod";
 
 export const generateSoulProfileRequestSchema = z.object({
@@ -78,16 +78,13 @@ export const bootstrapUserResponseSchema = z.object({
   conversations: z.array(conversationSummarySchema),
   world: z.object({
     count: z.number().int().nonnegative(),
+    config: worldConfigSchema,
     movement_events: z.array(worldMovementEventSchema),
     agents: z.array(agentPositionSchema.extend({
       display_name: z.string(),
       avatar: avatarConfigSchema,
       is_self: z.boolean()
     }))
-  }),
-  session: z.object({
-    token: z.string().min(20),
-    expires_at: z.string().datetime()
   })
 });
 
@@ -107,6 +104,7 @@ export const syncWorldRequestSchema = z.object({
 
 export const syncWorldResponseSchema = z.object({
   count: z.number().int().nonnegative(),
+  config: worldConfigSchema,
   movement_events: z.array(worldMovementEventSchema),
   agents: z.array(agentPositionSchema.extend({
     display_name: z.string(),

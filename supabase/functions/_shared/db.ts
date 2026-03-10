@@ -14,16 +14,6 @@ interface UserRow {
   is_npc: boolean;
 }
 
-interface DeviceSessionRow {
-  id: string;
-  user_id: string;
-  device_id: string;
-  token_hash: string;
-  expires_at: string;
-  last_seen_at: string;
-  revoked_at: string | null;
-}
-
 interface AgentPositionRow {
   user_id: string;
   instance_id: string;
@@ -276,47 +266,6 @@ export async function createUser(deviceId: string): Promise<UserRow> {
 
 export async function ensureUser(deviceId: string): Promise<UserRow> {
   return createUser(deviceId);
-}
-
-export async function createDeviceSession(
-  userId: string,
-  deviceId: string,
-  tokenHash: string,
-  expiresAt: string
-): Promise<DeviceSessionRow> {
-  const created = await rest<DeviceSessionRow[]>("device_sessions", {
-    method: "POST",
-    body: JSON.stringify([{
-      user_id: userId,
-      device_id: deviceId,
-      token_hash: tokenHash,
-      expires_at: expiresAt
-    }])
-  });
-  return created[0];
-}
-
-export async function revokeSessionsForDevice(userId: string, deviceId: string): Promise<void> {
-  await rest<Json>(`device_sessions?user_id=eq.${userId}&device_id=eq.${encodeURIComponent(deviceId)}&revoked_at=is.null`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ revoked_at: new Date().toISOString() })
-  });
-}
-
-export async function getActiveSessionByTokenHash(tokenHash: string): Promise<DeviceSessionRow | null> {
-  const rows = await rest<DeviceSessionRow[]>(
-    `device_sessions?token_hash=eq.${tokenHash}&revoked_at=is.null&select=id,user_id,device_id,token_hash,expires_at,last_seen_at,revoked_at`
-  );
-  return rows[0] ?? null;
-}
-
-export async function touchDeviceSession(sessionId: string): Promise<void> {
-  await rest<Json>(`device_sessions?id=eq.${sessionId}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ last_seen_at: new Date().toISOString() })
-  });
 }
 
 export async function getSoulProfile(userId: string): Promise<SoulProfile | null> {
@@ -599,20 +548,6 @@ export async function insertConversationSummary(
       summary
     }])
   });
-}
-
-export async function listOfflineUsers(offlineSinceIso: string): Promise<UserRow[]> {
-  // Users who haven't had an active session in the last offlineSinceIso time
-  const offlineUserIds = await rest<Array<{ user_id: string }>>(
-    `device_sessions?last_seen_at=lt.${encodeURIComponent(offlineSinceIso)}&revoked_at=is.null&select=user_id`
-  );
-  const userIds = [...new Set(offlineUserIds.map(row => row.user_id))];
-
-  if (userIds.length === 0) {
-    return [];
-  }
-
-  return listUsersByIds(userIds);
 }
 
 export async function countUserConversationsToday(userId: string): Promise<number> {

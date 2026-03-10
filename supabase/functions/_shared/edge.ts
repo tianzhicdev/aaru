@@ -8,7 +8,7 @@ declare const Deno: {
 const defaultHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-aaru-session",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 
@@ -45,13 +45,7 @@ export function installEdgeHandler(handler: (payload: unknown, request: Request)
       }
 
       const message = error instanceof Error ? error.message : "Internal Server Error";
-      const status =
-        message.includes("Missing device session") ||
-        message.includes("Invalid device session") ||
-        message.includes("Device session mismatch") ||
-        message.includes("Expired device session")
-          ? 401
-          : 500;
+      const status = 500;
 
       return toEdgeResponse(jsonResponse(status, { code: status, message }));
     }

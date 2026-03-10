@@ -4,10 +4,14 @@ import type { AgentPosition } from "@aaru/domain/types.ts";
 
 const baseAgent = (overrides: Partial<AgentPosition>): AgentPosition => ({
   user_id: crypto.randomUUID(),
-  x: 0.1,
-  y: 0.1,
-  target_x: 0.2,
-  target_y: 0.2,
+  x: (5.5 / 50),
+  y: (5.5 / 50),
+  target_x: (6.5 / 50),
+  target_y: (6.5 / 50),
+  cell_x: 5,
+  cell_y: 5,
+  target_cell_x: 6,
+  target_cell_y: 6,
   state: "wandering",
   active_message: null,
   conversation_id: null,
@@ -17,8 +21,8 @@ const baseAgent = (overrides: Partial<AgentPosition>): AgentPosition => ({
 
 describe("world tick", () => {
   it("starts a conversation when two idle agents are in proximity", () => {
-    const a = baseAgent({ x: 0.15, y: 0.15, target_x: 0.15, target_y: 0.15 });
-    const b = baseAgent({ x: 0.25, y: 0.15, target_x: 0.25, target_y: 0.15 });
+    const a = baseAgent({ x: 5.5 / 50, y: 5.5 / 50, target_x: 5.5 / 50, target_y: 5.5 / 50, cell_x: 5, cell_y: 5, target_cell_x: 5, target_cell_y: 5 });
+    const b = baseAgent({ x: 6.5 / 50, y: 5.5 / 50, target_x: 6.5 / 50, target_y: 5.5 / 50, cell_x: 6, cell_y: 5, target_cell_x: 6, target_cell_y: 5 });
 
     const result = tickWorld([a, b], new Date("2026-03-09T20:00:00.000Z"));
 
@@ -28,8 +32,8 @@ describe("world tick", () => {
   });
 
   it("does not start a conversation for agents standing on the same cell", () => {
-    const a = baseAgent({ x: 0.15, y: 0.15, target_x: 0.15, target_y: 0.15 });
-    const b = baseAgent({ x: 0.15, y: 0.15, target_x: 0.15, target_y: 0.15 });
+    const a = baseAgent({ x: 5.5 / 50, y: 5.5 / 50, target_x: 5.5 / 50, target_y: 5.5 / 50, cell_x: 5, cell_y: 5, target_cell_x: 5, target_cell_y: 5 });
+    const b = baseAgent({ x: 5.5 / 50, y: 5.5 / 50, target_x: 5.5 / 50, target_y: 5.5 / 50, cell_x: 5, cell_y: 5, target_cell_x: 5, target_cell_y: 5 });
 
     const result = tickWorld([a, b], new Date("2026-03-09T20:00:00.000Z"));
 
@@ -37,8 +41,8 @@ describe("world tick", () => {
   });
 
   it("keeps agents on exclusive cells while moving toward the same target", () => {
-    const a = baseAgent({ x: 0.15, y: 0.15, target_x: 0.55, target_y: 0.55 });
-    const b = baseAgent({ x: 0.25, y: 0.15, target_x: 0.55, target_y: 0.55 });
+    const a = baseAgent({ x: 5.5 / 50, y: 5.5 / 50, target_x: 10.5 / 50, target_y: 10.5 / 50, cell_x: 5, cell_y: 5, target_cell_x: 10, target_cell_y: 10 });
+    const b = baseAgent({ x: 7.5 / 50, y: 5.5 / 50, target_x: 10.5 / 50, target_y: 10.5 / 50, cell_x: 7, cell_y: 5, target_cell_x: 10, target_cell_y: 10 });
 
     const result = tickWorld([a, b], new Date("2026-03-09T20:00:00.000Z"));
     const occupied = new Set(result.positions.map((position) => `${position.x}:${position.y}`));
@@ -47,13 +51,13 @@ describe("world tick", () => {
   });
 
   it("keeps a wandering agent on the same cell or one neighboring cell per tick", () => {
-    const agent = baseAgent({ x: 0.15, y: 0.15, target_x: 0.85, target_y: 0.85 });
+    const agent = baseAgent({ x: 5.5 / 50, y: 5.5 / 50, target_x: 20.5 / 50, target_y: 20.5 / 50, cell_x: 5, cell_y: 5, target_cell_x: 20, target_cell_y: 20 });
 
     const result = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z"));
     const moved = result.positions[0];
     const cellDistance = Math.max(
-      Math.abs((moved.cell_x ?? 0) - 1),
-      Math.abs((moved.cell_y ?? 0) - 2)
+      Math.abs((moved.cell_x ?? 0) - 5),
+      Math.abs((moved.cell_y ?? 0) - 5)
     );
 
     expect(cellDistance).toBeLessThanOrEqual(1);

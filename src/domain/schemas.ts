@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  WORLD_GRID_COLUMNS,
+  WORLD_GRID_ROWS
+} from "./constants.ts";
 
 export const soulProfileSchema = z.object({
   personality: z.string().min(1),
@@ -20,10 +24,10 @@ export const agentPositionSchema = z.object({
   y: z.number().min(0).max(1),
   target_x: z.number().min(0).max(1),
   target_y: z.number().min(0).max(1),
-  cell_x: z.number().int().min(0).max(9).optional(),
-  cell_y: z.number().int().min(0).max(13).optional(),
-  target_cell_x: z.number().int().min(0).max(9).optional(),
-  target_cell_y: z.number().int().min(0).max(13).optional(),
+  cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1).optional(),
+  cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
+  target_cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1).optional(),
+  target_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
   state: z.enum(["wandering", "approaching", "chatting", "cooldown"]),
   active_message: z.string().nullable(),
   conversation_id: z.string().uuid().nullable(),
@@ -32,10 +36,10 @@ export const agentPositionSchema = z.object({
 
 export const worldMovementEventSchema = z.object({
   user_id: z.string().uuid(),
-  from_cell_x: z.number().int().min(0).max(9),
-  from_cell_y: z.number().int().min(0).max(13),
-  to_cell_x: z.number().int().min(0).max(9),
-  to_cell_y: z.number().int().min(0).max(13)
+  from_cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1),
+  from_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1),
+  to_cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1),
+  to_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1)
 });
 
 export const conversationMessageSchema = z.object({
@@ -55,4 +59,18 @@ export const avatarConfigSchema = z.object({
   outfit_bottom: z.string().min(1),
   accessory: z.string().nullable().optional(),
   aura_color: z.string().min(1)
+});
+
+export const worldConfigSchema = z.object({
+  grid_columns: z.number().int().positive(),
+  grid_rows: z.number().int().positive(),
+  world_tick_ms: z.number().int().positive(),
+  move_animation_ms: z.number().int().positive(),
+  bubble_reading_wps: z.number().positive(),
+  conversation_speaking_wps: z.number().positive(),
+  conversation_turn_gap_ms: z.number().int().nonnegative(),
+  min_bubble_display_ms: z.number().int().nonnegative(),
+  min_reply_delay_ms: z.number().int().nonnegative(),
+  camera_visible_columns: z.number().int().positive(),
+  camera_visible_rows: z.number().int().positive()
 });

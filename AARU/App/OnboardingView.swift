@@ -11,6 +11,8 @@ struct OnboardingView: View {
                         .font(.system(size: 42, weight: .black, design: .rounded))
 
                     switch model.stage {
+                    case .launching:
+                        EmptyView()
                     case .onboarding(.soul):
                         soulStep
                     case .onboarding(.avatar):
@@ -38,7 +40,11 @@ struct OnboardingView: View {
             TextEditor(text: $model.profileInput)
                 .frame(minHeight: 220)
                 .padding(12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(Color.white.opacity(0.88), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                }
 
             HStack {
                 Button {
@@ -107,4 +113,3 @@ struct OnboardingView: View {
         }
     }
 }
-

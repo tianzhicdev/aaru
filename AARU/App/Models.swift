@@ -141,6 +141,48 @@ struct WorldAgent: Codable, Equatable, Identifiable {
     }
 }
 
+struct WorldConfig: Codable, Equatable {
+    let gridColumns: Int
+    let gridRows: Int
+    let worldTickMs: Int
+    let moveAnimationMs: Int
+    let bubbleReadingWPS: Double
+    let conversationSpeakingWPS: Double
+    let conversationTurnGapMs: Int
+    let minBubbleDisplayMs: Int
+    let minReplyDelayMs: Int
+    let cameraVisibleColumns: Int
+    let cameraVisibleRows: Int
+
+    enum CodingKeys: String, CodingKey {
+        case gridColumns = "grid_columns"
+        case gridRows = "grid_rows"
+        case worldTickMs = "world_tick_ms"
+        case moveAnimationMs = "move_animation_ms"
+        case bubbleReadingWPS = "bubble_reading_wps"
+        case conversationSpeakingWPS = "conversation_speaking_wps"
+        case conversationTurnGapMs = "conversation_turn_gap_ms"
+        case minBubbleDisplayMs = "min_bubble_display_ms"
+        case minReplyDelayMs = "min_reply_delay_ms"
+        case cameraVisibleColumns = "camera_visible_columns"
+        case cameraVisibleRows = "camera_visible_rows"
+    }
+
+    static let `default` = WorldConfig(
+        gridColumns: 50,
+        gridRows: 50,
+        worldTickMs: 1_000,
+        moveAnimationMs: 900,
+        bubbleReadingWPS: 4,
+        conversationSpeakingWPS: 2.7,
+        conversationTurnGapMs: 300,
+        minBubbleDisplayMs: 1_500,
+        minReplyDelayMs: 2_000,
+        cameraVisibleColumns: 7,
+        cameraVisibleRows: 9
+    )
+}
+
 struct WorldMovementEvent: Codable, Equatable {
     let userID: UUID
     let fromCellX: Int
@@ -237,7 +279,6 @@ struct BootstrapPayload: Codable, Equatable {
     let avatar: AvatarConfig
     let conversations: [ConversationPreviewPayload]
     let world: WorldSnapshot
-    let session: DeviceSession
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
@@ -248,7 +289,6 @@ struct BootstrapPayload: Codable, Equatable {
         case avatar
         case conversations
         case world
-        case session
     }
 }
 
@@ -280,24 +320,22 @@ struct ConversationPreviewPayload: Codable, Equatable {
 
 struct WorldSnapshot: Codable, Equatable {
     let count: Int
+    let config: WorldConfig
     let movementEvents: [WorldMovementEvent]
     let agents: [WorldAgent]
 
     enum CodingKeys: String, CodingKey {
         case count
+        case config
         case movementEvents = "movement_events"
         case agents
     }
 }
 
-struct DeviceSession: Codable, Equatable {
-    let token: String
-    let expiresAt: Date
-
-    enum CodingKeys: String, CodingKey {
-        case token
-        case expiresAt = "expires_at"
-    }
+struct DebugEvent: Identifiable, Equatable {
+    let id = UUID()
+    let timestamp: Date
+    let message: String
 }
 
 enum OnboardingStep: Equatable {
@@ -306,6 +344,7 @@ enum OnboardingStep: Equatable {
 }
 
 enum AppStage: Equatable {
+    case launching
     case onboarding(OnboardingStep)
     case world
 }

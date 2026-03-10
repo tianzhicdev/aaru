@@ -6,6 +6,9 @@ struct RootView: View {
     var body: some View {
         Group {
             switch model.stage {
+            case .launching:
+                ProgressView("Entering AARU")
+                    .controlSize(.large)
             case .onboarding:
                 OnboardingView()
             case .world:

@@ -48,6 +48,20 @@ export interface WorldTickResult {
   }>;
 }
 
+export interface WorldConfig {
+  gridColumns: number;
+  gridRows: number;
+  worldTickMs: number;
+  moveAnimationMs: number;
+  bubbleReadingWordsPerSecond: number;
+  conversationSpeakingWordsPerSecond: number;
+  conversationTurnGapMs: number;
+  minBubbleDisplayMs: number;
+  minReplyDelayMs: number;
+  cameraVisibleColumns: number;
+  cameraVisibleRows: number;
+}
+
 export interface ConversationMessage {
   user_id: UUID;
   type: "ka_generated" | "human_typed";

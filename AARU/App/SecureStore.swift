@@ -60,16 +60,3 @@ enum DeviceIdentity {
         return created
     }
 }
-
-enum SessionIdentity {
-    private static let service = "com.tianzhichen.aaru.session"
-    private static let account = "primary"
-
-    static func current() -> String? {
-        SecureStore.read(service: service, account: account)
-    }
-
-    static func save(_ token: String) {
-        SecureStore.write(token, service: service, account: account)
-    }
-}

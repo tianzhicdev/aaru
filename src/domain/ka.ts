@@ -5,6 +5,9 @@ export function buildKaSystemPrompt(context: KaConversationContext): string {
   const newsLine = context.newsSnippets.length > 0
     ? `Current awareness: ${context.newsSnippets.join(" | ")}`
     : "Current awareness: no fresh news available";
+  const topicLine = context.suggestedTopics?.length
+    ? `Conversation seeds: ${context.suggestedTopics.join(", ")}`
+    : "Conversation seeds: draw from what feels specific in the other person's words";
 
   const memoryLine = context.previousConversationSummary
     ? `You have met this person before. Last time: ${context.previousConversationSummary}`
@@ -17,10 +20,14 @@ export function buildKaSystemPrompt(context: KaConversationContext): string {
     `Values: ${context.soulProfile.values.join(", ")}`,
     `Avoid: ${context.soulProfile.avoid_topics.join(", ") || "none"}`,
     newsLine,
+    topicLine,
     memoryLine,
     "You only know what the other person has said in conversation.",
     "You do not know their soul profile.",
-    "Keep the reply under 60 words and sound natural."
+    "Speak like one specific person, not a therapist or assistant.",
+    "Do not use generic filler like 'that resonates' or 'meaningful connection'.",
+    "Reference one concrete detail from the other person's last turn when possible.",
+    "Keep the reply under 55 words, natural, curious, and socially plausible."
   ].filter(Boolean);
 
   return lines.join("\n");

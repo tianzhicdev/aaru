@@ -5,11 +5,13 @@ final class RealtimeBridge {
     private var client: SupabaseClient?
     private var channels: [RealtimeChannelV2] = []
     private var tasks: [Task<Void, Never>] = []
+    private var subscriptions: [RealtimeSubscription] = []
     private let decoder = PostgrestClient.Configuration.jsonDecoder
 
     func start(
         supabaseURL: URL?,
         anonKey: String?,
+        onRealtimeStatus: @escaping @MainActor (String) -> Void,
         onWorldInsert: @escaping @MainActor () -> Void,
         onWorldUpdate: @escaping @MainActor (RealtimeAgentPosition, RealtimeAgentPosition) -> Void,
         onWorldDelete: @escaping @MainActor () -> Void,
@@ -31,6 +33,12 @@ final class RealtimeBridge {
         )
         self.client = client
 
+        let clientStatusSubscription = client.realtimeV2.onStatusChange { status in
+            Task { @MainActor in
+                onRealtimeStatus("Realtime client \(String(describing: status))")
+            }
+        }
+
         let worldChannel = client.channel("aaru-world")
         let worldInsertStream = worldChannel.postgresChange(InsertAction.self, schema: "public", table: "agent_positions")
         let worldUpdateStream = worldChannel.postgresChange(UpdateAction.self, schema: "public", table: "agent_positions")
@@ -44,10 +52,34 @@ final class RealtimeBridge {
 
         channels = [worldChannel, conversationChannel, messageChannel]
 
+        let worldStatusSubscription = worldChannel.onStatusChange { status in
+            Task { @MainActor in
+                onRealtimeStatus("World channel \(String(describing: status))")
+            }
+        }
+        let conversationStatusSubscription = conversationChannel.onStatusChange { status in
+            Task { @MainActor in
+                onRealtimeStatus("Conversation channel \(String(describing: status))")
+            }
+        }
+        let messageStatusSubscription = messageChannel.onStatusChange { status in
+            Task { @MainActor in
+                onRealtimeStatus("Message channel \(String(describing: status))")
+            }
+        }
+        subscriptions = [
+            clientStatusSubscription,
+            worldStatusSubscription,
+            conversationStatusSubscription,
+            messageStatusSubscription
+        ]
+
         tasks.append(Task {
             do {
                 try await worldChannel.subscribeWithError()
+                await onRealtimeStatus("World channel subscribed")
             } catch {
+                await onRealtimeStatus("World channel failed: \(error.localizedDescription)")
                 return
             }
         })
@@ -80,11 +112,13 @@ final class RealtimeBridge {
         tasks.append(Task {
             do {
                 try await conversationChannel.subscribeWithError()
+                await onRealtimeStatus("Conversation channel subscribed")
                 for await _ in conversationStream {
                     await onInboxChange()
                     await onConversationChange()
                 }
             } catch {
+                await onRealtimeStatus("Conversation channel failed: \(error.localizedDescription)")
                 return
             }
         })
@@ -97,9 +131,15 @@ final class RealtimeBridge {
         })
 
         tasks.append(Task {
-            await messageChannel.subscribe()
-            for await _ in messageStream {
-                await onConversationChange()
+            do {
+                try await messageChannel.subscribeWithError()
+                await onRealtimeStatus("Message channel subscribed")
+                for await _ in messageStream {
+                    await onConversationChange()
+                }
+            } catch {
+                await onRealtimeStatus("Message channel failed: \(error.localizedDescription)")
+                return
             }
         })
 
@@ -108,11 +148,14 @@ final class RealtimeBridge {
                 await onConversationChange()
             }
         })
+
     }
 
     func stop() {
         tasks.forEach { $0.cancel() }
         tasks.removeAll()
+        subscriptions.forEach { $0.cancel() }
+        subscriptions.removeAll()
 
         let channels = self.channels
         let client = self.client

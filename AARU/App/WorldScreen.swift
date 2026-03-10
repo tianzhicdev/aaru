@@ -3,7 +3,7 @@ import SwiftUI
 
 struct WorldScreen: View {
     @EnvironmentObject private var model: AppModel
-    @State private var scene = WorldScene(size: CGSize(width: 1000, height: 1400))
+    @State private var scene = WorldScene(size: CGSize(width: 6_000, height: 6_000))
 
     private var liveThreadCount: Int {
         Set(model.worldAgents.compactMap(\.conversationID)).count
@@ -40,24 +40,25 @@ struct WorldScreen: View {
                         .background(.thinMaterial, in: Capsule())
                         .padding(16)
                 }
+                .overlay(alignment: .topTrailing) {
+                    if model.debugModeEnabled {
+                        DebugOverlay(events: model.debugEvents)
+                            .padding(16)
+                    }
+                }
         }
         .padding(20)
         .task {
             scene.scaleMode = .aspectFill
-            await model.refreshWorld()
+            scene.updateConfig(model.worldConfig)
             scene.updateAgents(model.worldAgents, events: model.worldMovementEvents)
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(1200))
-                await model.refreshWorld()
-            }
         }
         .onChange(of: model.worldAgents) { _, agents in
             scene.updateAgents(agents, events: model.worldMovementEvents)
         }
-        .onChange(of: model.worldMovementEvents) { _, events in
-            scene.updateAgents(model.worldAgents, events: events)
+        .onChange(of: model.worldConfig) { _, config in
+            scene.updateConfig(config)
+            scene.updateAgents(model.worldAgents, events: model.worldMovementEvents)
         }
     }
 
@@ -76,13 +77,15 @@ struct WorldScreen: View {
 }
 
 final class WorldScene: SKScene {
-    private let worldSize = CGSize(width: 1000, height: 1400)
+    private var worldConfig = WorldConfig.default
+    private let cellSize: CGFloat = 120
+    private var worldSize = CGSize(width: 6_000, height: 6_000)
     private let mapNode = SKNode()
     private var agentNodes: [UUID: AgentVisualNode] = [:]
     private let conversationLayer = SKNode()
     private let cameraNode = SKCameraNode()
-    private let columns = 10
-    private let rows = 14
+    private var columns = 50
+    private var rows = 50
 
     override func didMove(to view: SKView) {
         backgroundColor = UIColor(red: 0.80, green: 0.91, blue: 0.89, alpha: 1)
@@ -94,8 +97,20 @@ final class WorldScene: SKScene {
         if cameraNode.parent == nil {
             addChild(cameraNode)
             camera = cameraNode
-            cameraNode.setScale(1.75)
+            applyCameraScale()
         }
+    }
+
+    func updateConfig(_ config: WorldConfig) {
+        worldConfig = config
+        columns = config.gridColumns
+        rows = config.gridRows
+        worldSize = CGSize(width: CGFloat(columns) * cellSize, height: CGFloat(rows) * cellSize)
+        size = worldSize
+        mapNode.removeAllChildren()
+        agentNodes.removeAll()
+        buildBackdrop()
+        applyCameraScale()
     }
 
     func updateAgents(_ agents: [WorldAgent], events: [WorldMovementEvent]) {
@@ -106,7 +121,7 @@ final class WorldScene: SKScene {
         if cameraNode.parent == nil {
             addChild(cameraNode)
             camera = cameraNode
-            cameraNode.setScale(1.75)
+            applyCameraScale()
         }
 
         let movementByUserID = Dictionary(uniqueKeysWithValues: events.map { ($0.userID, $0) })
@@ -126,18 +141,16 @@ final class WorldScene: SKScene {
                     x: (CGFloat(event.fromCellX) + 0.5) / CGFloat(columns) * worldSize.width,
                     y: (CGFloat(event.fromCellY) + 0.5) / CGFloat(rows) * worldSize.height
                 )
-                if node.position == .zero {
-                    node.position = fromPosition
-                }
+                node.position = fromPosition
                 node.removeAllActions()
-                let moveDuration = 0.85
+                let moveDuration = TimeInterval(worldConfig.moveAnimationMs) / 1000
                 node.animateWalk(to: position, duration: moveDuration)
                 node.run(SKAction.sequence([
                     SKAction.move(to: position, duration: moveDuration),
                     SKAction.run { node.stopWalk() }
                 ]))
             } else {
-                node.run(SKAction.move(to: position, duration: 0.25))
+                node.run(SKAction.move(to: position, duration: 0.12))
             }
 
             if let message = agent.activeMessage {
@@ -183,6 +196,7 @@ final class WorldScene: SKScene {
     }
 
     private func buildBackdrop() {
+        mapNode.removeAllChildren()
         let sand = SKShapeNode(rectOf: CGSize(width: worldSize.width * 0.9, height: worldSize.height * 0.65), cornerRadius: 48)
         sand.fillColor = UIColor(red: 0.95, green: 0.84, blue: 0.63, alpha: 1)
         sand.strokeColor = .clear
@@ -260,7 +274,45 @@ final class WorldScene: SKScene {
         guard let agent else { return }
         let target = CGPoint(x: agent.x * worldSize.width, y: agent.y * worldSize.height)
         cameraNode.removeAllActions()
-        cameraNode.run(SKAction.move(to: target, duration: 0.18))
+        let moveDuration = TimeInterval(worldConfig.moveAnimationMs) / 1000
+        cameraNode.run(SKAction.move(to: target, duration: moveDuration))
+    }
+
+    private func applyCameraScale() {
+        let horizontalScale = (CGFloat(worldConfig.cameraVisibleColumns) * cellSize) / max(size.width, 1)
+        let verticalScale = (CGFloat(worldConfig.cameraVisibleRows) * cellSize) / max(size.height, 1)
+        cameraNode.setScale(max(horizontalScale, verticalScale))
+    }
+}
+
+private struct DebugOverlay: View {
+    let events: [DebugEvent]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Debug")
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.95))
+
+            ForEach(events.prefix(8)) { event in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(event.timestamp.formatted(date: .omitted, time: .standard))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text(event.message)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.95))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: 240, alignment: .leading)
+        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        }
     }
 }
 

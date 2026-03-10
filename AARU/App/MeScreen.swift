@@ -26,6 +26,21 @@ struct MeScreen: View {
                         Task { await model.saveAvatarAndEnterWorld() }
                     }
                     .buttonStyle(.bordered)
+
+                    Toggle(isOn: Binding(
+                        get: { model.debugModeEnabled },
+                        set: { model.setDebugMode($0) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Debug Overlay")
+                                .font(.headline)
+                            Text("Show live server movement and conversation events on the world map.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(14)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 } else {
                     Text("Complete onboarding to define the Ka.")
                         .foregroundStyle(.secondary)

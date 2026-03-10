@@ -4,13 +4,16 @@ import OSLog
 @MainActor
 final class AppModel: ObservableObject {
     private let logger = Logger(subsystem: "com.tianzhichen.aaru", category: "app")
-    @Published var stage: AppStage = .onboarding(.soul)
+    @Published var stage: AppStage = .launching
     @Published var profileInput = ""
     @Published var soulProfile: SoulProfile?
     @Published var avatar: AvatarConfig = .default
     @Published var worldAgents: [WorldAgent] = []
     @Published var worldCount = 0
+    @Published var worldConfig: WorldConfig = .default
     @Published var worldMovementEvents: [WorldMovementEvent] = []
+    @Published var debugModeEnabled = UserDefaults.standard.bool(forKey: "aaru.debugModeEnabled")
+    @Published var debugEvents: [DebugEvent] = []
     @Published var conversations: [ConversationPreview] = []
     @Published var selectedConversation: ConversationDetail?
     @Published var isLoading = false
@@ -24,6 +27,7 @@ final class AppModel: ObservableObject {
     private(set) var userID: UUID?
     private var worldRefreshTask: Task<Void, Never>?
     private var conversationRefreshTask: Task<Void, Never>?
+    private var inboxRefreshTask: Task<Void, Never>?
     private let realtime = RealtimeBridge()
 
     init(
@@ -33,7 +37,6 @@ final class AppModel: ObservableObject {
     ) {
         self.backend = backend
         self.deviceID = deviceID
-        self.backend.sessionToken = SessionIdentity.current()
 
         if autoBootstrap {
             Task {
@@ -43,6 +46,7 @@ final class AppModel: ObservableObject {
     }
 
     func bootstrap() async {
+        stage = .launching
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -50,18 +54,18 @@ final class AppModel: ObservableObject {
 
         do {
             let payload = try await backend.bootstrap(deviceID: deviceID)
-            backend.sessionToken = payload.session.token
-            SessionIdentity.save(payload.session.token)
             userID = payload.userID
             displayName = payload.displayName
             soulProfile = payload.soulProfile
             avatar = payload.avatar
+            worldMovementEvents = payload.world.movementEvents
             worldAgents = payload.world.agents
             worldCount = payload.world.count
-            worldMovementEvents = payload.world.movementEvents
+            worldConfig = payload.world.config
             conversations = payload.conversations.map(Self.preview(from:))
             stage = payload.soulProfile == nil ? .onboarding(.soul) : .world
             startRealtime()
+            appendDebugEvent("Bootstrap loaded \(payload.world.count) agents on a \(payload.world.config.gridColumns)x\(payload.world.config.gridRows) world")
             logger.info("Bootstrap complete with \(self.worldCount) agents and \(self.conversations.count) conversations")
         } catch {
             errorMessage = error.localizedDescription
@@ -106,12 +110,9 @@ final class AppModel: ObservableObject {
 
         do {
             try await backend.saveAvatar(deviceID: deviceID, avatar: avatar)
+            applyAvatarToSelf(avatar)
             stage = .world
-            if backend.sessionToken == nil {
-                await bootstrap()
-            } else {
-                await refreshWorld()
-            }
+            await refreshWorld()
             stage = .world
             logger.info("Saved avatar and entered world")
         } catch {
@@ -125,11 +126,16 @@ final class AppModel: ObservableObject {
 
         do {
             let snapshot = try await backend.syncWorld(deviceID: deviceID)
+            worldMovementEvents = snapshot.movementEvents
             worldAgents = snapshot.agents
             worldCount = snapshot.count
-            worldMovementEvents = snapshot.movementEvents
-            let latestConversations = try await backend.listConversations(deviceID: deviceID)
-            conversations = latestConversations.map(Self.preview(from:))
+            worldConfig = snapshot.config
+            if !snapshot.movementEvents.isEmpty {
+                for event in snapshot.movementEvents {
+                    appendDebugEvent(movementText(for: event, agentID: event.userID))
+                }
+            }
+            try await refreshInbox()
 
             if let current = selectedConversation {
                 selectedConversation = try await backend.getConversation(
@@ -143,6 +149,11 @@ final class AppModel: ObservableObject {
             errorMessage = error.localizedDescription
             logger.error("World refresh failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    func refreshInbox() async throws {
+        let latestConversations = try await backend.listConversations(deviceID: deviceID)
+        conversations = latestConversations.map(Self.preview(from:))
     }
 
     func loadConversation(_ conversationID: UUID) async {
@@ -271,8 +282,9 @@ final class AppModel: ObservableObject {
         )
     }
 
-    func configurePersistedSession() {
-        backend.sessionToken = SessionIdentity.current()
+    func setDebugMode(_ enabled: Bool) {
+        debugModeEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "aaru.debugModeEnabled")
     }
 
     func scheduleWorldRefresh() {
@@ -280,6 +292,21 @@ final class AppModel: ObservableObject {
         worldRefreshTask = Task {
             try? await Task.sleep(for: .milliseconds(250))
             await refreshWorld()
+        }
+    }
+
+    func scheduleInboxRefresh() {
+        inboxRefreshTask?.cancel()
+        inboxRefreshTask = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            do {
+                try await refreshInbox()
+            } catch is CancellationError {
+                return
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.logger.error("Inbox refresh failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 
@@ -295,23 +322,32 @@ final class AppModel: ObservableObject {
         realtime.start(
             supabaseURL: backend.realtimeURL,
             anonKey: backend.realtimeAnonKey,
+            onRealtimeStatus: { [weak self] status in
+                self?.appendDebugEvent(status)
+                self?.logger.info("\(status, privacy: .public)")
+            },
             onWorldInsert: { [weak self] in
+                self?.appendDebugEvent("World row inserted")
                 self?.scheduleWorldRefresh()
             },
             onWorldUpdate: { [weak self] oldRow, newRow in
                 self?.applyWorldUpdate(oldRow: oldRow, newRow: newRow)
             },
             onWorldDelete: { [weak self] in
+                self?.appendDebugEvent("World row deleted")
                 self?.scheduleWorldRefresh()
             },
             onInboxChange: { [weak self] in
-                self?.scheduleWorldRefresh()
+                self?.appendDebugEvent("Conversation metadata updated")
+                self?.scheduleInboxRefresh()
             },
             onConversationChange: { [weak self] in
                 guard let self, let conversationID = self.selectedConversation?.id else { return }
+                self.appendDebugEvent("Conversation \(conversationID.uuidString.prefix(6)) updated")
                 self.scheduleConversationRefresh(conversationID)
             }
         )
+        appendDebugEvent("Realtime bridge started")
         logger.info("Realtime bridge started")
     }
 
@@ -319,9 +355,27 @@ final class AppModel: ObservableObject {
         guard case .world = stage else { return }
         var agents = worldAgents
         guard let index = agents.firstIndex(where: { $0.id == newRow.userID }) else {
+            appendDebugEvent("World update for unknown user \(newRow.userID.uuidString.prefix(6)); refreshing")
             scheduleWorldRefresh()
             return
         }
+
+        let name = agents[index].displayName
+        let movementEvent: WorldMovementEvent?
+        if let fromX = oldRow.cellX, let fromY = oldRow.cellY, let toX = newRow.cellX, let toY = newRow.cellY,
+           fromX != toX || fromY != toY {
+            movementEvent = WorldMovementEvent(
+                userID: newRow.userID,
+                fromCellX: fromX,
+                fromCellY: fromY,
+                toCellX: toX,
+                toCellY: toY
+            )
+        } else {
+            movementEvent = nil
+        }
+
+        worldMovementEvents = movementEvent.map { [$0] } ?? []
 
         agents[index].x = newRow.x
         agents[index].y = newRow.y
@@ -334,19 +388,31 @@ final class AppModel: ObservableObject {
         agents[index].conversationID = newRow.conversationID
         worldAgents = agents
 
-        if let fromX = oldRow.cellX, let fromY = oldRow.cellY, let toX = newRow.cellX, let toY = newRow.cellY,
-           fromX != toX || fromY != toY {
-            worldMovementEvents = [
-                WorldMovementEvent(
-                    userID: newRow.userID,
-                    fromCellX: fromX,
-                    fromCellY: fromY,
-                    toCellX: toX,
-                    toCellY: toY
-                )
-            ]
-        } else {
-            worldMovementEvents = []
+        appendDebugEvent("\(name) update state=\(newRow.state) cell=(\(newRow.cellX ?? -1),\(newRow.cellY ?? -1))")
+        logger.info("Realtime row for \(name, privacy: .public) state=\(newRow.state, privacy: .public) cell=(\(newRow.cellX ?? -1), privacy: .public),(\(newRow.cellY ?? -1), privacy: .public)")
+
+        if let event = movementEvent {
+            appendDebugEvent(movementText(for: event, agentID: newRow.userID))
+            logger.info("Movement event \(self.movementText(for: event, agentID: newRow.userID), privacy: .public)")
+        }
+    }
+
+    func appendDebugEvent(_ message: String) {
+        let event = DebugEvent(timestamp: .now, message: message)
+        debugEvents = Array(([event] + debugEvents).prefix(20))
+    }
+
+    private func movementText(for event: WorldMovementEvent, agentID: UUID) -> String {
+        let name = worldAgents.first(where: { $0.id == agentID })?.displayName ?? agentID.uuidString.prefix(6).description
+        return "\(name) moved (\(event.fromCellX),\(event.fromCellY)) -> (\(event.toCellX),\(event.toCellY))"
+    }
+
+    private func applyAvatarToSelf(_ avatar: AvatarConfig) {
+        worldAgents = worldAgents.map { agent in
+            guard agent.isSelf else { return agent }
+            var updated = agent
+            updated.avatar = avatar
+            return updated
         }
     }
 

@@ -35,7 +35,6 @@ final class BackendClient {
     private let session: URLSession
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
-    var sessionToken: String?
 
     init(
         configuration: BackendConfiguration = .default,
@@ -47,19 +46,6 @@ final class BackendClient {
     }
 
     func bootstrap(deviceID: String) async throws -> BootstrapPayload {
-        guard endpoint(named: "bootstrap-user") != nil else {
-            return BootstrapPayload(
-                userID: UUID(),
-                deviceID: deviceID,
-                displayName: "Soul \(deviceID.suffix(4))",
-                instanceID: UUID(),
-                soulProfile: nil,
-                avatar: .default,
-                conversations: [],
-                world: WorldSnapshot(count: 0, movementEvents: [], agents: []),
-                session: DeviceSession(token: "local-dev-token", expiresAt: .distantFuture)
-            )
-        }
         let response: BootstrapPayload = try await post(
             "bootstrap-user",
             body: ["device_id": deviceID],
@@ -69,97 +55,54 @@ final class BackendClient {
     }
 
     func generateSoulProfile(rawInput: String) async throws -> SoulProfile {
-        guard endpoint(named: "generate-soul-profile") != nil else {
-            return SoulProfile(
-                personality: "Warm, curious, and open to meaningful conversation.",
-                interests: ["cinema", "travel", "art"],
-                values: ["honesty", "growth", "kindness"],
-                avoidTopics: ["cruelty", "bad-faith arguments"],
-                rawInput: rawInput,
-                guessedFields: ["personality", "interests", "values"]
-            )
-        }
-
         return try await post("generate-soul-profile", body: ["raw_input": rawInput])
     }
 
     func saveSoulProfile(deviceID: String, profile: SoulProfile) async throws {
-        guard endpoint(named: "save-soul-profile") != nil else { return }
         let _: SaveSoulProfileResponse = try await post(
             "save-soul-profile",
             body: SaveSoulProfileRequest(deviceID: deviceID, profile: profile),
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
 
     func saveAvatar(deviceID: String, avatar: AvatarConfig) async throws {
-        guard endpoint(named: "save-avatar") != nil else { return }
         let _: SaveAvatarResponse = try await post(
             "save-avatar",
             body: SaveAvatarRequest(deviceID: deviceID, avatar: avatar),
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
 
     func syncWorld(deviceID: String) async throws -> WorldSnapshot {
-        guard endpoint(named: "sync-world") != nil else {
-            return WorldSnapshot(count: 0, movementEvents: [], agents: [])
-        }
         return try await post(
             "sync-world",
             body: ["device_id": deviceID],
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
 
     func listConversations(deviceID: String) async throws -> [ConversationPreviewPayload] {
-        guard endpoint(named: "list-conversations") != nil else {
-            return []
-        }
         return try await post(
             "list-conversations",
             body: ["device_id": deviceID],
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
 
     func getConversation(deviceID: String, conversationID: UUID) async throws -> ConversationDetail {
-        guard endpoint(named: "get-conversation") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: false,
-                otherSoul: nil,
-                messages: [],
-                baConversationID: nil,
-                baMessages: []
-            )
-        }
         let payload: ConversationDetailPayload = try await post(
             "get-conversation",
             body: [
                 "device_id": deviceID,
                 "conversation_id": conversationID.uuidString
             ],
-            requiresAuth: true,
             retryOnServerError: true
         )
         return payload.asConversationDetail()
     }
 
     func transcribeAudio(audioData: Data) async throws -> String {
-        guard endpoint(named: "transcribe-audio") != nil else {
-            return "(transcription unavailable offline)"
-        }
         let response: TranscribeAudioResponse = try await post(
             "transcribe-audio",
             body: TranscribeAudioRequest(
@@ -171,61 +114,25 @@ final class BackendClient {
     }
 
     func sendBaMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
-        guard endpoint(named: "send-ba-message") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: true,
-                otherSoul: nil,
-                messages: [],
-                baConversationID: nil,
-                baMessages: [BaMessage(id: UUID(), senderName: "You", content: content)]
-            )
-        }
         let payload: ConversationDetailPayload = try await post(
             "send-ba-message",
             body: [
                 "device_id": deviceID,
                 "conversation_id": conversationID.uuidString,
                 "content": content
-            ],
-            requiresAuth: true
+            ]
         )
         return payload.asConversationDetail()
     }
 
     func sendHumanMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
-        guard endpoint(named: "send-human-message") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: false,
-                otherSoul: nil,
-                messages: [
-                    ChatMessage(id: UUID(), senderName: "You", type: "human_typed", content: content)
-                ],
-                baConversationID: nil,
-                baMessages: []
-            )
-        }
         let payload: ConversationDetailPayload = try await post(
             "send-human-message",
             body: [
                 "device_id": deviceID,
                 "conversation_id": conversationID.uuidString,
                 "content": content
-            ],
-            requiresAuth: true
+            ]
         )
         return payload.asConversationDetail()
     }
@@ -237,7 +144,6 @@ final class BackendClient {
     private func post<ResponseType: Decodable, Body: Encodable>(
         _ name: String,
         body: Body,
-        requiresAuth: Bool = false,
         retryOnServerError: Bool = false
     ) async throws -> ResponseType {
         guard let url = endpoint(named: name) else {
@@ -251,9 +157,6 @@ final class BackendClient {
         if let anonKey = configuration.supabaseAnonKey {
             request.setValue(anonKey, forHTTPHeaderField: "apikey")
             request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
-        }
-        if requiresAuth, let sessionToken {
-            request.setValue(sessionToken, forHTTPHeaderField: "x-aaru-session")
         }
 
         let (data, response) = try await session.data(for: request)

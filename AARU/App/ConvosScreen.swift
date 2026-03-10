@@ -34,7 +34,7 @@ struct ConvosScreen: View {
             }
             .navigationTitle("Conversations")
             .task {
-                await model.refreshWorld()
+                try? await model.refreshInbox()
             }
         }
     }

@@ -2,15 +2,13 @@ import { buildKaReply, generateConversationSummary } from "../../../src/domain/k
 import { accumulateImpression, evaluateImpression, isBaAvailableToViewer } from "../../../src/domain/impression.ts";
 import { generateFallbackSoulProfile } from "../../../src/domain/soulProfile.ts";
 import { endConversation, tickWorld } from "../../../src/domain/world.ts";
-import type { AgentPosition, ConversationMessage, SoulProfile } from "../../../src/domain/types.ts";
+import type { AgentPosition, ConversationMessage, SoulProfile, WorldConfig } from "../../../src/domain/types.ts";
 import {
-  createDeviceSession,
   createConversation,
   ensureAgentPosition,
   ensureAvatar,
   ensureNpcPopulation,
   ensureUser,
-  getActiveSessionByTokenHash,
   getAgentPositions,
   getAvatar,
   getImpressionEdge,
@@ -33,8 +31,6 @@ import {
   listMessages,
   listFreshNewsItems,
   listUsersByIds,
-  revokeSessionsForDevice,
-  touchDeviceSession,
   touchWorldInstance,
   updateConversation,
   deleteUsersByIds,
@@ -49,14 +45,22 @@ import {
   insertBaMessage
 } from "./db.ts";
 import {
+  BUBBLE_READING_WORDS_PER_SECOND,
+  CAMERA_VISIBLE_COLUMNS,
+  CAMERA_VISIBLE_ROWS,
+  CONVERSATION_SPEAKING_WORDS_PER_SECOND,
+  CONVERSATION_TURN_GAP_MS,
   IMPRESSION_EVALUATION_INTERVAL,
   KA_MESSAGES_PER_CONVERSATION,
+  MIN_BUBBLE_DISPLAY_MS,
+  MIN_REPLY_DELAY_MS,
+  MOVE_ANIMATION_MS,
+  WORLD_TICK_INTERVAL_MS,
   WORLD_GRID_COLUMNS,
   WORLD_GRID_ROWS
 } from "../../../src/domain/constants.ts";
 import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
-import { hashSessionToken, issueSessionToken, readBearerToken } from "./auth.ts";
 import { fetchInterestNews } from "./xai.ts";
 
 export interface WorldAgentSnapshot extends AgentPosition {
@@ -74,10 +78,112 @@ const DEMO_WORLD_NPC_DEVICE_IDS = new Set([
   "npc-setka",
   "npc-meri"
 ]);
-const WORLD_TICK_INTERVAL_MS = 1_000;
-const CONVERSATION_TURN_INTERVAL_MS = 2_500;
 const JOB_LEASE_MS = 20_000;
 const WORLD_RUNNER_WINDOW_MS = 55_000;
+
+function buildWorldConfig(): WorldConfig {
+  return {
+    gridColumns: WORLD_GRID_COLUMNS,
+    gridRows: WORLD_GRID_ROWS,
+    worldTickMs: WORLD_TICK_INTERVAL_MS,
+    moveAnimationMs: MOVE_ANIMATION_MS,
+    bubbleReadingWordsPerSecond: BUBBLE_READING_WORDS_PER_SECOND,
+    conversationSpeakingWordsPerSecond: CONVERSATION_SPEAKING_WORDS_PER_SECOND,
+    conversationTurnGapMs: CONVERSATION_TURN_GAP_MS,
+    minBubbleDisplayMs: MIN_BUBBLE_DISPLAY_MS,
+    minReplyDelayMs: MIN_REPLY_DELAY_MS,
+    cameraVisibleColumns: CAMERA_VISIBLE_COLUMNS,
+    cameraVisibleRows: CAMERA_VISIBLE_ROWS
+  };
+}
+
+function serializeWorldConfig() {
+  const config = buildWorldConfig();
+  return {
+    grid_columns: config.gridColumns,
+    grid_rows: config.gridRows,
+    world_tick_ms: config.worldTickMs,
+    move_animation_ms: config.moveAnimationMs,
+    bubble_reading_wps: config.bubbleReadingWordsPerSecond,
+    conversation_speaking_wps: config.conversationSpeakingWordsPerSecond,
+    conversation_turn_gap_ms: config.conversationTurnGapMs,
+    min_bubble_display_ms: config.minBubbleDisplayMs,
+    min_reply_delay_ms: config.minReplyDelayMs,
+    camera_visible_columns: config.cameraVisibleColumns,
+    camera_visible_rows: config.cameraVisibleRows
+  };
+}
+
+function wordCount(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function bubbleDisplayDurationMs(text: string) {
+  const words = Math.max(1, wordCount(text));
+  return Math.max(
+    MIN_BUBBLE_DISPLAY_MS,
+    Math.round((words / BUBBLE_READING_WORDS_PER_SECOND) * 1000)
+  );
+}
+
+function conversationReplyDelayMs(text: string) {
+  const words = Math.max(1, wordCount(text));
+  return Math.max(
+    MIN_REPLY_DELAY_MS,
+    Math.round((words / CONVERSATION_SPEAKING_WORDS_PER_SECOND) * 1000 + CONVERSATION_TURN_GAP_MS)
+  );
+}
+
+function logWorldTickSummary(input: {
+  instanceId: string;
+  step: number;
+  movementEvents: Array<{
+    user_id: string;
+    from_cell_x: number;
+    from_cell_y: number;
+    to_cell_x: number;
+    to_cell_y: number;
+  }>;
+  startedConversations: Array<{
+    agentA: string;
+    agentB: string;
+  }>;
+}) {
+  const movementSample = input.movementEvents.slice(0, 8).map((event) => ({
+    user_id: event.user_id,
+    from: [event.from_cell_x, event.from_cell_y],
+    to: [event.to_cell_x, event.to_cell_y]
+  }));
+  const conversationSample = input.startedConversations.slice(0, 4).map((entry) => ({
+    agent_a: entry.agentA,
+    agent_b: entry.agentB
+  }));
+
+  console.log(JSON.stringify({
+    event: "world_tick",
+    instance_id: input.instanceId,
+    step: input.step,
+    moved_count: input.movementEvents.length,
+    started_conversation_count: input.startedConversations.length,
+    movement_sample: movementSample,
+    conversation_sample: conversationSample
+  }));
+}
+
+function scheduleActiveMessageClear(instanceId: string, conversationId: string, userId: string, content: string) {
+  const bubbleLifetimeMs = bubbleDisplayDurationMs(content);
+  void (async () => {
+    await new Promise((resolve) => setTimeout(resolve, bubbleLifetimeMs));
+    const refreshed = await getAgentPositions(instanceId);
+    await upsertAgentPositions(
+      refreshed.map((row) =>
+        row.conversation_id === conversationId && row.user_id === userId && row.active_message === content
+          ? { ...row, active_message: null }
+          : row
+      )
+    );
+  })();
+}
 
 function toAgentPosition(row: Awaited<ReturnType<typeof getAgentPositions>>[number]): AgentPosition {
   return {
@@ -242,11 +348,8 @@ export async function bootstrapUser(deviceId: string) {
       await ensureAgentPosition(user);
       const soulProfile = await getSoulProfile(user.id);
       const avatar = (await getAvatar(user.id)) ?? defaultAvatarConfig;
-      const session = await issueSessionToken(user.id, deviceId);
-      await revokeSessionsForDevice(user.id, deviceId);
-      await createDeviceSession(user.id, deviceId, session.tokenHash, session.expiresAt);
-      const world = await buildWorldSnapshot(instanceId, user.id);
       await advanceDueConversationsForUser(user.id);
+      const world = await buildWorldSnapshot(instanceId, user.id);
       const conversations = await listConversationSummaries(deviceId);
 
       return {
@@ -257,11 +360,7 @@ export async function bootstrapUser(deviceId: string) {
         soul_profile: soulProfile,
         avatar,
         conversations,
-        world,
-        session: {
-          token: session.token,
-          expires_at: session.expiresAt
-        }
+        world
       };
     } catch (error) {
       lastError = error;
@@ -288,27 +387,6 @@ export async function saveAvatar(deviceId: string, avatar: AvatarConfig) {
   });
   const finalAvatar = await upsertAvatar(user.id, saved);
   return { user_id: user.id, avatar: finalAvatar };
-}
-
-export async function requireDeviceSession(request: Request, deviceId: string) {
-  const token = readBearerToken(request);
-  if (!token) {
-    throw new Error("Missing device session");
-  }
-
-  const session = await getActiveSessionByTokenHash(await hashSessionToken(token));
-  if (!session) {
-    throw new Error("Invalid device session");
-  }
-  if (session.device_id !== deviceId) {
-    throw new Error("Device session mismatch");
-  }
-  if (new Date(session.expires_at).getTime() <= Date.now()) {
-    throw new Error("Expired device session");
-  }
-
-  await touchDeviceSession(session.id);
-  return session;
 }
 
 async function ensureSoulProfileForUser(user: AppUser) {
@@ -522,12 +600,13 @@ async function buildWorldSnapshot(
 
   return {
     count: agents.length,
+    config: serializeWorldConfig(),
     movement_events: movementEvents,
     agents
   };
 }
 
-function nextConversationTurnAt(delayMs = CONVERSATION_TURN_INTERVAL_MS) {
+function nextConversationTurnAt(delayMs = MIN_REPLY_DELAY_MS) {
   return new Date(Date.now() + delayMs).toISOString();
 }
 
@@ -538,7 +617,7 @@ function isDue(isoTimestamp?: string | null) {
 async function markConversationTurn(
   conversationId: string,
   turnCount: number,
-  delayMs = CONVERSATION_TURN_INTERVAL_MS
+  delayMs = MIN_REPLY_DELAY_MS
 ) {
   await updateConversation(conversationId, {
     turn_count: turnCount,
@@ -680,7 +759,7 @@ async function advanceConversation(conversationId: string) {
   });
 
   await insertMessage(conversationId, nextSpeaker.user.id, "ka_generated", reply.content);
-  await markConversationTurn(conversationId, messages.length + 1);
+  await markConversationTurn(conversationId, messages.length + 1, conversationReplyDelayMs(reply.content));
   const positions = await getAgentPositions(userA.instance_id ?? await getDefaultInstanceId());
   const updated = positions.map((row) =>
     row.conversation_id === conversationId
@@ -688,6 +767,12 @@ async function advanceConversation(conversationId: string) {
       : row
   );
   await upsertAgentPositions(updated);
+  scheduleActiveMessageClear(
+    userA.instance_id ?? await getDefaultInstanceId(),
+    conversationId,
+    nextSpeaker.user.id,
+    reply.content
+  );
 }
 
 async function claimAndAdvanceConversation(conversationId: string) {
@@ -787,7 +872,8 @@ async function forceConversationForUser(
   const firstTopic = topicBundle.seedTopics[0] ?? "the things people linger on";
   const firstLine = `You seem like someone who pays attention to ${firstTopic} in a way most people miss.`;
   await insertMessage(conversation.id, candidate.user_id, "ka_generated", firstLine);
-  await markConversationTurn(conversation.id, 1);
+  await markConversationTurn(conversation.id, 1, conversationReplyDelayMs(firstLine));
+  scheduleActiveMessageClear(instanceId, conversation.id, candidate.user_id, firstLine);
   userPosition.state = "chatting";
   userPosition.conversation_id = conversation.id;
   userPosition.active_message = firstLine;
@@ -803,11 +889,11 @@ export async function syncWorld(deviceId: string) {
   const instanceId = user.instance_id ?? (await getDefaultInstanceId());
   await pruneDemoWorld(instanceId, user.id);
   await ensureNpcPopulation();
-  const soulProfile = await ensureSoulProfileForUser(user);
+  await ensureSoulProfileForUser(user);
   await ensureAvatarForUser(user);
   await ensureAgentPosition(user);
-  const world = await buildWorldSnapshot(instanceId, user.id);
   await advanceDueConversationsForUser(user.id);
+  const world = await buildWorldSnapshot(instanceId, user.id);
   return world;
 }
 
@@ -831,6 +917,12 @@ async function runWorldTick(
     const tickInput = persisted.map((row) => toAgentPosition(row));
     const result = tickWorld(tickInput);
     latestMovementEvents = result.movementEvents;
+    logWorldTickSummary({
+      instanceId,
+      step: step + 1,
+      movementEvents: result.movementEvents,
+      startedConversations: result.startedConversations
+    });
 
     persisted = result.positions.map((position) => ({
       user_id: position.user_id,
@@ -906,7 +998,8 @@ async function runWorldTick(
       const firstTopic = topicBundle.seedTopics[0] ?? "the things people return to";
       const firstLine = `I get the feeling ${firstTopic} says a lot about a person.`;
       await insertMessage(conversation.id, started.agentA, "ka_generated", firstLine);
-      await markConversationTurn(conversation.id, 1);
+      await markConversationTurn(conversation.id, 1, conversationReplyDelayMs(firstLine));
+      scheduleActiveMessageClear(instanceId, conversation.id, started.agentA, firstLine);
       for (const row of persisted) {
         if (row.user_id === started.agentA || row.user_id === started.agentB) {
           row.conversation_id = conversation.id;
@@ -1081,27 +1174,51 @@ export async function sendBaMessage(deviceId: string, conversationId: string, co
 
 export async function sendHumanMessage(deviceId: string, conversationId: string, content: string) {
   const user = await ensureUser(deviceId);
+  const conversation = await getConversation(conversationId);
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
   await insertMessage(conversationId, user.id, "human_typed", content);
+  const instanceId = user.instance_id ?? (await getDefaultInstanceId());
+  const positions = await getAgentPositions(instanceId);
+  await upsertAgentPositions(
+    positions.map((row) =>
+      row.conversation_id === conversationId && row.user_id === user.id
+        ? { ...row, active_message: content }
+        : row
+    )
+  );
   await updateConversation(conversationId, {
-    turn_count: ((await getConversation(conversationId))?.turn_count ?? 0) + 1,
+    turn_count: (conversation.turn_count ?? 0) + 1,
     last_turn_at: new Date().toISOString(),
-    next_turn_at: new Date().toISOString(),
+    next_turn_at: nextConversationTurnAt(conversationReplyDelayMs(content)),
     processing_owner: null,
     processing_expires_at: null
   });
-  await claimAndAdvanceConversation(conversationId);
+  scheduleActiveMessageClear(instanceId, conversationId, user.id, content);
   return getConversationDetail(deviceId, conversationId);
 }
 
 export async function advanceOnlineWorlds() {
   const deadline = Date.now() + WORLD_RUNNER_WINDOW_MS;
   const results = new Map<string, { instance_id: string; ticks: number; count: number }>();
+  console.log(JSON.stringify({
+    event: "advance_worlds_start",
+    deadline_ms: WORLD_RUNNER_WINDOW_MS,
+    tick_interval_ms: WORLD_TICK_INTERVAL_MS
+  }));
 
   while (Date.now() < deadline) {
     const owner = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const leaseExpiresAt = new Date(Date.now() + JOB_LEASE_MS).toISOString();
     const instances = await claimDueWorldInstances(owner, leaseExpiresAt, nowIso, 10);
+    console.log(JSON.stringify({
+      event: "advance_worlds_claim",
+      owner,
+      claimed_count: instances.length,
+      due_before: nowIso
+    }));
 
     for (const instance of instances) {
       const users = await listUsersInInstance(instance.id);
@@ -1114,7 +1231,15 @@ export async function advanceOnlineWorlds() {
       await ensureNpcPopulation();
       const lastTick = instance.last_tick_at ? new Date(instance.last_tick_at).getTime() : 0;
       const elapsedMs = Math.max(WORLD_TICK_INTERVAL_MS, Date.now() - lastTick);
-      const stepCount = Math.max(1, Math.min(3, Math.floor(elapsedMs / WORLD_TICK_INTERVAL_MS)));
+      const stepCount = 1;
+      console.log(JSON.stringify({
+        event: "advance_world_instance",
+        instance_id: instance.id,
+        prior_last_tick_at: instance.last_tick_at,
+        elapsed_ms: elapsedMs,
+        step_count: stepCount,
+        user_count: users.length
+      }));
       const snapshot = await runWorldTick(instance.id, undefined, false, stepCount);
       const prior = results.get(instance.id);
       results.set(instance.id, {
@@ -1146,6 +1271,12 @@ export async function advanceDueConversations() {
   const leaseExpiresAt = new Date(Date.now() + JOB_LEASE_MS).toISOString();
   const conversations = await claimDueConversations(owner, leaseExpiresAt, nowIso, 30);
   const results = [];
+  console.log(JSON.stringify({
+    event: "advance_conversations_claim",
+    owner,
+    claimed_count: conversations.length,
+    due_before: nowIso
+  }));
 
   for (const conversation of conversations) {
     try {

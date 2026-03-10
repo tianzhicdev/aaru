@@ -1,4 +1,5 @@
 import type { ConversationMessage, KaConversationContext } from "./types.ts";
+import { callGroq } from "../../supabase/functions/_shared/groq.ts";
 
 export function buildKaSystemPrompt(context: KaConversationContext): string {
   const newsLine = context.newsSnippets.length > 0
@@ -18,7 +19,7 @@ export function buildKaSystemPrompt(context: KaConversationContext): string {
   ].join("\n");
 }
 
-export function buildKaReply(context: KaConversationContext): ConversationMessage {
+export function buildKaReplyFallback(context: KaConversationContext): ConversationMessage {
   const lastExternalMessage = [...context.history]
     .reverse()
     .find((message) => message.user_id !== context.selfUserId);
@@ -48,4 +49,27 @@ export function buildKaReply(context: KaConversationContext): ConversationMessag
     type: "ka_generated",
     content
   };
+}
+
+export async function buildKaReply(context: KaConversationContext): Promise<ConversationMessage> {
+  try {
+    const systemPrompt = buildKaSystemPrompt(context);
+
+    // Convert conversation history to messages format
+    const messages = context.history.map((msg) => ({
+      role: msg.user_id === context.selfUserId ? "assistant" : "user",
+      content: msg.content
+    }));
+
+    const response = await callGroq(systemPrompt, messages);
+
+    return {
+      user_id: context.selfUserId,
+      type: "ka_generated",
+      content: response
+    };
+  } catch (error) {
+    console.error("LLM call failed, falling back to template:", error);
+    return buildKaReplyFallback(context);
+  }
 }

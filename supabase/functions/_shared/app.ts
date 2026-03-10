@@ -642,7 +642,7 @@ async function advanceConversation(conversationId: string) {
     await updateConversation(conversationId, { topic_seed: topicBundle.seedTopics });
   }
 
-  const reply = buildKaReply({
+  const reply = await buildKaReply({
     selfUserId: nextSpeaker.user.id,
     selfName: nextSpeaker.user.display_name,
     soulProfile: nextSpeaker.soul,

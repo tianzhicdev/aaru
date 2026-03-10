@@ -44,3 +44,7 @@ export function aaruSessionSecret(): string {
 export function xaiToken(): string | undefined {
   return readEnv("XAI_TOKEN");
 }
+
+export function groqApiKey(): string | undefined {
+  return readEnv("GROQ_API_KEY");
+}

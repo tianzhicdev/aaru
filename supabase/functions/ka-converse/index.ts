@@ -8,7 +8,7 @@ import {
 
 export async function handleKaConverse(payload: unknown) {
   const request = kaConverseRequestSchema.parse(payload);
-  const reply = buildKaReply(request);
+  const reply = await buildKaReply(request);
 
   return jsonResponse(200, kaConverseResponseSchema.parse(reply));
 }

@@ -80,6 +80,14 @@ interface ConversationSummaryRow {
   created_at: string;
 }
 
+interface DeviceTokenRow {
+  user_id: string;
+  device_token: string;
+  platform: string;
+  is_active: boolean;
+  updated_at: string;
+}
+
 interface WorldInstanceRow {
   id: string;
   slug: string;
@@ -689,4 +697,13 @@ export async function ensureNpcPopulation(): Promise<void> {
     await upsertAvatar(user.id, avatarForSeed(deviceId));
     await ensureAgentPosition(user);
   }
+}
+
+export async function getDeviceTokensForUsers(userIds: string[]): Promise<DeviceTokenRow[]> {
+  if (userIds.length === 0) {
+    return [];
+  }
+  return rest<DeviceTokenRow[]>(
+    `device_tokens?user_id=in.(${userIds.join(",")})&is_active=eq.true&select=user_id,device_token,platform,is_active,updated_at`
+  );
 }

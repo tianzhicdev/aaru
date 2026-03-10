@@ -48,3 +48,19 @@ export function xaiToken(): string | undefined {
 export function groqApiKey(): string | undefined {
   return readEnv("GROQ_API_KEY");
 }
+
+export function apnsKeyId(): string | undefined {
+  return readEnv("APNS_KEY_ID");
+}
+
+export function apnsTeamId(): string | undefined {
+  return readEnv("APNS_TEAM_ID");
+}
+
+export function apnsPrivateKey(): string | undefined {
+  return readEnv("APNS_PRIVATE_KEY");
+}
+
+export function apnsBundleId(): string | undefined {
+  return readEnv("APNS_BUNDLE_ID");
+}

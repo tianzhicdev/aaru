@@ -593,6 +593,32 @@ export async function insertConversationSummary(
   });
 }
 
+export async function listOfflineUsers(offlineSinceIso: string): Promise<UserRow[]> {
+  // Users who haven't had an active session in the last offlineSinceIso time
+  const offlineUserIds = await rest<Array<{ user_id: string }>>(
+    `device_sessions?last_seen_at=lt.${encodeURIComponent(offlineSinceIso)}&revoked_at=is.null&select=user_id`
+  );
+  const userIds = [...new Set(offlineUserIds.map(row => row.user_id))];
+
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  return listUsersByIds(userIds);
+}
+
+export async function countUserConversationsToday(userId: string): Promise<number> {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayIso = startOfToday.toISOString();
+
+  const rows = await rest<Array<{ count: number }>>(
+    `conversations?or=(user_a_id.eq.${userId},user_b_id.eq.${userId})&started_at=gte.${encodeURIComponent(todayIso)}&select=count`
+  );
+
+  return rows.length;
+}
+
 export async function ensureNpcPopulation(): Promise<void> {
   const instanceId = await getDefaultInstanceId();
   const npcSeeds = [

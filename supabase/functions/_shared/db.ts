@@ -71,6 +71,15 @@ interface NewsItemRow {
   fetched_at: string;
 }
 
+interface ConversationSummaryRow {
+  id: string;
+  conversation_id: string;
+  user_a_id: string;
+  user_b_id: string;
+  summary: string;
+  created_at: string;
+}
+
 interface WorldInstanceRow {
   id: string;
   slug: string;
@@ -553,6 +562,34 @@ export async function deleteUsersByIds(userIds: string[]): Promise<void> {
   await rest<Json>(`users?id=in.(${userIds.join(",")})`, {
     method: "DELETE",
     headers: { Prefer: "return=minimal" }
+  });
+}
+
+export async function listRecentConversationSummaries(
+  userIdA: string,
+  userIdB: string,
+  limit: number
+): Promise<ConversationSummaryRow[]> {
+  return rest<ConversationSummaryRow[]>(
+    `conversation_summaries?or=(and(user_a_id.eq.${userIdA},user_b_id.eq.${userIdB}),and(user_a_id.eq.${userIdB},user_b_id.eq.${userIdA}))&order=created_at.desc&limit=${limit}&select=id,conversation_id,user_a_id,user_b_id,summary,created_at`
+  );
+}
+
+export async function insertConversationSummary(
+  conversationId: string,
+  userAId: string,
+  userBId: string,
+  summary: string
+): Promise<void> {
+  await rest<Json>("conversation_summaries", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([{
+      conversation_id: conversationId,
+      user_a_id: userAId,
+      user_b_id: userBId,
+      summary
+    }])
   });
 }
 

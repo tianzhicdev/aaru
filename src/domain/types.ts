@@ -62,4 +62,5 @@ export interface KaConversationContext {
   newsSnippets: string[];
   suggestedTopics?: string[];
   history: ConversationMessage[];
+  previousConversationSummary?: string;
 }

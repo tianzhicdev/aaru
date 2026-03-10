@@ -1,4 +1,4 @@
-import { buildKaReply } from "../../../src/domain/ka.ts";
+import { buildKaReply, generateConversationSummary } from "../../../src/domain/ka.ts";
 import { accumulateImpression, evaluateImpression, isBaAvailableToViewer } from "../../../src/domain/impression.ts";
 import { generateFallbackSoulProfile } from "../../../src/domain/soulProfile.ts";
 import { endConversation, tickWorld } from "../../../src/domain/world.ts";
@@ -23,8 +23,10 @@ import {
   claimDueWorldInstances,
   claimWorldInstance,
   listRecentConversationsBetweenUsers,
+  listRecentConversationSummaries,
   listUsersInInstance,
   getUserById,
+  insertConversationSummary,
   insertMessage,
   insertNewsItems,
   listOnlineWorldInstances,
@@ -612,6 +614,14 @@ async function advanceConversation(conversationId: string) {
     );
 
     if (messages.length >= KA_MESSAGES_PER_CONVERSATION) {
+      // Generate and store conversation summary for future reference
+      try {
+        const summary = await generateConversationSummary(transcript);
+        await insertConversationSummary(conversationId, conversation.user_a_id, conversation.user_b_id, summary);
+      } catch (error) {
+        console.error("Failed to store conversation summary:", error);
+      }
+
       await finishConversation(conversationId, {});
 
       const positions = await getAgentPositions(userA.instance_id ?? await getDefaultInstanceId());
@@ -642,13 +652,26 @@ async function advanceConversation(conversationId: string) {
     await updateConversation(conversationId, { topic_seed: topicBundle.seedTopics });
   }
 
+  // Fetch previous conversation summary for context
+  let previousConversationSummary: string | undefined;
+  try {
+    const otherUserId = nextSpeaker.user.id === userA.id ? userB.id : userA.id;
+    const recentSummaries = await listRecentConversationSummaries(nextSpeaker.user.id, otherUserId, 1);
+    if (recentSummaries.length > 0) {
+      previousConversationSummary = recentSummaries[0].summary;
+    }
+  } catch (error) {
+    console.error("Failed to fetch conversation history:", error);
+  }
+
   const reply = await buildKaReply({
     selfUserId: nextSpeaker.user.id,
     selfName: nextSpeaker.user.display_name,
     soulProfile: nextSpeaker.soul,
     newsSnippets: topicBundle.newsSnippets,
     suggestedTopics: conversation.topic_seed?.length ? conversation.topic_seed : topicBundle.seedTopics,
-    history: messages
+    history: messages,
+    previousConversationSummary
   });
 
   await insertMessage(conversationId, nextSpeaker.user.id, "ka_generated", reply.content);

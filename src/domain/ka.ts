@@ -6,17 +6,24 @@ export function buildKaSystemPrompt(context: KaConversationContext): string {
     ? `Current awareness: ${context.newsSnippets.join(" | ")}`
     : "Current awareness: no fresh news available";
 
-  return [
+  const memoryLine = context.previousConversationSummary
+    ? `You have met this person before. Last time: ${context.previousConversationSummary}`
+    : "";
+
+  const lines = [
     `You are ${context.selfName}'s Ka.`,
     `Personality: ${context.soulProfile.personality}`,
     `Interests: ${context.soulProfile.interests.join(", ")}`,
     `Values: ${context.soulProfile.values.join(", ")}`,
     `Avoid: ${context.soulProfile.avoid_topics.join(", ") || "none"}`,
     newsLine,
+    memoryLine,
     "You only know what the other person has said in conversation.",
     "You do not know their soul profile.",
     "Keep the reply under 60 words and sound natural."
-  ].join("\n");
+  ].filter(Boolean);
+
+  return lines.join("\n");
 }
 
 export function buildKaReplyFallback(context: KaConversationContext): ConversationMessage {
@@ -71,5 +78,31 @@ export async function buildKaReply(context: KaConversationContext): Promise<Conv
   } catch (error) {
     console.error("LLM call failed, falling back to template:", error);
     return buildKaReplyFallback(context);
+  }
+}
+
+export async function generateConversationSummary(transcript: ConversationMessage[]): Promise<string> {
+  try {
+    const systemPrompt = `Summarize this conversation in 1-2 sentences, focusing on the key topics discussed and the general tone of the interaction. Keep it concise and natural.`;
+
+    const conversationText = transcript.map((msg, index) =>
+      `Message ${index + 1}: ${msg.content}`
+    ).join("\n");
+
+    const prompt = `Conversation:\n${conversationText}\n\nSummary:`;
+
+    const response = await callGroq(systemPrompt, [{ role: "user", content: prompt }]);
+    return response.trim();
+  } catch (error) {
+    console.error("Failed to generate conversation summary:", error);
+    // Fallback to basic summary
+    const topics = transcript
+      .map(msg => msg.content)
+      .join(" ")
+      .split(" ")
+      .filter(word => word.length > 4)
+      .slice(0, 3)
+      .join(", ");
+    return `Talked about ${topics || "various topics"}.`;
   }
 }

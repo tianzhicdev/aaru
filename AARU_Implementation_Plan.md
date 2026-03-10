@@ -166,7 +166,7 @@ Client does NOT compute positions. It only animates to what the server sends.
 
 ### Tasks
 - Build `world-tick` Edge Function — the isolated movement module
-- Implement Ka state machine: WANDERING → APPROACHING → CHATTING → COOLDOWN
+- Implement Ka state machine: WANDERING → CHATTING → COOLDOWN
 - Random target selection for wandering agents
 - Discrete grid occupancy — exactly one Ka per cell
 - Conversation initiation only from one of the 8 neighboring cells

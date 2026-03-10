@@ -41,7 +41,12 @@ import {
   upsertAvatar,
   upsertAgentPositions,
   upsertImpressionEdge,
-  upsertSoulProfile
+  upsertSoulProfile,
+  getBaConversationForPair,
+  ensureBaConversation,
+  listBaMessages,
+  countBaMessages,
+  insertBaMessage
 } from "./db.ts";
 import {
   IMPRESSION_EVALUATION_INTERVAL,
@@ -974,10 +979,12 @@ export async function listConversationSummaries(deviceId: string) {
   return Promise.all(deduped.map(async (conversation) => {
     const otherId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
     const other = byId.get(otherId);
-    const [yourEdge, theirEdge] = await Promise.all([
+    const [yourEdge, theirEdge, baConvo] = await Promise.all([
       getImpressionEdge(user.id, otherId),
-      getImpressionEdge(otherId, user.id)
+      getImpressionEdge(otherId, user.id),
+      getBaConversationForPair(user.id, otherId)
     ]);
+    const baMessageCount = baConvo ? await countBaMessages(baConvo.id) : 0;
     return {
       id: conversation.id,
       title: other?.display_name ?? "Unknown Soul",
@@ -986,7 +993,9 @@ export async function listConversationSummaries(deviceId: string) {
       status: conversation.status,
       ba_unlocked: theirEdge?.ba_unlocked ?? false,
       their_impression_score: theirEdge?.score ?? 0,
-      their_impression_summary: theirEdge?.summary ?? "They have not opened their Ba to you yet."
+      their_impression_summary: theirEdge?.summary ?? "They have not opened their Ba to you yet.",
+      ba_conversation_id: baConvo?.id ?? null,
+      ba_message_count: baMessageCount
     };
   }));
 }
@@ -1009,13 +1018,25 @@ export async function getConversationDetail(deviceId: string, conversationId: st
   }
 
   const otherId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
-  const [otherUser, messages, otherSoul, yourEdge, theirEdge] = await Promise.all([
+  const [otherUser, messages, otherSoul, yourEdge, theirEdge, baConvo] = await Promise.all([
     getUserById(otherId),
     listMessages(conversationId),
     getSoulProfile(otherId),
     getImpressionEdge(user.id, otherId),
-    getImpressionEdge(otherId, user.id)
+    getImpressionEdge(otherId, user.id),
+    getBaConversationForPair(user.id, otherId)
   ]);
+
+  let baMessages: Array<{ id: string; sender_name: string; content: string; created_at?: string }> = [];
+  if (baConvo) {
+    const rawBa = await listBaMessages(baConvo.id);
+    baMessages = rawBa.map((msg) => ({
+      id: msg.id,
+      sender_name: msg.user_id === user.id ? "You" : (otherUser?.display_name ?? "Other"),
+      content: msg.content,
+      created_at: msg.created_at
+    }));
+  }
 
   return {
     id: conversation.id,
@@ -1033,8 +1054,29 @@ export async function getConversationDetail(deviceId: string, conversationId: st
       type: message.type,
       content: message.content,
       created_at: message.created_at
-    }))
+    })),
+    ba_conversation_id: baConvo?.id ?? null,
+    ba_messages: baMessages
   };
+}
+
+export async function sendBaMessage(deviceId: string, conversationId: string, content: string) {
+  const user = await ensureUser(deviceId);
+  const conversation = await getConversation(conversationId);
+  if (!conversation) {
+    throw new Error("Conversation not found");
+  }
+  if (![conversation.user_a_id, conversation.user_b_id].includes(user.id)) {
+    throw new Error("Conversation does not belong to this user");
+  }
+  const otherId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+  const theirEdge = await getImpressionEdge(otherId, user.id);
+  if (!theirEdge?.ba_unlocked) {
+    throw new Error("Ba is not unlocked for this pair");
+  }
+  const baConvo = await ensureBaConversation(user.id, otherId, conversationId);
+  await insertBaMessage(baConvo.id, user.id, content);
+  return getConversationDetail(deviceId, conversationId);
 }
 
 export async function sendHumanMessage(deviceId: string, conversationId: string, content: string) {

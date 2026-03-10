@@ -40,8 +40,38 @@ struct OnboardingView: View {
                 .padding(12)
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
 
-            if let profile = model.soulProfile {
-                SoulProfileCard(profile: profile)
+            HStack {
+                Button {
+                    if model.audioRecorder.isRecording {
+                        Task { await model.transcribeRecording() }
+                    } else {
+                        model.audioRecorder.startRecording()
+                    }
+                } label: {
+                    Image(systemName: model.audioRecorder.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(model.audioRecorder.isRecording ? .red : .accentColor)
+                }
+                .disabled(model.isTranscribing)
+
+                if model.isTranscribing {
+                    ProgressView()
+                        .padding(.leading, 4)
+                    Text("Transcribing...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if model.audioRecorder.isRecording {
+                    Text("Recording... tap to stop")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            if model.soulProfile != nil {
+                EditableSoulProfileCard(profile: Binding(
+                    get: { model.soulProfile! },
+                    set: { model.soulProfile = $0 }
+                ))
             }
 
             HStack {
@@ -78,40 +108,3 @@ struct OnboardingView: View {
     }
 }
 
-private struct SoulProfileCard: View {
-    let profile: SoulProfile
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Soul Profile")
-                .font(.title3.bold())
-            Text(profile.personality)
-            LabelValueRow(label: "Interests", value: profile.interests.joined(separator: ", "))
-            LabelValueRow(label: "Values", value: profile.values.joined(separator: ", "))
-            LabelValueRow(label: "Avoid", value: profile.avoidTopics.joined(separator: ", "))
-
-            if !profile.guessedFields.isEmpty {
-                Text("AI guessed: \(profile.guessedFields.joined(separator: ", "))")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-}
-
-private struct LabelValueRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(value)
-        }
-    }
-}

@@ -63,7 +63,9 @@ export const conversationSummarySchema = z.object({
   their_impression_score: z.number().min(0).max(100),
   their_impression_summary: z.string(),
   status: z.string(),
-  ba_unlocked: z.boolean()
+  ba_unlocked: z.boolean(),
+  ba_conversation_id: z.string().uuid().nullable().optional(),
+  ba_message_count: z.number().int().nonnegative().optional()
 });
 
 export const bootstrapUserResponseSchema = z.object({
@@ -132,6 +134,13 @@ export const chatMessageSchema = z.object({
   created_at: z.string().optional()
 });
 
+export const baMessageSchema = z.object({
+  id: z.string().uuid(),
+  sender_name: z.string(),
+  content: z.string(),
+  created_at: z.string().optional()
+});
+
 export const conversationDetailSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
@@ -142,11 +151,30 @@ export const conversationDetailSchema = z.object({
   status: z.string(),
   ba_unlocked: z.boolean(),
   other_soul: soulProfileSchema.nullable(),
-  messages: z.array(chatMessageSchema)
+  messages: z.array(chatMessageSchema),
+  ba_conversation_id: z.string().uuid().nullable().optional(),
+  ba_messages: z.array(baMessageSchema).optional()
 });
 
 export const sendHumanMessageRequestSchema = z.object({
   device_id: z.string().min(4),
   conversation_id: z.string().uuid(),
   content: z.string().min(1)
+});
+
+export const sendBaMessageRequestSchema = z.object({
+  device_id: z.string().min(4),
+  conversation_id: z.string().uuid(),
+  content: z.string().min(1)
+});
+
+// ── Transcription ──────────────────────────────────────────────
+
+export const transcribeAudioRequestSchema = z.object({
+  audio_base64: z.string().min(1),
+  mime_type: z.string().default("audio/m4a")
+});
+
+export const transcribeAudioResponseSchema = z.object({
+  transcript: z.string()
 });

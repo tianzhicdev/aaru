@@ -27,9 +27,7 @@ struct ConvosScreen: View {
                         }
                         Text(conversation.theirImpressionSummary)
                             .font(.subheadline)
-                        Text(conversation.baUnlocked ? "Their Ba is open to you" : (conversation.status == "active" ? "Their impression is still forming" : "Ka conversation archived"))
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(conversation.baUnlocked ? .green : .secondary)
+                        UnlockProgressBar(score: conversation.theirImpressionScore, isUnlocked: conversation.baUnlocked)
                     }
                     .padding(.vertical, 6)
                 }

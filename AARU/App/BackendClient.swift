@@ -139,7 +139,9 @@ final class BackendClient {
                 status: "active",
                 baUnlocked: false,
                 otherSoul: nil,
-                messages: []
+                messages: [],
+                baConversationID: nil,
+                baMessages: []
             )
         }
         let payload: ConversationDetailPayload = try await post(
@@ -150,6 +152,49 @@ final class BackendClient {
             ],
             requiresAuth: true,
             retryOnServerError: true
+        )
+        return payload.asConversationDetail()
+    }
+
+    func transcribeAudio(audioData: Data) async throws -> String {
+        guard endpoint(named: "transcribe-audio") != nil else {
+            return "(transcription unavailable offline)"
+        }
+        let response: TranscribeAudioResponse = try await post(
+            "transcribe-audio",
+            body: TranscribeAudioRequest(
+                audioBase64: audioData.base64EncodedString(),
+                mimeType: "audio/m4a"
+            )
+        )
+        return response.transcript
+    }
+
+    func sendBaMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
+        guard endpoint(named: "send-ba-message") != nil else {
+            return ConversationDetail(
+                id: conversationID,
+                title: "Local Soul",
+                impressionScore: 0,
+                impressionSummary: "",
+                theirImpressionScore: 0,
+                theirImpressionSummary: "",
+                status: "active",
+                baUnlocked: true,
+                otherSoul: nil,
+                messages: [],
+                baConversationID: nil,
+                baMessages: [BaMessage(id: UUID(), senderName: "You", content: content)]
+            )
+        }
+        let payload: ConversationDetailPayload = try await post(
+            "send-ba-message",
+            body: [
+                "device_id": deviceID,
+                "conversation_id": conversationID.uuidString,
+                "content": content
+            ],
+            requiresAuth: true
         )
         return payload.asConversationDetail()
     }
@@ -168,7 +213,9 @@ final class BackendClient {
                 otherSoul: nil,
                 messages: [
                     ChatMessage(id: UUID(), senderName: "You", type: "human_typed", content: content)
-                ]
+                ],
+                baConversationID: nil,
+                baMessages: []
             )
         }
         let payload: ConversationDetailPayload = try await post(
@@ -291,6 +338,8 @@ private struct ConversationDetailPayload: Decodable {
     let baUnlocked: Bool
     let otherSoul: SoulProfile?
     let messages: [ConversationMessagePayload]
+    let baConversationID: UUID?
+    let baMessages: [BaMessagePayload]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -303,6 +352,8 @@ private struct ConversationDetailPayload: Decodable {
         case baUnlocked = "ba_unlocked"
         case otherSoul = "other_soul"
         case messages
+        case baConversationID = "ba_conversation_id"
+        case baMessages = "ba_messages"
     }
 
     func asConversationDetail() -> ConversationDetail {
@@ -323,8 +374,28 @@ private struct ConversationDetailPayload: Decodable {
                     type: $0.type,
                     content: $0.content
                 )
+            },
+            baConversationID: baConversationID,
+            baMessages: (baMessages ?? []).map {
+                BaMessage(
+                    id: $0.id,
+                    senderName: $0.senderName,
+                    content: $0.content
+                )
             }
         )
+    }
+}
+
+private struct BaMessagePayload: Decodable {
+    let id: UUID
+    let senderName: String
+    let content: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case senderName = "sender_name"
+        case content
     }
 }
 
@@ -340,4 +411,18 @@ private struct ConversationMessagePayload: Decodable {
         case type
         case content
     }
+}
+
+private struct TranscribeAudioRequest: Encodable {
+    let audioBase64: String
+    let mimeType: String
+
+    enum CodingKeys: String, CodingKey {
+        case audioBase64 = "audio_base64"
+        case mimeType = "mime_type"
+    }
+}
+
+private struct TranscribeAudioResponse: Decodable {
+    let transcript: String
 }

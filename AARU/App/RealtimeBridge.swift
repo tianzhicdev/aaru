@@ -40,6 +40,7 @@ final class RealtimeBridge {
         let compatibilityStream = conversationChannel.postgresChange(AnyAction.self, schema: "public", table: "impression_edges")
         let messageChannel = client.channel("aaru-messages")
         let messageStream = messageChannel.postgresChange(AnyAction.self, schema: "public", table: "messages")
+        let baMessageStream = messageChannel.postgresChange(AnyAction.self, schema: "public", table: "ba_messages")
 
         channels = [worldChannel, conversationChannel, messageChannel]
 
@@ -98,6 +99,12 @@ final class RealtimeBridge {
         tasks.append(Task {
             await messageChannel.subscribe()
             for await _ in messageStream {
+                await onConversationChange()
+            }
+        })
+
+        tasks.append(Task {
+            for await _ in baMessageStream {
                 await onConversationChange()
             }
         })

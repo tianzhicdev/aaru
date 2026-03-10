@@ -16,6 +16,8 @@ final class AppModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var displayName = "Wandering Soul"
+    @Published var audioRecorder = AudioRecorder()
+    @Published var isTranscribing = false
 
     let backend: BackendClient
     let deviceID: String
@@ -154,6 +156,63 @@ final class AppModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             logger.error("Loading conversation failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func sendBaMessage(_ text: String, conversationID: UUID) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        do {
+            let updated = try await backend.sendBaMessage(
+                deviceID: deviceID,
+                conversationID: conversationID,
+                content: trimmed
+            )
+            selectedConversation = updated
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("Sending Ba message failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func transcribeRecording() async {
+        guard let fileURL = audioRecorder.stopRecording() else { return }
+        isTranscribing = true
+        defer {
+            isTranscribing = false
+            audioRecorder.cleanup()
+        }
+
+        do {
+            let audioData = try Data(contentsOf: fileURL)
+            let transcript = try await backend.transcribeAudio(audioData: audioData)
+            if !transcript.isEmpty {
+                if !profileInput.isEmpty && !profileInput.hasSuffix(" ") && !profileInput.hasSuffix("\n") {
+                    profileInput += " "
+                }
+                profileInput += transcript
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("Transcription failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func updateSoulProfile() async {
+        guard let soulProfile else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            try await backend.saveSoulProfile(deviceID: deviceID, profile: soulProfile)
+            logger.info("Updated soul profile")
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("Updating soul profile failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -300,7 +359,9 @@ final class AppModel: ObservableObject {
             theirImpressionScore: payload.theirImpressionScore,
             theirImpressionSummary: payload.theirImpressionSummary,
             status: payload.status,
-            baUnlocked: payload.baUnlocked
+            baUnlocked: payload.baUnlocked,
+            baConversationID: payload.baConversationID,
+            baMessageCount: payload.baMessageCount ?? 0
         )
     }
 }

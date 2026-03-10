@@ -1,33 +1,37 @@
 import SwiftUI
 
+private enum ConversationTab: String, CaseIterable {
+    case ka = "Ka"
+    case ba = "Ba"
+}
+
 struct ConversationDetailScreen: View {
     @EnvironmentObject private var model: AppModel
     let conversation: ConversationPreview
-    @State private var draft = ""
+    @State private var selectedTab: ConversationTab = .ka
+    @State private var kaDraft = ""
+    @State private var baDraft = ""
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             if let detail = model.selectedConversation, detail.id == conversation.id {
                 header(detail: detail)
 
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(detail.messages) { message in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("\(message.type == "ka_generated" ? "🤖" : "👤") \(message.senderName)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                Text(message.content)
-                                    .padding(12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            }
-                        }
+                Picker("Thread", selection: $selectedTab) {
+                    ForEach(ConversationTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
                     }
-                    .padding(.horizontal, 16)
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
 
-                composer
+                switch selectedTab {
+                case .ka:
+                    kaTab(detail: detail)
+                case .ba:
+                    baTab(detail: detail)
+                }
             } else {
                 ProgressView()
                     .task { await model.loadConversation(conversation.id) }
@@ -37,6 +41,8 @@ struct ConversationDetailScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await model.loadConversation(conversation.id) }
     }
+
+    // MARK: - Header
 
     private func header(detail: ConversationDetail) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -59,33 +65,113 @@ struct ConversationDetailScreen: View {
                 .foregroundStyle(.secondary)
             Text(detail.impressionSummary)
                 .font(.footnote)
-            Text(detail.baUnlocked ? "Their Ba is open to you" : "Their Ba is still closed")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(detail.baUnlocked ? .green : .secondary)
+            UnlockProgressBar(score: detail.theirImpressionScore, isUnlocked: detail.baUnlocked)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
     }
 
-    private var composer: some View {
-        VStack(spacing: 12) {
-            Button("Refresh Thread") {
-                Task { await model.loadConversation(conversation.id) }
-            }
-            .buttonStyle(.bordered)
+    // MARK: - Ka Tab
 
-            HStack {
-                TextField("Join the thread as your Ba...", text: $draft)
-                    .textFieldStyle(.roundedBorder)
-                Button("Send") {
-                    Task {
-                        await model.sendHumanMessage(draft, conversationID: conversation.id)
-                        draft = ""
+    private func kaTab(detail: ConversationDetail) -> some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(detail.messages) { message in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(message.type == "ka_generated" ? "🤖" : "👤") \(message.senderName)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text(message.content)
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
                     }
                 }
-                .disabled(model.selectedConversation?.status != "active")
+                .padding(.horizontal, 16)
+            }
+
+            VStack(spacing: 12) {
+                Button("Refresh Thread") {
+                    Task { await model.loadConversation(conversation.id) }
+                }
+                .buttonStyle(.bordered)
+
+                HStack {
+                    TextField("Join the thread as your Ba...", text: $kaDraft)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Send") {
+                        Task {
+                            await model.sendHumanMessage(kaDraft, conversationID: conversation.id)
+                            kaDraft = ""
+                        }
+                    }
+                    .disabled(detail.status != "active")
+                }
+            }
+            .padding(16)
+        }
+    }
+
+    // MARK: - Ba Tab
+
+    private func baTab(detail: ConversationDetail) -> some View {
+        VStack(spacing: 0) {
+            if detail.baUnlocked {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        if detail.baMessages.isEmpty {
+                            Text("No Ba messages yet. Start a real conversation.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 20)
+                        }
+                        ForEach(detail.baMessages) { message in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("👤 \(message.senderName)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Text(message.content)
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+
+                HStack {
+                    TextField("Message the real person...", text: $baDraft)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Send") {
+                        Task {
+                            await model.sendBaMessage(baDraft, conversationID: conversation.id)
+                            baDraft = ""
+                        }
+                    }
+                    .disabled(baDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding(16)
+            } else {
+                Spacer()
+                VStack(spacing: 16) {
+                    Image(systemName: "lock.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                    Text("Ba is still locked")
+                        .font(.headline)
+                    Text("Keep conversing through your Ka. When the other person's impression of you reaches the threshold, their Ba will open to you.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    UnlockProgressBar(score: detail.theirImpressionScore, isUnlocked: false)
+                        .padding(.horizontal, 40)
+                }
+                .padding(32)
+                Spacer()
             }
         }
-        .padding(16)
     }
 }

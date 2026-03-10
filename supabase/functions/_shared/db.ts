@@ -699,6 +699,80 @@ export async function ensureNpcPopulation(): Promise<void> {
   }
 }
 
+// ── Ba Conversations ──────────────────────────────────────────────
+
+interface BaConversationRow {
+  id: string;
+  user_a_id: string;
+  user_b_id: string;
+  source_conversation_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BaMessageRow {
+  id: string;
+  ba_conversation_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+function normalizePair(idA: string, idB: string): [string, string] {
+  return idA < idB ? [idA, idB] : [idB, idA];
+}
+
+export async function getBaConversationForPair(userA: string, userB: string): Promise<BaConversationRow | null> {
+  const [a, b] = normalizePair(userA, userB);
+  const rows = await rest<BaConversationRow[]>(
+    `ba_conversations?user_a_id=eq.${a}&user_b_id=eq.${b}&select=id,user_a_id,user_b_id,source_conversation_id,status,created_at,updated_at`
+  );
+  return rows[0] ?? null;
+}
+
+export async function ensureBaConversation(userA: string, userB: string, sourceConversationId: string): Promise<BaConversationRow> {
+  const [a, b] = normalizePair(userA, userB);
+  const rows = await rest<BaConversationRow[]>("ba_conversations?on_conflict=user_a_id,user_b_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify([{
+      user_a_id: a,
+      user_b_id: b,
+      source_conversation_id: sourceConversationId,
+      status: "active"
+    }])
+  });
+  return rows[0];
+}
+
+export async function listBaConversationsForUser(userId: string): Promise<BaConversationRow[]> {
+  return rest<BaConversationRow[]>(
+    `ba_conversations?or=(user_a_id.eq.${userId},user_b_id.eq.${userId})&select=id,user_a_id,user_b_id,source_conversation_id,status,created_at,updated_at`
+  );
+}
+
+export async function listBaMessages(baConversationId: string): Promise<BaMessageRow[]> {
+  return rest<BaMessageRow[]>(
+    `ba_messages?ba_conversation_id=eq.${baConversationId}&order=created_at.asc&select=id,ba_conversation_id,user_id,content,created_at`
+  );
+}
+
+export async function countBaMessages(baConversationId: string): Promise<number> {
+  const rows = await rest<BaMessageRow[]>(
+    `ba_messages?ba_conversation_id=eq.${baConversationId}&select=id`
+  );
+  return rows.length;
+}
+
+export async function insertBaMessage(baConversationId: string, userId: string, content: string): Promise<void> {
+  await rest<Json>("ba_messages", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([{ ba_conversation_id: baConversationId, user_id: userId, content }])
+  });
+}
+
 export async function getDeviceTokensForUsers(userIds: string[]): Promise<DeviceTokenRow[]> {
   if (userIds.length === 0) {
     return [];

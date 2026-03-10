@@ -9,11 +9,18 @@ struct MeScreen: View {
                 Text("Me")
                     .font(.largeTitle.bold())
 
-                if let profile = model.soulProfile {
-                    Text(profile.personality)
-                        .font(.title3)
-                    Text("Interests: \(profile.interests.joined(separator: ", "))")
-                    Text("Values: \(profile.values.joined(separator: ", "))")
+                if model.soulProfile != nil {
+                    EditableSoulProfileCard(profile: Binding(
+                        get: { model.soulProfile! },
+                        set: { model.soulProfile = $0 }
+                    ))
+
+                    Button("Save Soul Profile") {
+                        Task { await model.updateSoulProfile() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isLoading)
+
                     AvatarEditorView()
                     Button("Save Avatar") {
                         Task { await model.saveAvatarAndEnterWorld() }

@@ -183,6 +183,16 @@ struct RealtimeAgentPosition: Decodable, Equatable {
     }
 }
 
+enum AARUConstants {
+    static let impressionUnlockThreshold = 72
+}
+
+struct BaMessage: Identifiable, Equatable {
+    let id: UUID
+    let senderName: String
+    let content: String
+}
+
 struct ConversationPreview: Identifiable, Equatable {
     let id: UUID
     let title: String
@@ -192,6 +202,8 @@ struct ConversationPreview: Identifiable, Equatable {
     var theirImpressionSummary: String
     var status: String
     var baUnlocked: Bool
+    var baConversationID: UUID?
+    var baMessageCount: Int
 }
 
 struct ChatMessage: Identifiable, Equatable {
@@ -212,6 +224,8 @@ struct ConversationDetail: Equatable {
     let baUnlocked: Bool
     let otherSoul: SoulProfile?
     let messages: [ChatMessage]
+    let baConversationID: UUID?
+    let baMessages: [BaMessage]
 }
 
 struct BootstrapPayload: Codable, Equatable {
@@ -247,6 +261,8 @@ struct ConversationPreviewPayload: Codable, Equatable {
     let theirImpressionSummary: String
     let status: String
     let baUnlocked: Bool
+    let baConversationID: UUID?
+    let baMessageCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -257,6 +273,8 @@ struct ConversationPreviewPayload: Codable, Equatable {
         case theirImpressionSummary = "their_impression_summary"
         case status
         case baUnlocked = "ba_unlocked"
+        case baConversationID = "ba_conversation_id"
+        case baMessageCount = "ba_message_count"
     }
 }
 

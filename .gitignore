@@ -11,3 +11,9 @@ tmp
 xcuserdata
 supabase/.branches
 supabase/.temp
+
+# Build artifacts
+generated-avatars/
+generate_avatars.py
+TestResults/
+TestResults.xcresult/

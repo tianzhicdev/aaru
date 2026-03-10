@@ -31,8 +31,8 @@ describe("compatibility", () => {
     expect(shouldEvaluateCompatibility(5)).toBe(true);
   });
 
-  it("produces a bounded score and summary", () => {
-    const evaluation = evaluateCompatibility(
+  it("produces a bounded score and summary", async () => {
+    const evaluation = await evaluateCompatibility(
       soul({ interests: ["film", "music"] }),
       soul({ interests: ["film", "reading"], values: ["growth", "kindness"] }),
       transcript

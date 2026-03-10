@@ -120,6 +120,7 @@ final class WorldScene: SKScene {
         for agent in agents {
             let node = agentNodes[agent.id] ?? makeAgentNode(id: agent.id)
             let position = CGPoint(x: agent.x * worldSize.width, y: agent.y * worldSize.height)
+            node.configure(with: agent)
             if let event = movementByUserID[agent.id] {
                 let fromPosition = CGPoint(
                     x: (CGFloat(event.fromCellX) + 0.5) / CGFloat(columns) * worldSize.width,
@@ -129,11 +130,15 @@ final class WorldScene: SKScene {
                     node.position = fromPosition
                 }
                 node.removeAllActions()
-                node.run(SKAction.move(to: position, duration: 0.85))
+                let moveDuration = 0.85
+                node.animateWalk(to: position, duration: moveDuration)
+                node.run(SKAction.sequence([
+                    SKAction.move(to: position, duration: moveDuration),
+                    SKAction.run { node.stopWalk() }
+                ]))
             } else {
                 node.run(SKAction.move(to: position, duration: 0.25))
             }
-            node.configure(with: agent)
 
             if let message = agent.activeMessage {
                 let bubble = bubbleNode(text: message)
@@ -260,52 +265,31 @@ final class WorldScene: SKScene {
 }
 
 final class AgentVisualNode: SKNode {
-    private let aura = SKShapeNode(circleOfRadius: 20)
-    private var body = SKShapeNode(rectOf: CGSize(width: 22, height: 28), cornerRadius: 8)
-    private let head = SKShapeNode(circleOfRadius: 11)
-    private var hair = SKShapeNode(rectOf: CGSize(width: 24, height: 10), cornerRadius: 4)
-    private let accessory = SKLabelNode(fontNamed: "AvenirNext-Bold")
+    private let aura = SKShapeNode(circleOfRadius: 24)
+    private let sprite = SKSpriteNode()
     private let nameLabel = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
+    private var currentSpriteId: String?
+    private var walkTextureCache: [SpriteSheetHelper.Direction: [SKTexture]] = [:]
+    private let walkActionKey = "walk"
+    private static let spriteScale: CGFloat = 0.7
 
     override init() {
         super.init()
 
         aura.lineWidth = 3
         aura.fillColor = .clear
+        aura.position = .zero
 
-        body.strokeColor = .clear
-        body.position = CGPoint(x: 0, y: -6)
+        sprite.setScale(Self.spriteScale)
+        sprite.position = CGPoint(x: 0, y: 2)
 
-        head.strokeColor = .clear
-        head.position = CGPoint(x: 0, y: 14)
-
-        hair.strokeColor = .clear
-        hair.position = CGPoint(x: 0, y: 21)
-
-        let leftEye = SKShapeNode(circleOfRadius: 1.4)
-        leftEye.fillColor = .black
-        leftEye.strokeColor = .clear
-        leftEye.position = CGPoint(x: -4, y: 14)
-
-        let rightEye = SKShapeNode(circleOfRadius: 1.4)
-        rightEye.fillColor = .black
-        rightEye.strokeColor = .clear
-        rightEye.position = CGPoint(x: 4, y: 14)
-
-        accessory.fontSize = 10
-        accessory.position = CGPoint(x: 13, y: 12)
         nameLabel.fontSize = 10
         nameLabel.fontColor = UIColor(red: 0.18, green: 0.20, blue: 0.18, alpha: 0.9)
         nameLabel.position = CGPoint(x: 0, y: -30)
         nameLabel.verticalAlignmentMode = .center
 
         addChild(aura)
-        addChild(body)
-        addChild(head)
-        addChild(hair)
-        addChild(leftEye)
-        addChild(rightEye)
-        addChild(accessory)
+        addChild(sprite)
         addChild(nameLabel)
     }
 
@@ -314,12 +298,22 @@ final class AgentVisualNode: SKNode {
     }
 
     func configure(with agent: WorldAgent) {
-        body.removeFromParent()
-        hair.removeFromParent()
-        body = bodyNode(for: agent.avatar.bodyShape)
-        hair = hairNode(for: agent.avatar.hairStyle)
-        addChild(body)
-        addChild(hair)
+        let spriteId = agent.avatar.spriteId
+
+        // Reload textures if sprite changed
+        if spriteId != currentSpriteId {
+            currentSpriteId = spriteId
+            walkTextureCache.removeAll()
+            for dir in [SpriteSheetHelper.Direction.north, .west, .south, .east] {
+                walkTextureCache[dir] = SpriteSheetHelper.walkTextures(for: spriteId, direction: dir)
+            }
+            // Set initial south-facing frame
+            if let tex = walkTextureCache[.south]?.first {
+                sprite.texture = tex
+                sprite.texture?.filteringMode = .nearest
+                sprite.size = tex.size()
+            }
+        }
 
         aura.strokeColor = agent.isSelf
             ? UIColor(red: 0.83, green: 0.69, blue: 0.30, alpha: 0.95)
@@ -327,49 +321,35 @@ final class AgentVisualNode: SKNode {
         aura.fillColor = agent.state == "chatting"
             ? UIColor(hex: agent.avatar.auraColor).withAlphaComponent(0.12)
             : .clear
-        head.fillColor = UIColor(token: agent.avatar.skinTone)
-        body.fillColor = UIColor(token: agent.avatar.outfitTop)
-        hair.fillColor = UIColor(token: agent.avatar.hairColor)
-        accessory.fontColor = .white
-        accessory.text = agent.avatar.accessory.map { String($0.prefix(1)).uppercased() } ?? ""
+
         nameLabel.text = agent.displayName
         zPosition = agent.isSelf ? 4 : 2
     }
 
-    private func bodyNode(for bodyShape: String) -> SKShapeNode {
-        let size: CGSize
-        switch bodyShape {
-        case "athletic":
-            size = CGSize(width: 26, height: 30)
-        case "soft":
-            size = CGSize(width: 28, height: 29)
-        default:
-            size = CGSize(width: 22, height: 28)
+    /// Start walk animation toward a target, picking direction from movement vector.
+    func animateWalk(to target: CGPoint, duration: TimeInterval) {
+        let dx = target.x - position.x
+        let dy = target.y - position.y
+        let direction: SpriteSheetHelper.Direction
+        if abs(dx) > abs(dy) {
+            direction = dx > 0 ? .east : .west
+        } else {
+            direction = dy > 0 ? .north : .south
         }
-        let node = SKShapeNode(rectOf: size, cornerRadius: 8)
-        node.strokeColor = .clear
-        node.position = CGPoint(x: 0, y: -6)
-        return node
+
+        if let textures = walkTextureCache[direction], !textures.isEmpty {
+            sprite.removeAction(forKey: walkActionKey)
+            let animate = SKAction.animate(with: textures, timePerFrame: duration / Double(textures.count))
+            sprite.run(SKAction.repeatForever(animate), withKey: walkActionKey)
+        }
     }
 
-    private func hairNode(for hairStyle: String) -> SKShapeNode {
-        let node: SKShapeNode
-        switch hairStyle {
-        case "buzz":
-            node = SKShapeNode(rectOf: CGSize(width: 18, height: 6), cornerRadius: 3)
-            node.position = CGPoint(x: 0, y: 22)
-        case "braid":
-            node = SKShapeNode(rectOf: CGSize(width: 16, height: 14), cornerRadius: 5)
-            node.position = CGPoint(x: 0, y: 20)
-        case "curl":
-            node = SKShapeNode(circleOfRadius: 9)
-            node.position = CGPoint(x: 0, y: 21)
-        default:
-            node = SKShapeNode(rectOf: CGSize(width: 24, height: 10), cornerRadius: 4)
-            node.position = CGPoint(x: 0, y: 21)
+    /// Stop walk animation and show idle (south-facing first frame).
+    func stopWalk() {
+        sprite.removeAction(forKey: walkActionKey)
+        if let tex = walkTextureCache[.south]?.first {
+            sprite.texture = tex
         }
-        node.strokeColor = .clear
-        return node
     }
 }
 
@@ -386,24 +366,4 @@ private extension UIColor {
         )
     }
 
-    convenience init(token: String) {
-        switch token {
-        case "linen": self.init(red: 0.90, green: 0.87, blue: 0.77, alpha: 1)
-        case "indigo": self.init(red: 0.20, green: 0.24, blue: 0.45, alpha: 1)
-        case "ochre": self.init(red: 0.78, green: 0.58, blue: 0.24, alpha: 1)
-        case "sage": self.init(red: 0.48, green: 0.61, blue: 0.49, alpha: 1)
-        case "sand": self.init(red: 0.79, green: 0.70, blue: 0.52, alpha: 1)
-        case "night": self.init(red: 0.13, green: 0.17, blue: 0.28, alpha: 1)
-        case "stone": self.init(red: 0.63, green: 0.63, blue: 0.60, alpha: 1)
-        case "terracotta": self.init(red: 0.68, green: 0.38, blue: 0.28, alpha: 1)
-        case "amber": self.init(red: 0.79, green: 0.62, blue: 0.42, alpha: 1)
-        case "olive": self.init(red: 0.66, green: 0.55, blue: 0.38, alpha: 1)
-        case "ebony": self.init(red: 0.34, green: 0.24, blue: 0.18, alpha: 1)
-        case "rose": self.init(red: 0.90, green: 0.74, blue: 0.70, alpha: 1)
-        case "brown": self.init(red: 0.32, green: 0.22, blue: 0.14, alpha: 1)
-        case "copper": self.init(red: 0.67, green: 0.37, blue: 0.21, alpha: 1)
-        case "silver": self.init(red: 0.77, green: 0.78, blue: 0.82, alpha: 1)
-        default: self.init(white: 0.15, alpha: 1)
-        }
-    }
 }

@@ -19,6 +19,7 @@ struct SoulProfile: Codable, Equatable {
 }
 
 struct AvatarConfig: Codable, Equatable {
+    var spriteId: String
     var bodyShape: String
     var skinTone: String
     var hairStyle: String
@@ -30,6 +31,7 @@ struct AvatarConfig: Codable, Equatable {
     var auraColor: String
 
     enum CodingKeys: String, CodingKey {
+        case spriteId = "sprite_id"
         case bodyShape = "body_shape"
         case skinTone = "skin_tone"
         case hairStyle = "hair_style"
@@ -41,7 +43,46 @@ struct AvatarConfig: Codable, Equatable {
         case auraColor = "aura_color"
     }
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        spriteId = (try? container.decode(String.self, forKey: .spriteId)) ?? AvatarSprites.all.randomElement()!
+        bodyShape = try container.decode(String.self, forKey: .bodyShape)
+        skinTone = try container.decode(String.self, forKey: .skinTone)
+        hairStyle = try container.decode(String.self, forKey: .hairStyle)
+        hairColor = try container.decode(String.self, forKey: .hairColor)
+        eyes = try container.decode(String.self, forKey: .eyes)
+        outfitTop = try container.decode(String.self, forKey: .outfitTop)
+        outfitBottom = try container.decode(String.self, forKey: .outfitBottom)
+        accessory = try container.decodeIfPresent(String.self, forKey: .accessory)
+        auraColor = try container.decode(String.self, forKey: .auraColor)
+    }
+
+    init(
+        spriteId: String = "m01_explorer",
+        bodyShape: String = "slender",
+        skinTone: String = "amber",
+        hairStyle: String = "wave",
+        hairColor: String = "black",
+        eyes: String = "focused",
+        outfitTop: String = "linen",
+        outfitBottom: String = "sand",
+        accessory: String? = nil,
+        auraColor: String = "#d4af37"
+    ) {
+        self.spriteId = spriteId
+        self.bodyShape = bodyShape
+        self.skinTone = skinTone
+        self.hairStyle = hairStyle
+        self.hairColor = hairColor
+        self.eyes = eyes
+        self.outfitTop = outfitTop
+        self.outfitBottom = outfitBottom
+        self.accessory = accessory
+        self.auraColor = auraColor
+    }
+
     static let `default` = AvatarConfig(
+        spriteId: "m01_explorer",
         bodyShape: "slender",
         skinTone: "amber",
         hairStyle: "wave",
@@ -52,6 +93,20 @@ struct AvatarConfig: Codable, Equatable {
         accessory: nil,
         auraColor: "#d4af37"
     )
+}
+
+enum AvatarSprites {
+    static let all: [String] = [
+        "m01_explorer", "m02_artisan", "m03_sage", "m04_rebel",
+        "m05_gentleman", "m06_farmer", "m07_nomad", "m08_scholar",
+        "m09_athlete", "m10_hipster", "m11_dapper", "m12_surfer",
+        "m13_dreads", "m14_cowlick",
+        "f01_wanderer", "f02_mystic", "f03_scholar", "f04_punk",
+        "f05_botanist", "f06_dancer", "f07_royal", "f08_mechanic",
+        "f09_artist", "f10_adventurer", "f11_studious", "f12_natural",
+        "f13_sporty", "f14_cozy",
+        "t01_student", "t02_skater",
+    ]
 }
 
 struct WorldAgent: Codable, Equatable, Identifiable {

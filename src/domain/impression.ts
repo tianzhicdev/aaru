@@ -4,6 +4,7 @@ import {
 } from "./constants.ts";
 import { impressionEvaluationSchema } from "./schemas.ts";
 import type { ConversationMessage, ImpressionEvaluation, SoulProfile } from "./types.ts";
+import { callGroq } from "../../supabase/functions/_shared/groq.ts";
 
 function overlapRatio(a: string[], b: string[]): number {
   const aSet = new Set(a.map((value) => value.toLowerCase()));
@@ -23,7 +24,7 @@ export function shouldEvaluateImpression(messageCount: number): boolean {
   return messageCount > 0 && messageCount % IMPRESSION_EVALUATION_INTERVAL === 0;
 }
 
-export function evaluateImpression(
+export function evaluateImpressionFallback(
   selfSoul: SoulProfile,
   otherSoul: SoulProfile,
   transcript: ConversationMessage[]
@@ -48,6 +49,54 @@ export function evaluateImpression(
     : "They feel intriguing, but the connection still depends more on curiosity than on proven alignment.";
 
   return impressionEvaluationSchema.parse({ score, summary });
+}
+
+export async function evaluateImpression(
+  selfSoul: SoulProfile,
+  otherSoul: SoulProfile,
+  transcript: ConversationMessage[]
+): Promise<ImpressionEvaluation> {
+  try {
+    const systemPrompt = `You are evaluating how compatible two people are based on their conversation and soul profiles. Return only valid JSON in this format: {"score": 0-100, "summary": "1-2 sentence impression summary"}.
+
+Score guidelines:
+- 0-30: Poor compatibility, major differences
+- 31-60: Some compatibility, mixed signals
+- 61-85: Good compatibility, shared values/interests
+- 86-100: Exceptional compatibility, deep connection
+
+Consider:
+- Shared interests and values
+- Conversation flow and engagement
+- Emotional resonance and understanding
+- Personal chemistry and intrigue`;
+
+    const conversationText = transcript.map(msg => msg.content).join("\n");
+
+    const prompt = `Person A Profile:
+Personality: ${selfSoul.personality}
+Interests: ${selfSoul.interests.join(", ")}
+Values: ${selfSoul.values.join(", ")}
+
+Person B Profile:
+Personality: ${otherSoul.personality}
+Interests: ${otherSoul.interests.join(", ")}
+Values: ${otherSoul.values.join(", ")}
+
+Conversation:
+${conversationText}
+
+Evaluate Person A's impression of Person B. Return JSON:`;
+
+    const response = await callGroq(systemPrompt, [{ role: "user", content: prompt }]);
+
+    // Try to parse the JSON response
+    const parsed = JSON.parse(response.trim());
+    return impressionEvaluationSchema.parse(parsed);
+  } catch (error) {
+    console.error("LLM impression evaluation failed, falling back:", error);
+    return evaluateImpressionFallback(selfSoul, otherSoul, transcript);
+  }
 }
 
 export function accumulateImpression(previousScore: number, nextScore: number): number {

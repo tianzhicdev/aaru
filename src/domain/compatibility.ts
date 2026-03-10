@@ -10,12 +10,12 @@ export function shouldEvaluateCompatibility(messageCount: number) {
   return shouldEvaluateImpression(messageCount);
 }
 
-export function evaluateCompatibility(
+export async function evaluateCompatibility(
   soulA: SoulProfile,
   soulB: SoulProfile,
   transcript: ConversationMessage[]
-): ImpressionEvaluation {
-  return evaluateImpression(soulA, soulB, transcript);
+): Promise<ImpressionEvaluation> {
+  return await evaluateImpression(soulA, soulB, transcript);
 }
 
 export function accumulateCompatibility(previousScore: number, nextScore: number) {

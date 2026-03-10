@@ -12,7 +12,7 @@ import {
 
 export async function handleEvaluateCompatibility(payload: unknown) {
   const request = evaluateCompatibilityRequestSchema.parse(payload);
-  const evaluation = evaluateCompatibility(request.soulA, request.soulB, request.transcript);
+  const evaluation = await evaluateCompatibility(request.soulA, request.soulB, request.transcript);
   const accumulatedScore = accumulateCompatibility(request.previousScore, evaluation.score);
   const baUnlocked = isBaUnlocked(accumulatedScore, request.reciprocalScore);
 

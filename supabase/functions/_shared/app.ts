@@ -588,8 +588,8 @@ async function advanceConversation(conversationId: string) {
   const shouldEvaluate = messages.length > 0 && messages.length % IMPRESSION_EVALUATION_INTERVAL === 0;
 
   if (shouldEvaluate) {
-    const evaluationA = evaluateImpression(soulA, soulB, transcript);
-    const evaluationB = evaluateImpression(soulB, soulA, transcript);
+    const evaluationA = await evaluateImpression(soulA, soulB, transcript);
+    const evaluationB = await evaluateImpression(soulB, soulA, transcript);
     const reciprocalA = await getImpressionEdge(conversation.user_a_id, conversation.user_b_id);
     const reciprocalB = await getImpressionEdge(conversation.user_b_id, conversation.user_a_id);
     const scoreA = accumulateImpression(reciprocalA?.score ?? 0, evaluationA.score);

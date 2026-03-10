@@ -1,0 +1,4 @@
+appId: com.tianzhichen.aaru
+---
+- launchApp
+- assertVisible: "AARU"

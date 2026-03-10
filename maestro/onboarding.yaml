@@ -1,0 +1,9 @@
+appId: com.tianzhichen.aaru
+---
+- launchApp
+- assertVisible: "AARU"
+- assertVisible: "Describe your soul"
+- tapOn: "Describe your soul.*"
+- inputText: "I love exploring ancient myths, writing poetry, and stargazing on quiet nights."
+- tapOn: "Generate Soul Profile"
+- assertVisible: "Soul Profile"

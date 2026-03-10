@@ -1,0 +1,238 @@
+import Foundation
+
+struct SoulProfile: Codable, Equatable {
+    var personality: String
+    var interests: [String]
+    var values: [String]
+    var avoidTopics: [String]
+    var rawInput: String
+    var guessedFields: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case personality
+        case interests
+        case values
+        case avoidTopics = "avoid_topics"
+        case rawInput = "raw_input"
+        case guessedFields = "guessed_fields"
+    }
+}
+
+struct AvatarConfig: Codable, Equatable {
+    var bodyShape: String
+    var skinTone: String
+    var hairStyle: String
+    var hairColor: String
+    var eyes: String
+    var outfitTop: String
+    var outfitBottom: String
+    var accessory: String?
+    var auraColor: String
+
+    enum CodingKeys: String, CodingKey {
+        case bodyShape = "body_shape"
+        case skinTone = "skin_tone"
+        case hairStyle = "hair_style"
+        case hairColor = "hair_color"
+        case eyes
+        case outfitTop = "outfit_top"
+        case outfitBottom = "outfit_bottom"
+        case accessory
+        case auraColor = "aura_color"
+    }
+
+    static let `default` = AvatarConfig(
+        bodyShape: "slender",
+        skinTone: "amber",
+        hairStyle: "wave",
+        hairColor: "black",
+        eyes: "focused",
+        outfitTop: "linen",
+        outfitBottom: "sand",
+        accessory: nil,
+        auraColor: "#d4af37"
+    )
+}
+
+struct WorldAgent: Codable, Equatable, Identifiable {
+    let id: UUID
+    var x: Double
+    var y: Double
+    var targetX: Double
+    var targetY: Double
+    var cellX: Int?
+    var cellY: Int?
+    var state: String
+    var activeMessage: String?
+    var conversationID: UUID?
+    var displayName: String
+    var avatar: AvatarConfig
+    var isSelf: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id = "user_id"
+        case x
+        case y
+        case targetX = "target_x"
+        case targetY = "target_y"
+        case cellX = "cell_x"
+        case cellY = "cell_y"
+        case state
+        case activeMessage = "active_message"
+        case conversationID = "conversation_id"
+        case displayName = "display_name"
+        case avatar
+        case isSelf = "is_self"
+    }
+}
+
+struct WorldMovementEvent: Codable, Equatable {
+    let userID: UUID
+    let fromCellX: Int
+    let fromCellY: Int
+    let toCellX: Int
+    let toCellY: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case fromCellX = "from_cell_x"
+        case fromCellY = "from_cell_y"
+        case toCellX = "to_cell_x"
+        case toCellY = "to_cell_y"
+    }
+}
+
+struct RealtimeAgentPosition: Decodable, Equatable {
+    let userID: UUID
+    let x: Double
+    let y: Double
+    let targetX: Double
+    let targetY: Double
+    let cellX: Int?
+    let cellY: Int?
+    let state: String
+    let activeMessage: String?
+    let conversationID: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case x
+        case y
+        case targetX = "target_x"
+        case targetY = "target_y"
+        case cellX = "cell_x"
+        case cellY = "cell_y"
+        case state
+        case activeMessage = "active_message"
+        case conversationID = "conversation_id"
+    }
+}
+
+struct ConversationPreview: Identifiable, Equatable {
+    let id: UUID
+    let title: String
+    var impressionScore: Int
+    var impressionSummary: String
+    var theirImpressionScore: Int
+    var theirImpressionSummary: String
+    var status: String
+    var baUnlocked: Bool
+}
+
+struct ChatMessage: Identifiable, Equatable {
+    let id: UUID
+    let senderName: String
+    let type: String
+    let content: String
+}
+
+struct ConversationDetail: Equatable {
+    let id: UUID
+    let title: String
+    let impressionScore: Int
+    let impressionSummary: String
+    let theirImpressionScore: Int
+    let theirImpressionSummary: String
+    let status: String
+    let baUnlocked: Bool
+    let otherSoul: SoulProfile?
+    let messages: [ChatMessage]
+}
+
+struct BootstrapPayload: Codable, Equatable {
+    let userID: UUID
+    let deviceID: String
+    let displayName: String
+    let instanceID: UUID
+    let soulProfile: SoulProfile?
+    let avatar: AvatarConfig
+    let conversations: [ConversationPreviewPayload]
+    let world: WorldSnapshot
+    let session: DeviceSession
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case deviceID = "device_id"
+        case displayName = "display_name"
+        case instanceID = "instance_id"
+        case soulProfile = "soul_profile"
+        case avatar
+        case conversations
+        case world
+        case session
+    }
+}
+
+struct ConversationPreviewPayload: Codable, Equatable {
+    let id: UUID
+    let title: String
+    let impressionScore: Int
+    let impressionSummary: String
+    let theirImpressionScore: Int
+    let theirImpressionSummary: String
+    let status: String
+    let baUnlocked: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case impressionScore = "impression_score"
+        case impressionSummary = "impression_summary"
+        case theirImpressionScore = "their_impression_score"
+        case theirImpressionSummary = "their_impression_summary"
+        case status
+        case baUnlocked = "ba_unlocked"
+    }
+}
+
+struct WorldSnapshot: Codable, Equatable {
+    let count: Int
+    let movementEvents: [WorldMovementEvent]
+    let agents: [WorldAgent]
+
+    enum CodingKeys: String, CodingKey {
+        case count
+        case movementEvents = "movement_events"
+        case agents
+    }
+}
+
+struct DeviceSession: Codable, Equatable {
+    let token: String
+    let expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case expiresAt = "expires_at"
+    }
+}
+
+enum OnboardingStep: Equatable {
+    case soul
+    case avatar
+}
+
+enum AppStage: Equatable {
+    case onboarding(OnboardingStep)
+    case world
+}

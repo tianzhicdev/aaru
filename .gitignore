@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+coverage
+dist
+.DS_Store
+.build
+DerivedData
+.env
+tmp
+*.xcuserstate
+xcuserdata
+supabase/.branches
+supabase/.temp

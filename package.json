@@ -1,0 +1,27 @@
+{
+  "name": "aaru",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "ios:generate": "xcodegen generate",
+    "ios:list": "xcodebuild -list -project AARU.xcodeproj",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:status": "npx supabase status",
+    "supabase:link": "sh scripts/supabase-link.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "dotenv": "^17.2.3",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  }
+}

@@ -25,6 +25,8 @@ interface AgentPositionRow {
   cell_y: number;
   target_cell_x: number;
   target_cell_y: number;
+  path?: Array<{ x: number; y: number }>;
+  move_speed?: number;
   state: "wandering" | "approaching" | "chatting" | "cooldown";
   active_message: string | null;
   conversation_id: string | null;
@@ -302,13 +304,13 @@ export async function ensureAvatar(userId: string): Promise<AvatarConfig> {
 
 export async function getAgentPositions(instanceId: string): Promise<AgentPositionRow[]> {
   return rest<AgentPositionRow[]>(
-    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,state,active_message,conversation_id,cooldown_until`
+    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until`
   );
 }
 
 export async function getAgentPosition(userId: string): Promise<AgentPositionRow | null> {
   const rows = await rest<AgentPositionRow[]>(
-    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,state,active_message,conversation_id,cooldown_until`
+    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until`
   );
   return rows[0] ?? null;
 }

@@ -12,6 +12,8 @@ const baseAgent = (overrides: Partial<AgentPosition>): AgentPosition => ({
   cell_y: 5,
   target_cell_x: 6,
   target_cell_y: 6,
+  path: [],
+  move_speed: 1.8,
   state: "wandering",
   active_message: null,
   conversation_id: null,

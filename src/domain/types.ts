@@ -16,6 +16,11 @@ export interface ImpressionEvaluation {
   summary: string;
 }
 
+export interface CellCoord {
+  x: number;
+  y: number;
+}
+
 export interface AgentPosition {
   user_id: UUID;
   x: number;
@@ -26,6 +31,8 @@ export interface AgentPosition {
   cell_y?: number;
   target_cell_x?: number;
   target_cell_y?: number;
+  path: CellCoord[];
+  move_speed: number;
   state: AgentState;
   active_message: string | null;
   conversation_id: UUID | null;
@@ -60,6 +67,7 @@ export interface WorldConfig {
   minReplyDelayMs: number;
   cameraVisibleColumns: number;
   cameraVisibleRows: number;
+  agentMoveSpeed: number;
 }
 
 export interface ConversationMessage {

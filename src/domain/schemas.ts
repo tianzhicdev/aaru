@@ -18,6 +18,11 @@ export const impressionEvaluationSchema = z.object({
   summary: z.string().min(1).max(280)
 });
 
+export const cellCoordSchema = z.object({
+  x: z.number().int().min(0),
+  y: z.number().int().min(0)
+});
+
 export const agentPositionSchema = z.object({
   user_id: z.string().uuid(),
   x: z.number().min(0).max(1),
@@ -28,6 +33,8 @@ export const agentPositionSchema = z.object({
   cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
   target_cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1).optional(),
   target_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
+  path: z.array(cellCoordSchema).default([]),
+  move_speed: z.number().nonnegative().default(1.8),
   state: z.enum(["wandering", "approaching", "chatting", "cooldown"]),
   active_message: z.string().nullable(),
   conversation_id: z.string().uuid().nullable(),
@@ -72,5 +79,6 @@ export const worldConfigSchema = z.object({
   min_bubble_display_ms: z.number().int().nonnegative(),
   min_reply_delay_ms: z.number().int().nonnegative(),
   camera_visible_columns: z.number().int().positive(),
-  camera_visible_rows: z.number().int().positive()
+  camera_visible_rows: z.number().int().positive(),
+  agent_move_speed: z.number().positive().default(1.8)
 });

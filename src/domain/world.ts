@@ -1,15 +1,18 @@
 import {
+  AGENT_MOVE_SPEED,
+  WANDER_PATH_MAX,
+  WANDER_PATH_MIN,
   WORLD_COOLDOWN_SECONDS,
   WORLD_GRID_COLUMNS,
   WORLD_GRID_ROWS
 } from "./constants.ts";
-import type { AgentPosition, WorldTickResult } from "./types.ts";
+import type { AgentPosition, CellCoord, WorldTickResult } from "./types.ts";
 
 function clampCell(value: number, max: number): number {
   return Math.max(0, Math.min(max - 1, value));
 }
 
-function cellCenter(cellX: number, cellY: number) {
+export function cellCenter(cellX: number, cellY: number) {
   return {
     x: (cellX + 0.5) / WORLD_GRID_COLUMNS,
     y: (cellY + 0.5) / WORLD_GRID_ROWS
@@ -76,28 +79,77 @@ function allNeighborCells(cellX: number, cellY: number) {
   return cells.filter((cell, index, array) => array.findIndex((entry) => entry.x === cell.x && entry.y === cell.y) === index);
 }
 
-function moveOnGrid(agent: AgentPosition, occupied: Set<string>): AgentPosition {
-  const current = currentCell(agent);
-  const nextOccupied = new Set(occupied);
+function generateWanderPath(startX: number, startY: number, occupied: Set<string>): CellCoord[] {
+  const length = WANDER_PATH_MIN + Math.floor(Math.random() * (WANDER_PATH_MAX - WANDER_PATH_MIN + 1));
+  const path: CellCoord[] = [];
+  let cx = startX;
+  let cy = startY;
+  const localOccupied = new Set(occupied);
 
-  if (agent.state === "chatting") {
-    return withCells(agent, current.x, current.y, current.x, current.y);
+  for (let i = 0; i < length; i++) {
+    const neighbors = allNeighborCells(cx, cy).filter(
+      (cell) => !localOccupied.has(occupancyKey(cell.x, cell.y))
+    );
+    if (neighbors.length === 0) break;
+    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+    localOccupied.delete(occupancyKey(cx, cy));
+    localOccupied.add(occupancyKey(next.x, next.y));
+    path.push({ x: next.x, y: next.y });
+    cx = next.x;
+    cy = next.y;
   }
 
-  nextOccupied.delete(occupancyKey(current.x, current.y));
-  const freeNeighbors = allNeighborCells(current.x, current.y).filter((cell) => !nextOccupied.has(occupancyKey(cell.x, cell.y)));
-  const shouldStay = freeNeighbors.length === 0 || Math.random() < 0.35;
-  const nextCell = shouldStay
-    ? current
-    : freeNeighbors[Math.floor(Math.random() * freeNeighbors.length)] ?? current;
+  return path;
+}
 
+function advanceOnPath(agent: AgentPosition, occupied: Set<string>): AgentPosition {
+  const current = currentCell(agent);
+
+  if (agent.state === "chatting") {
+    return { ...withCells(agent, current.x, current.y, current.x, current.y), path: [], move_speed: 0 };
+  }
+
+  const path = agent.path ?? [];
+  let nextCell: CellCoord;
+  let remainingPath: CellCoord[];
+
+  if (path.length > 0) {
+    const candidate = path[0];
+    if (occupied.has(occupancyKey(candidate.x, candidate.y))) {
+      // Path blocked — generate new path
+      const newPath = generateWanderPath(current.x, current.y, occupied);
+      if (newPath.length === 0) {
+        return { ...withCells(agent, current.x, current.y, current.x, current.y), path: [], move_speed: AGENT_MOVE_SPEED, state: "wandering" };
+      }
+      nextCell = newPath[0];
+      remainingPath = newPath.slice(1);
+    } else {
+      nextCell = candidate;
+      remainingPath = path.slice(1);
+    }
+  } else {
+    // Path exhausted — generate new wander path
+    const newPath = generateWanderPath(current.x, current.y, occupied);
+    if (newPath.length === 0) {
+      return { ...withCells(agent, current.x, current.y, current.x, current.y), path: [], move_speed: AGENT_MOVE_SPEED, state: "wandering" };
+    }
+    nextCell = newPath[0];
+    remainingPath = newPath.slice(1);
+  }
+
+  // Update occupancy
+  const nextOccupied = new Set(occupied);
+  nextOccupied.delete(occupancyKey(current.x, current.y));
   nextOccupied.add(occupancyKey(nextCell.x, nextCell.y));
   occupied.clear();
   for (const entry of nextOccupied) {
     occupied.add(entry);
   }
+
   return {
     ...withCells(agent, nextCell.x, nextCell.y, nextCell.x, nextCell.y),
+    path: remainingPath,
+    move_speed: AGENT_MOVE_SPEED,
     state: "wandering"
   };
 }
@@ -153,12 +205,16 @@ export function tickWorld(
       normalized[i] = {
         ...withCells(a, currentCell(a).x, currentCell(a).y, currentCell(a).x, currentCell(a).y),
         state: "chatting",
-        active_message: null
+        active_message: null,
+        path: [],
+        move_speed: 0
       };
       normalized[j] = {
         ...withCells(b, currentCell(b).x, currentCell(b).y, currentCell(b).x, currentCell(b).y),
         state: "chatting",
-        active_message: null
+        active_message: null,
+        path: [],
+        move_speed: 0
       };
 
       busy.add(a.user_id);
@@ -183,7 +239,7 @@ export function tickWorld(
   );
   const updated = normalized.map((position) => {
     const before = currentCell(position);
-    const next = moveOnGrid(position, occupied);
+    const next = advanceOnPath(position, occupied);
     const after = currentCell(next);
     if (before.x !== after.x || before.y !== after.y) {
       movementEvents.push({
@@ -208,6 +264,8 @@ export function endConversation(position: AgentPosition, now: Date = new Date())
     state: "cooldown",
     active_message: null,
     conversation_id: null,
-    cooldown_until: cooldownUntil
+    cooldown_until: cooldownUntil,
+    path: [],
+    move_speed: 0
   };
 }

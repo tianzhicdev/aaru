@@ -57,7 +57,8 @@ import {
   MOVE_ANIMATION_MS,
   WORLD_TICK_INTERVAL_MS,
   WORLD_GRID_COLUMNS,
-  WORLD_GRID_ROWS
+  WORLD_GRID_ROWS,
+  AGENT_MOVE_SPEED
 } from "../../../src/domain/constants.ts";
 import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
@@ -93,7 +94,8 @@ function buildWorldConfig(): WorldConfig {
     minBubbleDisplayMs: MIN_BUBBLE_DISPLAY_MS,
     minReplyDelayMs: MIN_REPLY_DELAY_MS,
     cameraVisibleColumns: CAMERA_VISIBLE_COLUMNS,
-    cameraVisibleRows: CAMERA_VISIBLE_ROWS
+    cameraVisibleRows: CAMERA_VISIBLE_ROWS,
+    agentMoveSpeed: AGENT_MOVE_SPEED
   };
 }
 
@@ -110,7 +112,8 @@ function serializeWorldConfig() {
     min_bubble_display_ms: config.minBubbleDisplayMs,
     min_reply_delay_ms: config.minReplyDelayMs,
     camera_visible_columns: config.cameraVisibleColumns,
-    camera_visible_rows: config.cameraVisibleRows
+    camera_visible_rows: config.cameraVisibleRows,
+    agent_move_speed: config.agentMoveSpeed
   };
 }
 
@@ -196,6 +199,8 @@ function toAgentPosition(row: Awaited<ReturnType<typeof getAgentPositions>>[numb
     cell_y: row.cell_y,
     target_cell_x: row.target_cell_x,
     target_cell_y: row.target_cell_y,
+    path: row.path ?? [],
+    move_speed: row.move_speed ?? AGENT_MOVE_SPEED,
     state: row.state,
     active_message: row.active_message,
     conversation_id: row.conversation_id,
@@ -935,6 +940,8 @@ async function runWorldTick(
       cell_y: position.cell_y ?? 0,
       target_cell_x: position.target_cell_x ?? 0,
       target_cell_y: position.target_cell_y ?? 0,
+      path: position.path,
+      move_speed: position.move_speed,
       state: position.state,
       active_message: position.active_message,
       conversation_id: position.conversation_id,

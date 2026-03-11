@@ -109,6 +109,11 @@ enum AvatarSprites {
     ]
 }
 
+struct CellCoord: Codable, Equatable {
+    let x: Int
+    let y: Int
+}
+
 struct WorldAgent: Codable, Equatable, Identifiable {
     let id: UUID
     var x: Double
@@ -117,6 +122,8 @@ struct WorldAgent: Codable, Equatable, Identifiable {
     var targetY: Double
     var cellX: Int?
     var cellY: Int?
+    var path: [CellCoord]
+    var moveSpeed: Double
     var state: String
     var activeMessage: String?
     var conversationID: UUID?
@@ -132,6 +139,8 @@ struct WorldAgent: Codable, Equatable, Identifiable {
         case targetY = "target_y"
         case cellX = "cell_x"
         case cellY = "cell_y"
+        case path
+        case moveSpeed = "move_speed"
         case state
         case activeMessage = "active_message"
         case conversationID = "conversation_id"
@@ -153,6 +162,7 @@ struct WorldConfig: Codable, Equatable {
     let minReplyDelayMs: Int
     let cameraVisibleColumns: Int
     let cameraVisibleRows: Int
+    let agentMoveSpeed: Double
 
     enum CodingKeys: String, CodingKey {
         case gridColumns = "grid_columns"
@@ -166,6 +176,41 @@ struct WorldConfig: Codable, Equatable {
         case minReplyDelayMs = "min_reply_delay_ms"
         case cameraVisibleColumns = "camera_visible_columns"
         case cameraVisibleRows = "camera_visible_rows"
+        case agentMoveSpeed = "agent_move_speed"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        gridColumns = try container.decode(Int.self, forKey: .gridColumns)
+        gridRows = try container.decode(Int.self, forKey: .gridRows)
+        worldTickMs = try container.decode(Int.self, forKey: .worldTickMs)
+        moveAnimationMs = try container.decode(Int.self, forKey: .moveAnimationMs)
+        bubbleReadingWPS = try container.decode(Double.self, forKey: .bubbleReadingWPS)
+        conversationSpeakingWPS = try container.decode(Double.self, forKey: .conversationSpeakingWPS)
+        conversationTurnGapMs = try container.decode(Int.self, forKey: .conversationTurnGapMs)
+        minBubbleDisplayMs = try container.decode(Int.self, forKey: .minBubbleDisplayMs)
+        minReplyDelayMs = try container.decode(Int.self, forKey: .minReplyDelayMs)
+        cameraVisibleColumns = try container.decode(Int.self, forKey: .cameraVisibleColumns)
+        cameraVisibleRows = try container.decode(Int.self, forKey: .cameraVisibleRows)
+        agentMoveSpeed = (try? container.decode(Double.self, forKey: .agentMoveSpeed)) ?? 1.8
+    }
+
+    init(gridColumns: Int, gridRows: Int, worldTickMs: Int, moveAnimationMs: Int,
+         bubbleReadingWPS: Double, conversationSpeakingWPS: Double,
+         conversationTurnGapMs: Int, minBubbleDisplayMs: Int, minReplyDelayMs: Int,
+         cameraVisibleColumns: Int, cameraVisibleRows: Int, agentMoveSpeed: Double = 1.8) {
+        self.gridColumns = gridColumns
+        self.gridRows = gridRows
+        self.worldTickMs = worldTickMs
+        self.moveAnimationMs = moveAnimationMs
+        self.bubbleReadingWPS = bubbleReadingWPS
+        self.conversationSpeakingWPS = conversationSpeakingWPS
+        self.conversationTurnGapMs = conversationTurnGapMs
+        self.minBubbleDisplayMs = minBubbleDisplayMs
+        self.minReplyDelayMs = minReplyDelayMs
+        self.cameraVisibleColumns = cameraVisibleColumns
+        self.cameraVisibleRows = cameraVisibleRows
+        self.agentMoveSpeed = agentMoveSpeed
     }
 
     static let `default` = WorldConfig(
@@ -179,7 +224,8 @@ struct WorldConfig: Codable, Equatable {
         minBubbleDisplayMs: 1_500,
         minReplyDelayMs: 2_000,
         cameraVisibleColumns: 7,
-        cameraVisibleRows: 9
+        cameraVisibleRows: 9,
+        agentMoveSpeed: 1.8
     )
 }
 
@@ -207,6 +253,8 @@ struct RealtimeAgentPosition: Decodable, Equatable {
     let targetY: Double
     let cellX: Int?
     let cellY: Int?
+    let path: [CellCoord]
+    let moveSpeed: Double
     let state: String
     let activeMessage: String?
     let conversationID: UUID?
@@ -219,9 +267,27 @@ struct RealtimeAgentPosition: Decodable, Equatable {
         case targetY = "target_y"
         case cellX = "cell_x"
         case cellY = "cell_y"
+        case path
+        case moveSpeed = "move_speed"
         case state
         case activeMessage = "active_message"
         case conversationID = "conversation_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userID = try container.decode(UUID.self, forKey: .userID)
+        x = try container.decode(Double.self, forKey: .x)
+        y = try container.decode(Double.self, forKey: .y)
+        targetX = try container.decode(Double.self, forKey: .targetX)
+        targetY = try container.decode(Double.self, forKey: .targetY)
+        cellX = try container.decodeIfPresent(Int.self, forKey: .cellX)
+        cellY = try container.decodeIfPresent(Int.self, forKey: .cellY)
+        path = (try? container.decode([CellCoord].self, forKey: .path)) ?? []
+        moveSpeed = (try? container.decode(Double.self, forKey: .moveSpeed)) ?? 1.8
+        state = try container.decode(String.self, forKey: .state)
+        activeMessage = try container.decodeIfPresent(String.self, forKey: .activeMessage)
+        conversationID = try container.decodeIfPresent(UUID.self, forKey: .conversationID)
     }
 }
 

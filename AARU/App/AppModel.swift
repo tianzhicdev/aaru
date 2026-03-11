@@ -383,6 +383,8 @@ final class AppModel: ObservableObject {
         agents[index].targetY = newRow.targetY
         agents[index].cellX = newRow.cellX
         agents[index].cellY = newRow.cellY
+        agents[index].path = newRow.path
+        agents[index].moveSpeed = newRow.moveSpeed
         agents[index].state = newRow.state
         agents[index].activeMessage = newRow.activeMessage
         agents[index].conversationID = newRow.conversationID

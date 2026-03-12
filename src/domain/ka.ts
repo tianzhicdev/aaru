@@ -1,15 +1,11 @@
 import type { ConversationMessage, KaConversationContext } from "./types.ts";
+import { getConversationPhase, type ConversationPhase } from "./constants.ts";
 import { callGroq } from "../../supabase/functions/_shared/groq.ts";
 
 // ── Phase helpers ──────────────────────────────────────────────
 
-type ConversationPhase = "discovery" | "personal" | "depth";
-
 function getPhase(encounterCount: number | undefined): ConversationPhase {
-  const n = encounterCount ?? 1;
-  if (n <= 5) return "discovery";
-  if (n <= 12) return "personal";
-  return "depth";
+  return getConversationPhase(encounterCount ?? 1);
 }
 
 function phaseDirective(phase: ConversationPhase): string {

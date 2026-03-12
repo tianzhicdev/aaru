@@ -6,13 +6,20 @@
  * evaluates multi-dimensional impressions, tracks encounter-count-aware
  * accumulation, and reports Ba unlock progress.
  *
+ * Outputs:
+ *   logs/sim_<timestamp>/souls.json     — soul profiles used
+ *   logs/sim_<timestamp>/round_N.json   — per-round transcript + scores
+ *   logs/sim_<timestamp>/summary.json   — final results
+ *
  * Usage:
  *   npx tsx scripts/simulate_conversation.ts
  *   npx tsx scripts/simulate_conversation.ts --rounds 5
  */
 
 import "dotenv/config";
-import type { ConversationMessage, KaConversationContext, SoulProfile } from "../src/domain/types.ts";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { ConversationMessage, KaConversationContext, SoulProfile, ImpressionEvaluation } from "../src/domain/types.ts";
 import { buildKaReply, generateConversationSummary } from "../src/domain/ka.ts";
 import {
   evaluateImpression,
@@ -85,7 +92,17 @@ const soulB: SoulProfile = {
 const USER_A = "aaaa-aaaa-aaaa-aaaa";
 const USER_B = "bbbb-bbbb-bbbb-bbbb";
 
-// ─── Helpers ──────────────────────────────────────────────────────
+// ─── Log directory ───────────────────────────────────────────────
+
+const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+const logDir = join(import.meta.dirname ?? ".", "..", "logs", `sim_${timestamp}`);
+mkdirSync(logDir, { recursive: true });
+
+function writeLog(filename: string, data: unknown) {
+  writeFileSync(join(logDir, filename), JSON.stringify(data, null, 2) + "\n");
+}
+
+// ─── Console helpers ─────────────────────────────────────────────
 
 function dim(s: string) { return `\x1b[90m${s}\x1b[0m`; }
 function bold(s: string) { return `\x1b[1m${s}\x1b[0m`; }
@@ -146,6 +163,33 @@ function suggestTopics(a: SoulProfile, b: SoulProfile): string[] {
 
 // ─── Run one conversation ────────────────────────────────────────
 
+interface RoundLog {
+  round: number;
+  encounterCount: number;
+  phase: Phase;
+  messagesPerRound: number;
+  memory: string | null;
+  transcript: Array<{
+    turn: number;
+    speaker: string;
+    content: string;
+    source: "groq" | "fallback";
+    latencyMs: number;
+  }>;
+  evaluations: Array<{
+    atMessage: number;
+    nahlaToKhepri: { raw: ImpressionEvaluation; accumulated: number };
+    khepriToNahla: { raw: ImpressionEvaluation; accumulated: number };
+    fallbackNahlaToKhepri: ImpressionEvaluation;
+    fallbackKhepriToNahla: ImpressionEvaluation;
+    baUnlocked: { nahla: boolean; khepri: boolean };
+  }>;
+  summary: string;
+  groqCalls: number;
+  fallbackCalls: number;
+  accumulatedScores: { nahlaToKhepri: number; khepriToNahla: number };
+}
+
 async function runConversation(
   round: number,
   encounterCount: number,
@@ -161,6 +205,20 @@ async function runConversation(
   const phase = getPhase(encounterCount);
   const messagesThisRound = getMessagesForPhase(phase);
   const phaseLabel = phaseColor(phase)(phase.toUpperCase());
+
+  const roundLog: RoundLog = {
+    round,
+    encounterCount,
+    phase,
+    messagesPerRound: messagesThisRound,
+    memory: previousSummary ?? null,
+    transcript: [],
+    evaluations: [],
+    summary: "",
+    groqCalls: 0,
+    fallbackCalls: 0,
+    accumulatedScores: { nahlaToKhepri: scoreAtoB, khepriToNahla: scoreBtoA },
+  };
 
   console.log(`\n${"═".repeat(70)}`);
   console.log(bold(`  Round ${round} (encounter #${encounterCount}): ${cyan("Nahla")} meets ${yellow("Khepri")}`));
@@ -195,6 +253,14 @@ async function runConversation(
 
     history.push(reply);
 
+    roundLog.transcript.push({
+      turn: turn + 1,
+      speaker,
+      content: reply.content,
+      source: usedGroq ? "groq" : "fallback",
+      latencyMs: elapsedMs,
+    });
+
     const turnLabel = `  [${turn + 1}/${messagesThisRound}]`;
     const sourceTag = usedGroq ? green("GROQ") : red("FALLBACK");
     console.log(`${turnLabel} ${speakerColor(speaker)} ${dim(`(${elapsedMs}ms ${sourceTag})`)}`);
@@ -215,16 +281,26 @@ async function runConversation(
       scoreAtoB = accumulateImpression(scoreAtoB, evalAtoB.score, encounterCount);
       scoreBtoA = accumulateImpression(scoreBtoA, evalBtoA.score, encounterCount);
 
+      const baA = isBaAvailableToViewer(scoreBtoA);
+      const baB = isBaAvailableToViewer(scoreAtoB);
+
+      roundLog.evaluations.push({
+        atMessage: turn + 1,
+        nahlaToKhepri: { raw: evalAtoB, accumulated: scoreAtoB },
+        khepriToNahla: { raw: evalBtoA, accumulated: scoreBtoA },
+        fallbackNahlaToKhepri: fallbackAtoB,
+        fallbackKhepriToNahla: fallbackBtoA,
+        baUnlocked: { nahla: baA, khepri: baB },
+      });
+
       console.log(dim(`  Groq eval (${evalMs}ms):`));
 
-      // Per-dimension display for A→B
       console.log(`    Nahla → Khepri:  raw ${evalAtoB.score} → accumulated ${bar(scoreAtoB)}`);
       if (evalAtoB.responsiveness != null) {
         console.log(`      ${miniBar(evalAtoB.responsiveness, "Resp")}  ${miniBar(evalAtoB.values_alignment!, "Vals")}  ${miniBar(evalAtoB.conversation_quality!, "Conv")}  ${miniBar(evalAtoB.interest_overlap!, "Intr")}  ${miniBar(evalAtoB.novelty!, "Novl")}`);
       }
       console.log(`                     ${dim(evalAtoB.summary)}`);
 
-      // Per-dimension display for B→A
       console.log(`    Khepri → Nahla:  raw ${evalBtoA.score} → accumulated ${bar(scoreBtoA)}`);
       if (evalBtoA.responsiveness != null) {
         console.log(`      ${miniBar(evalBtoA.responsiveness, "Resp")}  ${miniBar(evalBtoA.values_alignment!, "Vals")}  ${miniBar(evalBtoA.conversation_quality!, "Conv")}  ${miniBar(evalBtoA.interest_overlap!, "Intr")}  ${miniBar(evalBtoA.novelty!, "Novl")}`);
@@ -235,12 +311,9 @@ async function runConversation(
       console.log(`    Nahla → Khepri:  ${fallbackAtoB.score} ${dim(fallbackAtoB.summary)}`);
       console.log(`    Khepri → Nahla:  ${fallbackBtoA.score} ${dim(fallbackBtoA.summary)}\n`);
 
-      // Accumulation weight info
       const historyWeight = Math.min(0.65, 0.40 + encounterCount * 0.025);
       console.log(dim(`  Accumulation: history=${(historyWeight * 100).toFixed(0)}% / new=${((1 - historyWeight) * 100).toFixed(0)}% (encounter #${encounterCount})`));
 
-      const baA = isBaAvailableToViewer(scoreBtoA);
-      const baB = isBaAvailableToViewer(scoreAtoB);
       if (baA || baB) {
         console.log(green(`  Ba UNLOCKED! ${baA ? "Nahla can see Khepri's Ba" : ""} ${baB ? "Khepri can see Nahla's Ba" : ""}`));
       } else {
@@ -256,6 +329,13 @@ async function runConversation(
   console.log(dim(`  Summary: "${summary}"`));
   console.log(dim(`  Groq calls: ${groqCallCount}, Fallbacks: ${fallbackCount}`));
 
+  roundLog.summary = summary;
+  roundLog.groqCalls = groqCallCount;
+  roundLog.fallbackCalls = fallbackCount;
+  roundLog.accumulatedScores = { nahlaToKhepri: scoreAtoB, khepriToNahla: scoreBtoA };
+
+  writeLog(`round_${round}.json`, roundLog);
+
   return { scoreAtoB, scoreBtoA, summary, transcript: history };
 }
 
@@ -263,6 +343,12 @@ async function runConversation(
 
 async function main() {
   const rounds = parseInt(process.argv.find((_, i, a) => a[i - 1] === "--rounds") ?? "5", 10);
+
+  // Write soul profiles
+  writeLog("souls.json", {
+    nahla: { userId: USER_A, profile: soulA },
+    khepri: { userId: USER_B, profile: soulB },
+  });
 
   console.log(bold("\n╔══════════════════════════════════════════════════════════════════╗"));
   console.log(bold("║       AARU Soul v2 Conversation Simulator                      ║"));
@@ -278,6 +364,7 @@ async function main() {
   console.log(`  ${yellow("Khepri")}: ${soulB.personality.split(".")[0]}`);
   console.log(`    Values: ST=${soulB.values.self_transcendence} SE=${soulB.values.self_enhancement} OC=${soulB.values.openness_to_change} CO=${soulB.values.conservation}`);
   console.log(`    Stories: ${soulB.narrative.formative_stories.length} | Memories: ${soulB.narrative.self_defining_memories.length}`);
+  console.log(dim(`\n  Logs: ${logDir}`));
 
   // Check Groq connectivity
   const apiKey = process.env.GROQ_API_KEY;
@@ -292,13 +379,12 @@ async function main() {
   let previousSummary: string | undefined;
 
   for (let r = 1; r <= rounds; r++) {
-    const encounterCount = r; // Each round = one encounter
+    const encounterCount = r;
     const result = await runConversation(r, encounterCount, previousSummary, scoreAtoB, scoreBtoA);
     scoreAtoB = result.scoreAtoB;
     scoreBtoA = result.scoreBtoA;
     previousSummary = result.summary;
 
-    // Show phase transition notice
     const currentPhase = getPhase(encounterCount);
     const nextPhase = getPhase(encounterCount + 1);
     if (currentPhase !== nextPhase) {
@@ -307,16 +393,35 @@ async function main() {
   }
 
   // Final report
+  const finalPhase = getPhase(rounds);
+  const baA = isBaAvailableToViewer(scoreBtoA);
+  const baB = isBaAvailableToViewer(scoreAtoB);
+
+  const summaryData = {
+    encounters: rounds,
+    finalPhase,
+    scores: {
+      nahlaToKhepri: scoreAtoB,
+      khepriToNahla: scoreBtoA,
+    },
+    baUnlocked: {
+      nahlaCanSeeKhepri: baA,
+      khepriCanSeeNahla: baB,
+      fullyUnlocked: baA && baB,
+    },
+    logDir,
+  };
+
+  writeLog("summary.json", summaryData);
+
   console.log(`\n${"═".repeat(70)}`);
   console.log(bold("  FINAL RESULTS"));
   console.log(`${"═".repeat(70)}`);
   console.log(`  Encounters: ${rounds}`);
-  console.log(`  Final phase: ${getPhase(rounds)}`);
+  console.log(`  Final phase: ${finalPhase}`);
   console.log(`  Nahla → Khepri:  ${bar(scoreAtoB)}`);
   console.log(`  Khepri → Nahla:  ${bar(scoreBtoA)}`);
 
-  const baA = isBaAvailableToViewer(scoreBtoA);
-  const baB = isBaAvailableToViewer(scoreAtoB);
   if (baA && baB) {
     console.log(green("\n  ✓ Ba fully unlocked! Both can see each other's true self."));
   } else if (baA || baB) {
@@ -324,6 +429,7 @@ async function main() {
   } else {
     console.log(red("\n  ✗ Ba still locked. More conversations needed."));
   }
+  console.log(dim(`\n  Full logs: ${logDir}`));
   console.log();
 }
 

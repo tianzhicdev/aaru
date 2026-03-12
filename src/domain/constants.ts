@@ -23,3 +23,20 @@ export const MIDDLE_PHASE_MESSAGES = 10;
 export const DEEP_PHASE_MESSAGES = 16;
 export const EARLY_PHASE_MAX_ENCOUNTERS = 5;
 export const MIDDLE_PHASE_MAX_ENCOUNTERS = 12;
+
+export type ConversationPhase = "discovery" | "personal" | "depth";
+
+export function getConversationPhase(encounterCount: number): ConversationPhase {
+  if (encounterCount <= EARLY_PHASE_MAX_ENCOUNTERS) return "discovery";
+  if (encounterCount <= MIDDLE_PHASE_MAX_ENCOUNTERS) return "personal";
+  return "depth";
+}
+
+export function getMessagesForEncounter(encounterCount: number): number {
+  const phase = getConversationPhase(encounterCount);
+  switch (phase) {
+    case "discovery": return EARLY_PHASE_MESSAGES;
+    case "personal": return MIDDLE_PHASE_MESSAGES;
+    case "depth": return DEEP_PHASE_MESSAGES;
+  }
+}

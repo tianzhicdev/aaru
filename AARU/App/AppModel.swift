@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
     let backend: BackendClient
     let deviceID: String
     private(set) var userID: UUID?
+    private(set) var instanceID: UUID?
     private var worldRefreshTask: Task<Void, Never>?
     private var conversationRefreshTask: Task<Void, Never>?
     private var inboxRefreshTask: Task<Void, Never>?
@@ -55,6 +56,7 @@ final class AppModel: ObservableObject {
         do {
             let payload = try await backend.bootstrap(deviceID: deviceID)
             userID = payload.userID
+            instanceID = payload.instanceID
             displayName = payload.displayName
             soulProfile = payload.soulProfile
             avatar = payload.avatar
@@ -322,6 +324,8 @@ final class AppModel: ObservableObject {
         realtime.start(
             supabaseURL: backend.realtimeURL,
             anonKey: backend.realtimeAnonKey,
+            instanceID: instanceID,
+            userID: userID,
             onRealtimeStatus: { [weak self] status in
                 self?.appendDebugEvent(status)
                 self?.logger.info("\(status, privacy: .public)")

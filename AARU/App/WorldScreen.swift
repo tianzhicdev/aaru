@@ -129,6 +129,10 @@ final class WorldScene: SKScene {
     }
 
     func updateConfig(_ config: WorldConfig) {
+        guard config != worldConfig else {
+            applyCameraScale()
+            return
+        }
         worldConfig = config
         columns = config.gridColumns
         rows = config.gridRows
@@ -174,6 +178,8 @@ final class WorldScene: SKScene {
         for agent in agents {
             let node = agentNodes[agent.id] ?? makeAgentNode(id: agent.id)
             node.configure(with: agent, debugMode: debugMode)
+            let animationSeconds = max(Double(worldConfig.moveAnimationMs), 1) / 1_000.0
+            let pointsPerSecond = cellSize / CGFloat(animationSeconds)
 
             // Build the full path: current cell position -> remaining path waypoints
             var waypoints: [CGPoint] = []
@@ -190,8 +196,8 @@ final class WorldScene: SKScene {
 
             node.setPath(
                 waypoints: waypoints,
-                speed: agent.moveSpeed > 0 ? CGFloat(agent.moveSpeed) * cellSize : 0,
-                isMoving: agent.state == "wandering"
+                speed: pointsPerSecond,
+                isMoving: agent.state == "wandering" || agent.state == "approaching"
             )
 
             // Place new nodes at their starting position

@@ -264,8 +264,8 @@ struct WorldConfig: Codable, Equatable {
         conversationTurnGapMs: 300,
         minBubbleDisplayMs: 1_500,
         minReplyDelayMs: 2_000,
-        cameraVisibleColumns: 28,
-        cameraVisibleRows: 36,
+        cameraVisibleColumns: 7,
+        cameraVisibleRows: 9,
         agentMoveSpeed: 1.8
     )
 }

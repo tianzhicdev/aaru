@@ -11,6 +11,8 @@ final class RealtimeBridge {
     func start(
         supabaseURL: URL?,
         anonKey: String?,
+        instanceID: UUID?,
+        userID: UUID?,
         onRealtimeStatus: @escaping @MainActor (String) -> Void,
         onWorldInsert: @escaping @MainActor () -> Void,
         onWorldUpdate: @escaping @MainActor (RealtimeAgentPosition, RealtimeAgentPosition) -> Void,
@@ -40,12 +42,43 @@ final class RealtimeBridge {
         }
 
         let worldChannel = client.channel("aaru-world")
-        let worldInsertStream = worldChannel.postgresChange(InsertAction.self, schema: "public", table: "agent_positions")
-        let worldUpdateStream = worldChannel.postgresChange(UpdateAction.self, schema: "public", table: "agent_positions")
-        let worldDeleteStream = worldChannel.postgresChange(DeleteAction.self, schema: "public", table: "agent_positions")
+        let worldFilter = instanceID.map { RealtimePostgresFilter.eq("instance_id", value: $0.uuidString) }
+        let worldInsertStream = worldChannel.postgresChange(InsertAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
+        let worldUpdateStream = worldChannel.postgresChange(UpdateAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
+        let worldDeleteStream = worldChannel.postgresChange(DeleteAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
         let conversationChannel = client.channel("aaru-conversations")
-        let conversationStream = conversationChannel.postgresChange(AnyAction.self, schema: "public", table: "conversations")
-        let compatibilityStream = conversationChannel.postgresChange(AnyAction.self, schema: "public", table: "impression_edges")
+        let conversationsAsA = userID.map {
+            conversationChannel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "conversations",
+                filter: .eq("user_a_id", value: $0.uuidString)
+            )
+        }
+        let conversationsAsB = userID.map {
+            conversationChannel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "conversations",
+                filter: .eq("user_b_id", value: $0.uuidString)
+            )
+        }
+        let impressionsFromUser = userID.map {
+            conversationChannel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "impression_edges",
+                filter: .eq("user_id", value: $0.uuidString)
+            )
+        }
+        let impressionsToUser = userID.map {
+            conversationChannel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "impression_edges",
+                filter: .eq("target_user_id", value: $0.uuidString)
+            )
+        }
         let messageChannel = client.channel("aaru-messages")
         let messageStream = messageChannel.postgresChange(AnyAction.self, schema: "public", table: "messages")
         let baMessageStream = messageChannel.postgresChange(AnyAction.self, schema: "public", table: "ba_messages")
@@ -113,20 +146,43 @@ final class RealtimeBridge {
             do {
                 try await conversationChannel.subscribeWithError()
                 await onRealtimeStatus("Conversation channel subscribed")
-                for await _ in conversationStream {
-                    await onInboxChange()
-                    await onConversationChange()
+                await withTaskGroup(of: Void.self) { group in
+                    if let conversationsAsA {
+                        group.addTask {
+                            for await _ in conversationsAsA {
+                                await onInboxChange()
+                                await onConversationChange()
+                            }
+                        }
+                    }
+                    if let conversationsAsB {
+                        group.addTask {
+                            for await _ in conversationsAsB {
+                                await onInboxChange()
+                                await onConversationChange()
+                            }
+                        }
+                    }
+                    if let impressionsFromUser {
+                        group.addTask {
+                            for await _ in impressionsFromUser {
+                                await onInboxChange()
+                                await onConversationChange()
+                            }
+                        }
+                    }
+                    if let impressionsToUser {
+                        group.addTask {
+                            for await _ in impressionsToUser {
+                                await onInboxChange()
+                                await onConversationChange()
+                            }
+                        }
+                    }
                 }
             } catch {
                 await onRealtimeStatus("Conversation channel failed: \(error.localizedDescription)")
                 return
-            }
-        })
-
-        tasks.append(Task {
-            for await _ in compatibilityStream {
-                await onInboxChange()
-                await onConversationChange()
             }
         })
 

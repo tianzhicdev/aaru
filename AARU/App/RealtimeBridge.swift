@@ -6,7 +6,6 @@ final class RealtimeBridge {
     private var channels: [RealtimeChannelV2] = []
     private var tasks: [Task<Void, Never>] = []
     private var subscriptions: [RealtimeSubscription] = []
-    private let decoder = PostgrestClient.Configuration.jsonDecoder
 
     func start(
         supabaseURL: URL?,
@@ -14,9 +13,7 @@ final class RealtimeBridge {
         instanceID: UUID?,
         userID: UUID?,
         onRealtimeStatus: @escaping @MainActor (String) -> Void,
-        onWorldInsert: @escaping @MainActor () -> Void,
-        onWorldUpdate: @escaping @MainActor (RealtimeAgentPosition, RealtimeAgentPosition) -> Void,
-        onWorldDelete: @escaping @MainActor () -> Void,
+        onWorldTick: @escaping @MainActor (WorldBroadcastPayload) -> Void,
         onInboxChange: @escaping @MainActor () -> Void,
         onConversationChange: @escaping @MainActor () -> Void
     ) {
@@ -41,11 +38,12 @@ final class RealtimeBridge {
             }
         }
 
-        let worldChannel = client.channel("aaru-world")
-        let worldFilter = instanceID.map { RealtimePostgresFilter.eq("instance_id", value: $0.uuidString) }
-        let worldInsertStream = worldChannel.postgresChange(InsertAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
-        let worldUpdateStream = worldChannel.postgresChange(UpdateAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
-        let worldDeleteStream = worldChannel.postgresChange(DeleteAction.self, schema: "public", table: "agent_positions", filter: worldFilter)
+        guard let instanceID else {
+            return
+        }
+
+        let worldChannel = client.channel("world:\(instanceID.uuidString)")
+        let worldTickStream = worldChannel.broadcastStream(event: "tick")
         let conversationChannel = client.channel("aaru-conversations")
         let conversationsAsA = userID.map {
             conversationChannel.postgresChange(
@@ -118,27 +116,20 @@ final class RealtimeBridge {
         })
 
         tasks.append(Task {
-            for await _ in worldInsertStream {
-                await onWorldInsert()
-            }
-        })
-
-        tasks.append(Task {
-            for await update in worldUpdateStream {
-                guard
-                    let oldRow = try? update.decodeOldRecord(as: RealtimeAgentPosition.self, decoder: self.decoder),
-                    let newRow = try? update.decodeRecord(as: RealtimeAgentPosition.self, decoder: self.decoder)
-                else {
-                    await onWorldInsert()
-                    continue
+            for await message in worldTickStream {
+                do {
+                    guard let payloadObject = message["payload"]?.objectValue else {
+                        await onRealtimeStatus("World tick missing payload")
+                        continue
+                    }
+                    let payload = try payloadObject.decode(
+                        as: WorldBroadcastPayload.self,
+                        decoder: PostgrestClient.Configuration.jsonDecoder
+                    )
+                    await onWorldTick(payload)
+                } catch {
+                    await onRealtimeStatus("World tick decode failed: \(error.localizedDescription)")
                 }
-                await onWorldUpdate(oldRow, newRow)
-            }
-        })
-
-        tasks.append(Task {
-            for await _ in worldDeleteStream {
-                await onWorldDelete()
             }
         })
 

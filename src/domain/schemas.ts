@@ -38,6 +38,14 @@ export const impressionEvaluationSchema = z.object({
   novelty: z.number().min(0).max(100).optional()
 });
 
+export const impressionFactorsSchema = z.object({
+  responsiveness: z.number().min(0).max(100),
+  values_alignment: z.number().min(0).max(100),
+  conversation_quality: z.number().min(0).max(100),
+  interest_overlap: z.number().min(0).max(100),
+  novelty: z.number().min(0).max(100)
+});
+
 export const cellCoordSchema = z.object({
   x: z.number().int().min(0),
   y: z.number().int().min(0)
@@ -55,10 +63,13 @@ export const agentPositionSchema = z.object({
   target_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
   path: z.array(cellCoordSchema).default([]),
   move_speed: z.number().nonnegative().default(1.8),
-  state: z.enum(["wandering", "idle", "approaching", "chatting", "cooldown"]),
+  state: z.enum(["wandering", "idle", "approaching", "chatting", "cooldown", "user_moving"]),
   behavior: z.enum(["wander", "idle", "drift_social", "drift_poi", "retreat"]).optional(),
   behavior_ticks_remaining: z.number().int().nonnegative().optional(),
   heading: z.number().int().min(0).max(7).optional(),
+  user_target_cell_x: z.number().int().min(0).max(WORLD_GRID_COLUMNS - 1).nullable().optional(),
+  user_target_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).nullable().optional(),
+  user_directed: z.boolean().nullable().optional(),
   active_message: z.string().nullable(),
   conversation_id: z.string().uuid().nullable(),
   cooldown_until: z.string().datetime({ offset: true }).nullable()

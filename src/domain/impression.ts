@@ -172,9 +172,27 @@ export function evaluateImpressionFallback(
 export async function evaluateImpression(
   selfSoul: SoulProfile,
   otherSoul: SoulProfile,
-  transcript: ConversationMessage[]
+  transcript: ConversationMessage[],
+  names?: {
+    selfName?: string;
+    otherName?: string;
+  }
 ): Promise<ImpressionEvaluation> {
   try {
+    function parseJsonObject(text: string) {
+      const trimmed = text.trim();
+      try {
+        return JSON.parse(trimmed) as Record<string, unknown>;
+      } catch {
+        const firstBrace = trimmed.indexOf("{");
+        const lastBrace = trimmed.lastIndexOf("}");
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+          return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1)) as Record<string, unknown>;
+        }
+        throw new Error("No JSON object found in model response");
+      }
+    }
+
     const systemPrompt = `You are evaluating how two people connected in conversation. Assess 5 dimensions, each scored 0-100. Return only valid JSON in this exact format:
 {"responsiveness":N,"values_alignment":N,"conversation_quality":N,"interest_overlap":N,"novelty":N,"summary":"1-2 sentence impression summary"}
 
@@ -189,12 +207,14 @@ Score each dimension independently. Be calibrated: 50 is average, 70+ is notably
 
     const conversationText = transcript.map(msg => msg.content).join("\n");
 
-    const prompt = `Person A Profile:
+    const selfLabel = names?.selfName?.trim() || "Person A";
+    const otherLabel = names?.otherName?.trim() || "Person B";
+    const prompt = `${selfLabel} Profile:
 Personality: ${selfSoul.personality}
 Interests: ${selfSoul.interests.join(", ")}
 Values: ${selfSoul.values.expressed.join(", ")}
 
-Person B Profile:
+${otherLabel} Profile:
 Personality: ${otherSoul.personality}
 Interests: ${otherSoul.interests.join(", ")}
 Values: ${otherSoul.values.expressed.join(", ")}
@@ -202,18 +222,18 @@ Values: ${otherSoul.values.expressed.join(", ")}
 Conversation:
 ${conversationText}
 
-Evaluate Person A's impression of Person B. Return JSON:`;
+Evaluate ${selfLabel}'s impression of ${otherLabel}. Return JSON:`;
 
     const response = await callGroq(systemPrompt, [{ role: "user", content: prompt }]);
 
     // Try to parse the JSON response
-    const parsed = JSON.parse(response.trim());
+    const parsed = parseJsonObject(response);
 
-    const responsiveness = parsed.responsiveness ?? 50;
-    const values_alignment = parsed.values_alignment ?? 50;
-    const conversation_quality = parsed.conversation_quality ?? 50;
-    const interest_overlap = parsed.interest_overlap ?? 50;
-    const novelty_val = parsed.novelty ?? 50;
+    const responsiveness = typeof parsed.responsiveness === "number" ? parsed.responsiveness : 50;
+    const values_alignment = typeof parsed.values_alignment === "number" ? parsed.values_alignment : 50;
+    const conversation_quality = typeof parsed.conversation_quality === "number" ? parsed.conversation_quality : 50;
+    const interest_overlap = typeof parsed.interest_overlap === "number" ? parsed.interest_overlap : 50;
+    const novelty_val = typeof parsed.novelty === "number" ? parsed.novelty : 50;
 
     const score = computeCompositeScore(
       responsiveness,

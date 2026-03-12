@@ -41,7 +41,19 @@ function extractText(payload: unknown): string {
 
 function parseJsonArray(text: string): XaiNewsItem[] {
   try {
-    const parsed = JSON.parse(text);
+    const trimmed = text.trim();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      const firstBracket = trimmed.indexOf("[");
+      const lastBracket = trimmed.lastIndexOf("]");
+      if (firstBracket >= 0 && lastBracket > firstBracket) {
+        parsed = JSON.parse(trimmed.slice(firstBracket, lastBracket + 1));
+      } else {
+        return [];
+      }
+    }
     if (!Array.isArray(parsed)) {
       return [];
     }
@@ -77,7 +89,7 @@ export async function fetchInterestNews(topics: string[]): Promise<XaiNewsItem[]
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "grok-3-mini",
+      model: "grok-4",
       tools: [{ type: "web_search" }],
       input: `Find one current news angle for each topic in this list: ${topics.join(", ")}.
 Return only valid JSON as an array of objects:

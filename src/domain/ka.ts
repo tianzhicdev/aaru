@@ -65,6 +65,7 @@ export function buildKaSystemPrompt(context: KaConversationContext): string {
 
   lines.push(
     `Phase directive: ${phaseDirective(phase)}`,
+    "If one current-awareness item naturally connects to the conversation, weave it in concretely instead of speaking in abstractions.",
     "You only know what the other person has said in conversation.",
     "You do not know their soul profile.",
     "Speak like one specific person, not a therapist or assistant.",
@@ -195,5 +196,39 @@ export async function generateConversationSummary(transcript: ConversationMessag
       .slice(0, 3)
       .join(", ");
     return `Talked about ${topics || "various topics"}.`;
+  }
+}
+
+export async function generateRelationshipMemory(
+  selfName: string,
+  otherName: string,
+  transcript: ConversationMessage[]
+): Promise<string> {
+  try {
+    const systemPrompt = `Write a compact memory note one person keeps about another after a conversation.
+Return one sentence only, grounded in concrete details they would remember.
+Do not score, do not mention compatibility, and do not speak like an analyst.`;
+
+    const conversationText = transcript
+      .map((msg, index) => `Message ${index + 1}: ${msg.content}`)
+      .join("\n");
+
+    const prompt = `${selfName} is remembering ${otherName}.
+Conversation:
+${conversationText}
+
+Memory note:`;
+
+    return (await callGroq(systemPrompt, [{ role: "user", content: prompt }])).trim();
+  } catch (error) {
+    console.error("Failed to generate relationship memory:", error);
+    const detail = transcript
+      .map((msg) => msg.content)
+      .join(" ")
+      .split(/\s+/)
+      .filter((word) => word.length > 4)
+      .slice(0, 10)
+      .join(" ");
+    return `${otherName} feels tied to ${detail || "a conversation that lingered after it ended"}.`;
   }
 }

@@ -1,18 +1,16 @@
 import {
   AGENT_MOVE_SPEED,
+  USER_MOVE_SPEED,
+  USER_DIRECTED_IDLE_TICKS,
   BEHAVIOR_TICK_MIN,
   BEHAVIOR_TICK_MAX,
   CLUSTER_RANGE,
   CLUSTER_MIN_SIZE,
-  DIRECTIONAL_PATH_MIN,
-  DIRECTIONAL_PATH_MAX,
   DRIFT_POI_WEIGHT,
   DRIFT_SOCIAL_WEIGHT,
   GREEDY_JITTER_PROB,
   GREEDY_PATH_MIN,
   GREEDY_PATH_MAX,
-  HEADING_CONTINUE_PROB,
-  HEADING_DEVIATE_1_PROB,
   IDLE_DURATION_MIN,
   IDLE_DURATION_MAX,
   IDLE_WEIGHT,
@@ -139,81 +137,126 @@ export function pickRandomHeading(): number {
   return Math.floor(Math.random() * 8);
 }
 
+function directionScore(fromX: number, fromY: number, toX: number, toY: number, targetX: number, targetY: number) {
+  const stepX = Math.sign(toX - fromX);
+  const stepY = Math.sign(toY - fromY);
+  const targetDX = Math.sign(targetX - fromX);
+  const targetDY = Math.sign(targetY - fromY);
+  return (stepX === targetDX ? 1 : 0) + (stepY === targetDY ? 1 : 0);
+}
+
+function computeHeading(fromX: number, fromY: number, toX: number, toY: number): number {
+  const dx = Math.sign(toX - fromX);
+  const dy = Math.sign(toY - fromY);
+  for (let h = 0; h < 8; h += 1) {
+    if (HEADING_DX[h] === dx && HEADING_DY[h] === dy) {
+      return h;
+    }
+  }
+  return 0;
+}
+
+function buildPathToDestination(
+  startX: number,
+  startY: number,
+  targetX: number,
+  targetY: number,
+  occupied: Set<string>
+): { path: CellCoord[]; finalHeading: number } {
+  const path: CellCoord[] = [];
+  const localOccupied = new Set(occupied);
+  let cx = startX;
+  let cy = startY;
+  let heading = 0;
+  const maxSteps = Math.max(
+    chebyshev(startX, startY, targetX, targetY) + 8,
+    WANDER_PATH_MAX
+  );
+
+  for (let i = 0; i < maxSteps; i += 1) {
+    if (cx === targetX && cy === targetY) {
+      break;
+    }
+
+    const neighbors = allNeighborCells(cx, cy).filter((cell) => !localOccupied.has(occupancyKey(cell.x, cell.y)));
+    if (neighbors.length === 0) {
+      break;
+    }
+
+    const next = neighbors
+      .slice()
+      .sort((a, b) => {
+        const distA = chebyshev(a.x, a.y, targetX, targetY);
+        const distB = chebyshev(b.x, b.y, targetX, targetY);
+        if (distA !== distB) {
+          return distA - distB;
+        }
+
+        const dirA = directionScore(cx, cy, a.x, a.y, targetX, targetY);
+        const dirB = directionScore(cx, cy, b.x, b.y, targetX, targetY);
+        if (dirA !== dirB) {
+          return dirB - dirA;
+        }
+
+        const headingA = computeHeading(cx, cy, a.x, a.y);
+        const headingB = computeHeading(cx, cy, b.x, b.y);
+        const turnA = Math.min(Math.abs(headingA - heading), 8 - Math.abs(headingA - heading));
+        const turnB = Math.min(Math.abs(headingB - heading), 8 - Math.abs(headingB - heading));
+        if (turnA !== turnB) {
+          return turnA - turnB;
+        }
+
+        return 0;
+      })[0];
+
+    localOccupied.delete(occupancyKey(cx, cy));
+    localOccupied.add(occupancyKey(next.x, next.y));
+    path.push(next);
+    heading = computeHeading(cx, cy, next.x, next.y);
+    cx = next.x;
+    cy = next.y;
+  }
+
+  return { path, finalHeading: heading };
+}
+
 export function generateDirectionalPath(
   startX: number,
   startY: number,
   heading: number,
   occupied: Set<string>
 ): { path: CellCoord[]; finalHeading: number } {
-  const length = DIRECTIONAL_PATH_MIN + Math.floor(Math.random() * (DIRECTIONAL_PATH_MAX - DIRECTIONAL_PATH_MIN + 1));
-  const path: CellCoord[] = [];
-  let cx = startX;
-  let cy = startY;
-  let h = heading;
-  const localOccupied = new Set(occupied);
+  const minDistance = Math.max(4, WANDER_PATH_MIN);
+  const maxDistance = WANDER_PATH_MAX;
+  const headingCandidates = [
+    heading,
+    wrapHeading(heading + 1),
+    wrapHeading(heading - 1),
+    wrapHeading(heading + 2),
+    wrapHeading(heading - 2)
+  ];
+  let best: { path: CellCoord[]; finalHeading: number } = { path: [], finalHeading: heading };
 
-  for (let i = 0; i < length; i++) {
-    // Pick heading deviation: 70% straight, 20% ±1, 10% ±2
-    const roll = Math.random();
-    let chosenHeading: number;
-    if (roll < HEADING_CONTINUE_PROB) {
-      chosenHeading = h;
-    } else if (roll < HEADING_CONTINUE_PROB + HEADING_DEVIATE_1_PROB) {
-      chosenHeading = wrapHeading(h + (Math.random() < 0.5 ? 1 : -1));
-    } else {
-      chosenHeading = wrapHeading(h + (Math.random() < 0.5 ? 2 : -2));
-    }
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const chosenHeading = headingCandidates[Math.min(attempt, headingCandidates.length - 1)];
+    const distance = minDistance + Math.floor(Math.random() * (maxDistance - minDistance + 1));
+    const targetX = clampCell(startX + HEADING_DX[chosenHeading] * distance, WORLD_GRID_COLUMNS);
+    const targetY = clampCell(startY + HEADING_DY[chosenHeading] * distance, WORLD_GRID_ROWS);
 
-    const dx = HEADING_DX[chosenHeading];
-    const dy = HEADING_DY[chosenHeading];
-    const nx = cx + dx;
-    const ny = cy + dy;
-
-    // Check bounds
-    if (nx < 0 || nx >= WORLD_GRID_COLUMNS || ny < 0 || ny >= WORLD_GRID_ROWS) {
-      // Bounce: reverse heading and try to continue
-      h = wrapHeading(chosenHeading + 4);
+    if (targetX === startX && targetY === startY) {
       continue;
     }
 
-    // Check occupancy
-    if (localOccupied.has(occupancyKey(nx, ny))) {
-      // Try neighbors as fallback
-      const fallbackCandidates = [
-        wrapHeading(chosenHeading + 1),
-        wrapHeading(chosenHeading - 1),
-        wrapHeading(chosenHeading + 2),
-        wrapHeading(chosenHeading - 2)
-      ];
-      let found = false;
-      for (const fb of fallbackCandidates) {
-        const fbx = cx + HEADING_DX[fb];
-        const fby = cy + HEADING_DY[fb];
-        if (fbx >= 0 && fbx < WORLD_GRID_COLUMNS && fby >= 0 && fby < WORLD_GRID_ROWS &&
-            !localOccupied.has(occupancyKey(fbx, fby))) {
-          localOccupied.delete(occupancyKey(cx, cy));
-          localOccupied.add(occupancyKey(fbx, fby));
-          path.push({ x: fbx, y: fby });
-          cx = fbx;
-          cy = fby;
-          h = fb;
-          found = true;
-          break;
-        }
-      }
-      if (!found) break;
-      continue;
+    const candidate = buildPathToDestination(startX, startY, targetX, targetY, occupied);
+    if (candidate.path.length > best.path.length) {
+      best = candidate;
     }
-
-    localOccupied.delete(occupancyKey(cx, cy));
-    localOccupied.add(occupancyKey(nx, ny));
-    path.push({ x: nx, y: ny });
-    cx = nx;
-    cy = ny;
-    h = chosenHeading;
+    if (candidate.path.length >= minDistance) {
+      return candidate;
+    }
   }
 
-  return { path, finalHeading: h };
+  return best;
 }
 
 // ── Cluster detection + greedy pathfinding (Phase 2) ──
@@ -470,7 +513,76 @@ function advanceOnPath(agent: AgentPosition, occupied: Set<string>, allAgents?: 
   if (agent.state === "chatting") {
     return {
       ...withCells(agent, current.x, current.y, current.x, current.y),
-      path: [], move_speed: 0, behavior: undefined, behavior_ticks_remaining: 0
+      path: [], move_speed: 0, behavior: undefined, behavior_ticks_remaining: 0,
+      user_directed: false, user_target_cell_x: undefined, user_target_cell_y: undefined
+    };
+  }
+
+  // ── User-directed movement: follow path, skip behavior selection ──
+  if (agent.user_directed) {
+    const path = agent.path ?? [];
+
+    if (path.length === 0) {
+      // Arrived at destination — idle briefly, then resume autonomous
+      occupied.delete(occupancyKey(current.x, current.y));
+      occupied.add(occupancyKey(current.x, current.y));
+      return {
+        ...withCells(agent, current.x, current.y, current.x, current.y),
+        path: [],
+        move_speed: 0,
+        state: "idle",
+        behavior: "idle",
+        behavior_ticks_remaining: USER_DIRECTED_IDLE_TICKS,
+        user_directed: false,
+        user_target_cell_x: undefined,
+        user_target_cell_y: undefined,
+        heading: agent.heading
+      };
+    }
+
+    // Follow path
+    const nextCell = path[0];
+    if (occupied.has(occupancyKey(nextCell.x, nextCell.y))) {
+      // Path blocked — stay put, keep trying next tick
+      return {
+        ...withCells(agent, current.x, current.y, current.x, current.y),
+        path,
+        move_speed: USER_MOVE_SPEED,
+        state: "user_moving",
+        user_directed: true,
+        heading: agent.heading
+      };
+    }
+
+    // Update heading
+    const stepDx = nextCell.x - current.x;
+    const stepDy = nextCell.y - current.y;
+    let heading = agent.heading ?? 0;
+    for (let h = 0; h < 8; h++) {
+      if (HEADING_DX[h] === stepDx && HEADING_DY[h] === stepDy) {
+        heading = h;
+        break;
+      }
+    }
+
+    // Update occupancy
+    const nextOccupied = new Set(occupied);
+    nextOccupied.delete(occupancyKey(current.x, current.y));
+    nextOccupied.add(occupancyKey(nextCell.x, nextCell.y));
+    occupied.clear();
+    for (const entry of nextOccupied) {
+      occupied.add(entry);
+    }
+
+    return {
+      ...withCells(agent, nextCell.x, nextCell.y, nextCell.x, nextCell.y),
+      path: path.slice(1),
+      move_speed: USER_MOVE_SPEED,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: agent.user_target_cell_x,
+      user_target_cell_y: agent.user_target_cell_y,
+      heading
     };
   }
 
@@ -517,7 +629,6 @@ function advanceOnPath(agent: AgentPosition, occupied: Set<string>, allAgents?: 
       }
       nextCell = regen.path[0];
       remainingPath = regen.path.slice(1);
-      heading = regen.finalHeading;
     } else {
       nextCell = candidate;
       remainingPath = path.slice(1);
@@ -540,7 +651,18 @@ function advanceOnPath(agent: AgentPosition, occupied: Set<string>, allAgents?: 
     } else {
       nextCell = regen.path[0];
       remainingPath = regen.path.slice(1);
-      heading = regen.finalHeading;
+    }
+  }
+
+  // Derive heading from actual step direction (current → nextCell)
+  // so the stored heading always reflects where the agent IS going,
+  // not where a pre-computed path would eventually end up.
+  const stepDx = nextCell.x - current.x;
+  const stepDy = nextCell.y - current.y;
+  for (let h = 0; h < 8; h++) {
+    if (HEADING_DX[h] === stepDx && HEADING_DY[h] === stepDy) {
+      heading = h;
+      break;
     }
   }
 
@@ -634,6 +756,7 @@ export function tickWorld(
       .filter((position) => position.state === "chatting" || position.state === "cooldown")
       .map((position) => position.user_id)
   );
+  // user_moving agents CAN be approached for conversation (not excluded from busy)
 
   for (let i = 0; i < normalized.length; i += 1) {
     const a = normalized[i];
@@ -656,14 +779,20 @@ export function tickWorld(
         state: "chatting",
         active_message: null,
         path: [],
-        move_speed: 0
+        move_speed: 0,
+        user_directed: false,
+        user_target_cell_x: undefined,
+        user_target_cell_y: undefined
       };
       normalized[j] = {
         ...withCells(b, currentCell(b).x, currentCell(b).y, currentCell(b).x, currentCell(b).y),
         state: "chatting",
         active_message: null,
         path: [],
-        move_speed: 0
+        move_speed: 0,
+        user_directed: false,
+        user_target_cell_x: undefined,
+        user_target_cell_y: undefined
       };
 
       busy.add(a.user_id);

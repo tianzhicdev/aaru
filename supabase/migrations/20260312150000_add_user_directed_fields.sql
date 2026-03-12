@@ -1,0 +1,4 @@
+ALTER TABLE agent_positions
+  ADD COLUMN IF NOT EXISTS user_target_cell_x INTEGER,
+  ADD COLUMN IF NOT EXISTS user_target_cell_y INTEGER,
+  ADD COLUMN IF NOT EXISTS user_directed BOOLEAN DEFAULT FALSE;

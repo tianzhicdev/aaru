@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published var worldMovementEvents: [WorldMovementEvent] = []
     @Published var debugModeEnabled = UserDefaults.standard.bool(forKey: "aaru.debugModeEnabled")
     @Published var debugEvents: [DebugEvent] = []
+    @Published var agentDebugStats: [UUID: AgentDebugStat] = [:]
     @Published var conversations: [ConversationPreview] = []
     @Published var selectedConversation: ConversationDetail?
     @Published var isLoading = false
@@ -29,6 +30,8 @@ final class AppModel: ObservableObject {
     private var worldRefreshTask: Task<Void, Never>?
     private var conversationRefreshTask: Task<Void, Never>?
     private var inboxRefreshTask: Task<Void, Never>?
+    private var heartbeatTask: Task<Void, Never>?
+    private var pushTokenObserver: NSObjectProtocol?
     private let realtime = RealtimeBridge()
 
     init(
@@ -61,12 +64,15 @@ final class AppModel: ObservableObject {
             soulProfile = payload.soulProfile
             avatar = payload.avatar
             worldMovementEvents = payload.world.movementEvents
-            worldAgents = payload.world.agents
+            worldAgents = maskedWorldAgents(payload.world.agents)
             worldCount = payload.world.count
             worldConfig = payload.world.config
+            rebuildDebugStats(from: worldAgents)
             conversations = payload.conversations.map(Self.preview(from:))
             stage = payload.soulProfile == nil ? .onboarding(.soul) : .world
             startRealtime()
+            startHeartbeat()
+            listenForPushToken()
             appendDebugEvent("Bootstrap loaded \(payload.world.count) agents on a \(payload.world.config.gridColumns)x\(payload.world.config.gridRows) world")
             logger.info("Bootstrap complete with \(self.worldCount) agents and \(self.conversations.count) conversations")
         } catch {
@@ -81,7 +87,11 @@ final class AppModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            soulProfile = try await backend.generateSoulProfile(rawInput: profileInput)
+            let generated = try await backend.generateSoulProfile(rawInput: profileInput)
+            soulProfile = generated.soulProfile
+            if displayName == "Wandering Soul" || displayName.hasPrefix("Soul ") || displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                displayName = generated.displayName
+            }
             logger.info("Generated soul profile")
         } catch {
             errorMessage = error.localizedDescription
@@ -96,7 +106,13 @@ final class AppModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            try await backend.saveSoulProfile(deviceID: deviceID, profile: soulProfile)
+            let saved = try await backend.saveSoulProfile(
+                deviceID: deviceID,
+                profile: soulProfile,
+                displayName: displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            displayName = saved.displayName
+            self.soulProfile = saved.soulProfile
             stage = .onboarding(.avatar)
             logger.info("Saved soul profile")
         } catch {
@@ -108,36 +124,53 @@ final class AppModel: ObservableObject {
     func saveAvatarAndEnterWorld() async {
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
 
-        do {
-            try await backend.saveAvatar(deviceID: deviceID, avatar: avatar)
-            applyAvatarToSelf(avatar)
-            stage = .world
-            await refreshWorld()
-            stage = .world
-            logger.info("Saved avatar and entered world")
-        } catch {
-            errorMessage = error.localizedDescription
-            logger.error("Saving avatar failed: \(error.localizedDescription, privacy: .public)")
+        applyAvatarToSelf(avatar)
+        stage = .world
+        isLoading = false
+        logger.info("Entered world locally; syncing avatar and world state")
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.backend.saveAvatar(deviceID: self.deviceID, avatar: self.avatar)
+                await self.refreshWorld(includeInbox: false)
+                do {
+                    try await self.refreshInbox()
+                } catch is CancellationError {
+                    return
+                } catch {
+                    self.errorMessage = error.localizedDescription
+                    self.logger.error("Inbox refresh after entering world failed: \(error.localizedDescription, privacy: .public)")
+                }
+                self.logger.info("Saved avatar and synced world after entering")
+            } catch is CancellationError {
+                return
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.logger.error("Saving avatar failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 
-    func refreshWorld() async {
+    func refreshWorld(includeInbox: Bool = true) async {
         guard case .world = stage else { return }
 
         do {
             let snapshot = try await backend.syncWorld(deviceID: deviceID)
             worldMovementEvents = snapshot.movementEvents
-            worldAgents = snapshot.agents
+            worldAgents = maskedWorldAgents(snapshot.agents)
             worldCount = snapshot.count
             worldConfig = snapshot.config
+            rebuildDebugStats(from: worldAgents)
             if !snapshot.movementEvents.isEmpty {
                 for event in snapshot.movementEvents {
                     appendDebugEvent(movementText(for: event, agentID: event.userID))
                 }
             }
-            try await refreshInbox()
+            if includeInbox {
+                try await refreshInbox()
+            }
 
             if let current = selectedConversation {
                 selectedConversation = try await backend.getConversation(
@@ -221,7 +254,8 @@ final class AppModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            try await backend.saveSoulProfile(deviceID: deviceID, profile: soulProfile)
+            let saved = try await backend.saveSoulProfile(deviceID: deviceID, profile: soulProfile)
+            self.soulProfile = saved.soulProfile
             logger.info("Updated soul profile")
         } catch {
             errorMessage = error.localizedDescription
@@ -243,8 +277,14 @@ final class AppModel: ObservableObject {
             if let index = conversations.firstIndex(where: { $0.id == conversationID }) {
                 conversations[index].impressionScore = updated.impressionScore
                 conversations[index].impressionSummary = updated.impressionSummary
+                conversations[index].impressionFactors = updated.impressionFactors
+                conversations[index].memorySummary = updated.memorySummary
                 conversations[index].theirImpressionScore = updated.theirImpressionScore
                 conversations[index].theirImpressionSummary = updated.theirImpressionSummary
+                conversations[index].theirImpressionFactors = updated.theirImpressionFactors
+                conversations[index].theirMemorySummary = updated.theirMemorySummary
+                conversations[index].encounterCount = updated.encounterCount
+                conversations[index].phase = updated.phase
                 conversations[index].baUnlocked = updated.baUnlocked
             }
         } catch is CancellationError {
@@ -330,16 +370,8 @@ final class AppModel: ObservableObject {
                 self?.appendDebugEvent(status)
                 self?.logger.info("\(status, privacy: .public)")
             },
-            onWorldInsert: { [weak self] in
-                self?.appendDebugEvent("World row inserted")
-                self?.scheduleWorldRefresh()
-            },
-            onWorldUpdate: { [weak self] oldRow, newRow in
-                self?.applyWorldUpdate(oldRow: oldRow, newRow: newRow)
-            },
-            onWorldDelete: { [weak self] in
-                self?.appendDebugEvent("World row deleted")
-                self?.scheduleWorldRefresh()
+            onWorldTick: { [weak self] payload in
+                self?.applyWorldTick(payload)
             },
             onInboxChange: { [weak self] in
                 self?.appendDebugEvent("Conversation metadata updated")
@@ -355,60 +387,99 @@ final class AppModel: ObservableObject {
         logger.info("Realtime bridge started")
     }
 
-    private func applyWorldUpdate(oldRow: RealtimeAgentPosition, newRow: RealtimeAgentPosition) {
+    private func applyWorldTick(_ payload: WorldBroadcastPayload) {
         guard case .world = stage else { return }
-        var agents = worldAgents
-        guard let index = agents.firstIndex(where: { $0.id == newRow.userID }) else {
-            appendDebugEvent("World update for unknown user \(newRow.userID.uuidString.prefix(6)); refreshing")
+
+        let broadcastIDs = Set(payload.agents.map(\.userID))
+        let localIDs = Set(worldAgents.map(\.id))
+        let newIDs = broadcastIDs.subtracting(localIDs)
+        if !newIDs.isEmpty {
+            appendDebugEvent("World tick introduced \(newIDs.count) new agent(s); refreshing metadata")
             scheduleWorldRefresh()
             return
         }
 
-        let name = agents[index].displayName
-        let movementEvent: WorldMovementEvent?
-        if let fromX = oldRow.cellX, let fromY = oldRow.cellY, let toX = newRow.cellX, let toY = newRow.cellY,
-           fromX != toX || fromY != toY {
-            movementEvent = WorldMovementEvent(
-                userID: newRow.userID,
-                fromCellX: fromX,
-                fromCellY: fromY,
-                toCellX: toX,
-                toCellY: toY
+        var agents = worldAgents.filter { broadcastIDs.contains($0.id) }
+        var movementEvents: [WorldMovementEvent] = []
+
+        for broadcastAgent in payload.agents {
+            guard let index = agents.firstIndex(where: { $0.id == broadcastAgent.userID }) else {
+                continue
+            }
+
+            let oldAgent = agents[index]
+            var updatedAgent = oldAgent
+
+            if let fromX = oldAgent.cellX,
+               let fromY = oldAgent.cellY,
+               let toX = broadcastAgent.cellX,
+               let toY = broadcastAgent.cellY,
+               fromX != toX || fromY != toY {
+                movementEvents.append(
+                    WorldMovementEvent(
+                        userID: broadcastAgent.userID,
+                        fromCellX: fromX,
+                        fromCellY: fromY,
+                        toCellX: toX,
+                        toCellY: toY
+                    )
+                )
+            }
+
+            updatedAgent.x = broadcastAgent.x
+            updatedAgent.y = broadcastAgent.y
+            updatedAgent.targetX = broadcastAgent.targetX
+            updatedAgent.targetY = broadcastAgent.targetY
+            updatedAgent.cellX = broadcastAgent.cellX
+            updatedAgent.cellY = broadcastAgent.cellY
+            updatedAgent.path = broadcastAgent.path
+            updatedAgent.moveSpeed = broadcastAgent.moveSpeed
+            updatedAgent.state = broadcastAgent.state
+            updatedAgent.behavior = broadcastAgent.behavior
+            updatedAgent.behaviorTicksRemaining = nil
+            updatedAgent.heading = broadcastAgent.heading
+            updatedAgent.activeMessage = broadcastAgent.activeMessage
+            updatedAgent.conversationID = broadcastAgent.conversationID
+            agents[index] = updatedAgent
+            updateDebugStat(for: updatedAgent, oldAgent: oldAgent, newAgent: broadcastAgent)
+
+            let behaviorText = broadcastAgent.behavior ?? "-"
+            appendDebugEvent("\(updatedAgent.displayName) state=\(broadcastAgent.state) behavior=\(behaviorText) cell=(\(broadcastAgent.cellX ?? -1),\(broadcastAgent.cellY ?? -1)) path=\(broadcastAgent.path.count)")
+            logger.info("World tick for \(updatedAgent.displayName, privacy: .public) state=\(broadcastAgent.state, privacy: .public) behavior=\(behaviorText, privacy: .public) cell=(\(broadcastAgent.cellX ?? -1), privacy: .public),(\(broadcastAgent.cellY ?? -1), privacy: .public) path=\(broadcastAgent.path.count, privacy: .public)")
+        }
+
+        worldMovementEvents = movementEvents
+        worldCount = agents.count
+        worldAgents = maskedWorldAgents(agents)
+        rebuildDebugStats(from: worldAgents)
+
+        for event in movementEvents {
+            appendDebugEvent(movementText(for: event, agentID: event.userID))
+            logger.info("Movement event \(self.movementText(for: event, agentID: event.userID), privacy: .public)")
+        }
+    }
+
+    // MARK: - Tap Control
+
+    func tapCell(cellX: Int, cellY: Int) async {
+        do {
+            let response = try await backend.tapCell(
+                deviceID: deviceID, cellX: cellX, cellY: cellY
             )
-        } else {
-            movementEvent = nil
+            appendDebugEvent("Tapped cell (\(cellX), \(cellY)) — path: \(response.path.count) cells")
+        } catch {
+            appendDebugEvent("Tap failed: \(error.localizedDescription)")
         }
+    }
 
-        worldMovementEvents = movementEvent.map { [$0] } ?? []
-
-        agents[index].x = newRow.x
-        agents[index].y = newRow.y
-        agents[index].targetX = newRow.targetX
-        agents[index].targetY = newRow.targetY
-        agents[index].cellX = newRow.cellX
-        agents[index].cellY = newRow.cellY
-        agents[index].path = newRow.path
-        agents[index].moveSpeed = newRow.moveSpeed
-        agents[index].state = newRow.state
-        agents[index].conversationID = newRow.conversationID
-
-        // Only show active_message content for conversations the viewer is in
-        if let convoId = newRow.conversationID,
-           let selfAgent = agents.first(where: \.isSelf),
-           selfAgent.conversationID == convoId {
-            agents[index].activeMessage = newRow.activeMessage
-        } else {
-            agents[index].activeMessage = newRow.activeMessage != nil ? "..." : nil
-        }
-
-        worldAgents = agents
-
-        appendDebugEvent("\(name) update state=\(newRow.state) cell=(\(newRow.cellX ?? -1),\(newRow.cellY ?? -1))")
-        logger.info("Realtime row for \(name, privacy: .public) state=\(newRow.state, privacy: .public) cell=(\(newRow.cellX ?? -1), privacy: .public),(\(newRow.cellY ?? -1), privacy: .public)")
-
-        if let event = movementEvent {
-            appendDebugEvent(movementText(for: event, agentID: newRow.userID))
-            logger.info("Movement event \(self.movementText(for: event, agentID: newRow.userID), privacy: .public)")
+    func tapCharacter(targetUserId: UUID) async {
+        do {
+            let response = try await backend.tapCharacter(
+                deviceID: deviceID, targetUserID: targetUserId
+            )
+            appendDebugEvent("Approaching \(targetUserId.uuidString.prefix(6)) — path: \(response.path.count) cells")
+        } catch {
+            appendDebugEvent("Approach failed: \(error.localizedDescription)")
         }
     }
 
@@ -431,14 +502,139 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func rebuildDebugStats(from agents: [WorldAgent]) {
+        var stats: [UUID: AgentDebugStat] = [:]
+        for agent in agents {
+            let existing = agentDebugStats[agent.id]
+            stats[agent.id] = AgentDebugStat(
+                id: agent.id,
+                displayName: agent.displayName,
+                behavior: agent.behavior ?? agent.state,
+                heading: agent.heading,
+                pathLength: agent.path.count,
+                replanCount: existing?.replanCount ?? 0,
+                behaviorChangeCount: existing?.behaviorChangeCount ?? 0,
+                lastCell: {
+                    guard let x = agent.cellX, let y = agent.cellY else { return nil }
+                    return CellCoord(x: x, y: y)
+                }()
+            )
+        }
+        agentDebugStats = stats
+    }
+
+    private func maskedWorldAgents(_ agents: [WorldAgent]) -> [WorldAgent] {
+        let selfConversationID = agents.first(where: \.isSelf)?.conversationID
+        return agents.map { agent in
+            var maskedAgent = agent
+            if let activeMessage = agent.activeMessage {
+                maskedAgent.activeMessage = agent.conversationID == selfConversationID ? activeMessage : "..."
+            } else {
+                maskedAgent.activeMessage = nil
+            }
+            return maskedAgent
+        }
+    }
+
+    private func updateDebugStat(for agent: WorldAgent, oldAgent: WorldAgent, newAgent: BroadcastAgent) {
+        var stat = agentDebugStats[agent.id] ?? AgentDebugStat(
+            id: agent.id,
+            displayName: agent.displayName,
+            behavior: agent.behavior ?? agent.state,
+            heading: agent.heading,
+            pathLength: agent.path.count,
+            replanCount: 0,
+            behaviorChangeCount: 0,
+            lastCell: nil
+        )
+
+        let oldBehavior = oldAgent.behavior ?? oldAgent.state
+        let newBehavior = newAgent.behavior ?? newAgent.state
+        let behaviorChanged = oldBehavior != newBehavior
+        let pathReplanned =
+            !newAgent.path.isEmpty &&
+            (
+                oldAgent.path.isEmpty ||
+                newAgent.path.count > oldAgent.path.count ||
+                behaviorChanged
+            )
+
+        if behaviorChanged {
+            stat.behaviorChangeCount += 1
+            appendDebugEvent("\(agent.displayName) behavior \(oldBehavior) -> \(newBehavior)")
+        }
+
+        if pathReplanned {
+            stat.replanCount += 1
+            appendDebugEvent("\(agent.displayName) replanned path #\(stat.replanCount) (\(oldBehavior) -> \(newBehavior), len \(oldAgent.path.count) -> \(newAgent.path.count))")
+        }
+
+        stat.displayName = agent.displayName
+        stat.behavior = newBehavior
+        stat.heading = newAgent.heading
+        stat.pathLength = newAgent.path.count
+        if let x = newAgent.cellX, let y = newAgent.cellY {
+            stat.lastCell = CellCoord(x: x, y: y)
+        }
+        agentDebugStats[agent.id] = stat
+    }
+
+    // ── Heartbeat ──────────────────────────────────────────────
+
+    func startHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                do {
+                    try await self.backend.heartbeat(deviceID: self.deviceID)
+                } catch is CancellationError {
+                    return
+                } catch {
+                    self.logger.error("Heartbeat failed: \(error.localizedDescription, privacy: .public)")
+                }
+                try? await Task.sleep(for: .seconds(AARUConstants.heartbeatIntervalSeconds))
+            }
+        }
+    }
+
+    func stopHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+    }
+
+    private func listenForPushToken() {
+        pushTokenObserver = NotificationCenter.default.addObserver(
+            forName: .didReceiveAPNSToken,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self, let token = notification.object as? String else { return }
+            Task {
+                do {
+                    try await self.backend.registerPushToken(deviceID: self.deviceID, token: token)
+                    self.logger.info("Push token registered")
+                } catch {
+                    self.logger.error("Push token registration failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
+    }
+
     private static func preview(from payload: ConversationPreviewPayload) -> ConversationPreview {
         ConversationPreview(
             id: payload.id,
             title: payload.title,
             impressionScore: payload.impressionScore,
             impressionSummary: payload.impressionSummary,
+            impressionFactors: payload.impressionFactors,
+            memorySummary: payload.memorySummary,
             theirImpressionScore: payload.theirImpressionScore,
             theirImpressionSummary: payload.theirImpressionSummary,
+            theirImpressionFactors: payload.theirImpressionFactors,
+            theirMemorySummary: payload.theirMemorySummary,
+            encounterCount: payload.encounterCount,
+            phase: payload.phase,
             status: payload.status,
             baUnlocked: payload.baUnlocked,
             baConversationID: payload.baConversationID,

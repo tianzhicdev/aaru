@@ -255,8 +255,8 @@ struct WorldConfig: Codable, Equatable {
     }
 
     static let `default` = WorldConfig(
-        gridColumns: 64,
-        gridRows: 64,
+        gridColumns: 50,
+        gridRows: 50,
         worldTickMs: 1_000,
         moveAnimationMs: 900,
         bubbleReadingWPS: 4,
@@ -286,7 +286,13 @@ struct WorldMovementEvent: Codable, Equatable {
     }
 }
 
-struct RealtimeAgentPosition: Decodable, Equatable {
+struct WorldBroadcastPayload: Decodable, Equatable {
+    let tick: Int
+    let ts: Double
+    let agents: [BroadcastAgent]
+}
+
+struct BroadcastAgent: Decodable, Equatable {
     let userID: UUID
     let x: Double
     let y: Double
@@ -297,6 +303,8 @@ struct RealtimeAgentPosition: Decodable, Equatable {
     let path: [CellCoord]
     let moveSpeed: Double
     let state: String
+    let behavior: String?
+    let heading: Int?
     let activeMessage: String?
     let conversationID: UUID?
 
@@ -311,6 +319,8 @@ struct RealtimeAgentPosition: Decodable, Equatable {
         case path
         case moveSpeed = "move_speed"
         case state
+        case behavior
+        case heading
         case activeMessage = "active_message"
         case conversationID = "conversation_id"
     }
@@ -327,13 +337,31 @@ struct RealtimeAgentPosition: Decodable, Equatable {
         path = (try? container.decode([CellCoord].self, forKey: .path)) ?? []
         moveSpeed = (try? container.decode(Double.self, forKey: .moveSpeed)) ?? 1.8
         state = try container.decode(String.self, forKey: .state)
+        behavior = try container.decodeIfPresent(String.self, forKey: .behavior)
+        heading = try container.decodeIfPresent(Int.self, forKey: .heading)
         activeMessage = try container.decodeIfPresent(String.self, forKey: .activeMessage)
         conversationID = try container.decodeIfPresent(UUID.self, forKey: .conversationID)
     }
 }
 
+struct AgentDebugStat: Identifiable, Equatable {
+    let id: UUID
+    var displayName: String
+    var behavior: String
+    var heading: Int?
+    var pathLength: Int
+    var replanCount: Int
+    var behaviorChangeCount: Int
+    var lastCell: CellCoord?
+}
+
 enum AARUConstants {
     static let impressionUnlockThreshold = 72
+    static let heartbeatIntervalSeconds: TimeInterval = 30
+}
+
+extension Notification.Name {
+    static let didReceiveAPNSToken = Notification.Name("aaru.didReceiveAPNSToken")
 }
 
 struct BaMessage: Identifiable, Equatable {
@@ -347,8 +375,14 @@ struct ConversationPreview: Identifiable, Equatable {
     let title: String
     var impressionScore: Int
     var impressionSummary: String
+    var impressionFactors: ImpressionFactors?
+    var memorySummary: String?
     var theirImpressionScore: Int
     var theirImpressionSummary: String
+    var theirImpressionFactors: ImpressionFactors?
+    var theirMemorySummary: String?
+    var encounterCount: Int
+    var phase: String
     var status: String
     var baUnlocked: Bool
     var baConversationID: UUID?
@@ -362,13 +396,35 @@ struct ChatMessage: Identifiable, Equatable {
     let content: String
 }
 
+struct ImpressionFactors: Codable, Equatable {
+    let responsiveness: Int
+    let valuesAlignment: Int
+    let conversationQuality: Int
+    let interestOverlap: Int
+    let novelty: Int
+
+    enum CodingKeys: String, CodingKey {
+        case responsiveness
+        case valuesAlignment = "values_alignment"
+        case conversationQuality = "conversation_quality"
+        case interestOverlap = "interest_overlap"
+        case novelty
+    }
+}
+
 struct ConversationDetail: Equatable {
     let id: UUID
     let title: String
     let impressionScore: Int
     let impressionSummary: String
+    let impressionFactors: ImpressionFactors?
+    let memorySummary: String?
     let theirImpressionScore: Int
     let theirImpressionSummary: String
+    let theirImpressionFactors: ImpressionFactors?
+    let theirMemorySummary: String?
+    let encounterCount: Int
+    let phase: String
     let status: String
     let baUnlocked: Bool
     let otherSoul: SoulProfile?
@@ -399,13 +455,29 @@ struct BootstrapPayload: Codable, Equatable {
     }
 }
 
+struct GeneratedSoulProfile: Codable, Equatable {
+    let displayName: String
+    let soulProfile: SoulProfile
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case soulProfile = "soul_profile"
+    }
+}
+
 struct ConversationPreviewPayload: Codable, Equatable {
     let id: UUID
     let title: String
     let impressionScore: Int
     let impressionSummary: String
+    let impressionFactors: ImpressionFactors?
+    let memorySummary: String?
     let theirImpressionScore: Int
     let theirImpressionSummary: String
+    let theirImpressionFactors: ImpressionFactors?
+    let theirMemorySummary: String?
+    let encounterCount: Int
+    let phase: String
     let status: String
     let baUnlocked: Bool
     let baConversationID: UUID?
@@ -416,8 +488,14 @@ struct ConversationPreviewPayload: Codable, Equatable {
         case title
         case impressionScore = "impression_score"
         case impressionSummary = "impression_summary"
+        case impressionFactors = "impression_factors"
+        case memorySummary = "memory_summary"
         case theirImpressionScore = "their_impression_score"
         case theirImpressionSummary = "their_impression_summary"
+        case theirImpressionFactors = "their_impression_factors"
+        case theirMemorySummary = "their_memory_summary"
+        case encounterCount = "encounter_count"
+        case phase
         case status
         case baUnlocked = "ba_unlocked"
         case baConversationID = "ba_conversation_id"

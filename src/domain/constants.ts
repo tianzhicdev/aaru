@@ -1,5 +1,5 @@
-export const WORLD_GRID_COLUMNS = 64;
-export const WORLD_GRID_ROWS = 64;
+export const WORLD_GRID_COLUMNS = 50;
+export const WORLD_GRID_ROWS = 50;
 export const WORLD_COOLDOWN_SECONDS = 10;
 export const IMPRESSION_UNLOCK_THRESHOLD = 72;
 export const IMPRESSION_EVALUATION_INTERVAL = 5;
@@ -76,6 +76,10 @@ export function getPairCooldownHours(encounterCount: number, baUnlocked: boolean
   return DEFAULT_PAIR_COOLDOWN_HOURS;
 }
 
+// ── User-directed movement ──
+export const USER_MOVE_SPEED = 2.4;
+export const USER_DIRECTED_IDLE_TICKS = 3;
+
 // ── Behavior system (Phase 1) ──
 export const BEHAVIOR_TICK_MIN = 5;
 export const BEHAVIOR_TICK_MAX = 10;
@@ -100,6 +104,16 @@ export const RETREAT_MIN_CROWD = 3;
 export const GREEDY_PATH_MIN = 3;
 export const GREEDY_PATH_MAX = 8;
 export const GREEDY_JITTER_PROB = 0.20;
+
+// ── World population ──
+export const WORLD_POPULATION_TARGET = 50;
+export const MIN_NPC_COUNT = 5;
+
+// ── Presence tracking ──
+export const HEARTBEAT_INTERVAL_MS = 30_000;
+export const PRESENCE_BACKGROUND_THRESHOLD_MS = 30_000;
+export const PRESENCE_OFFLINE_THRESHOLD_MS = 900_000; // 15 min
+export const MAX_PUSH_NOTIFICATIONS_PER_DAY = 1;
 
 // ── Points of Interest (Sunset Beach) ──
 import type { POI } from "./types.ts";

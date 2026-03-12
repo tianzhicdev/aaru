@@ -23,7 +23,7 @@ AARU is a soul-based social app where AI agents (Ka) wander a 2D world, have con
 ```bash
 npx vitest run
 ```
-All 72 tests must pass (8 test files). Tests work without API keys (fallback paths are exercised).
+All 113 tests must pass (11 test files). Tests work without API keys (fallback paths are exercised).
 
 ### TypeScript lint
 ```bash
@@ -57,7 +57,7 @@ maestro test maestro/<flow>.yaml  # single flow
 ### TypeScript (src/)
 - `src/domain/` — Pure domain logic (world tick, Ka chat, impression scoring, soul profiles, avatars)
 - `src/lib/` — Utilities (env, http helpers)
-- `supabase/functions/` — Edge Function handlers that call domain logic
+- `supabase/functions/` — Edge Function handlers that call domain logic (incl. heartbeat, register-push-token)
 - `tests/unit/` — Unit tests for domain functions
 - `tests/integration/` — Handler integration tests
 
@@ -78,7 +78,8 @@ maestro test maestro/<flow>.yaml  # single flow
 - `impression.ts` — 5-dimension heuristic + LLM impression scoring, encounter-aware accumulation
 - `compatibility.ts` — Thin wrapper over impression for API surface
 - `soulProfile.ts` — Profile generation and merging (soul-v2: SoulValues + SoulNarrative)
-- `npcSeeds.ts` — 15-seed NPC pool with weekly rotation logic
+- `npcPool.ts` — 50-seed NPC pool with deep soul profiles and dynamic population selection
+- `npcSeeds.ts` — Legacy 15-seed NPC pool with weekly rotation logic
 - `constants.ts` — Grid size, thresholds, phase system, momentum, decay, behavior weights
 - `schemas.ts` — Zod schemas for runtime validation (incl. soulValuesSchema, soulNarrativeSchema)
 - `types.ts` — Domain types (SoulProfile, SoulValues, SoulNarrative, ImpressionEvaluation, POI, etc.)
@@ -145,10 +146,21 @@ Message limits scale with relationship depth:
 | Acquaintances (≥ 15 encounters) | 72 hours |
 | Ba unlocked | 168 hours (1 week) |
 
-### NPC Rotation
-- 15-seed pool defined in `npcSeeds.ts` (names, personalities, interests, values, avatar configs)
-- Weekly sliding window of 5 active NPCs, deterministic based on week number since epoch 2026-01-05
-- 1 NPC swaps per week; departing NPCs deactivated (not deleted), arriving ones created/reactivated
+### Presence Tracking (Phase 4)
+Server-side only — NEVER exposed to other users.
+- **Heartbeat**: iOS sends POST to `heartbeat` every 30s while app is active
+- **Transitions**: `online → background` (30s no heartbeat) → `offline` (15min no heartbeat)
+- **Offline conversation limit**: max 10 per day (`OFFLINE_MAX_CONVERSATIONS_PER_DAY`)
+- **Push notifications**: max 1/day when Ka finishes a conversation while user is offline
+- **iOS**: heartbeat timer starts/stops via `scenePhase`, push tokens registered via `AppDelegate`
+
+### NPC Population (Dynamic)
+- 50-seed pool in `npcPool.ts` with deep soul profiles (Schwartz values, formative stories, narrative themes)
+- World always targets 50 total agents: `real users + NPCs = WORLD_POPULATION_TARGET (50)`
+- NPCs spawn/despawn dynamically based on real user count via `ensureNpcPopulation()`
+- Each NPC gets a full `SoulProfile` derived from seed via `deriveSoulProfile()` — Schwartz dimensions blended from value mappings + personality nudges, narratives from interest-specific stories
+- Stable ordering: first N seeds from pool are preferred when fewer NPCs needed
+- Legacy 15-seed rotation logic in `npcSeeds.ts` (weekly sliding window) still exists but is not used by `ensureNpcPopulation`
 
 ### Behavior System
 Agents pick behaviors by weighted random selection:
@@ -182,7 +194,7 @@ Heading continuity: 70% same direction, 20% deviate ±1, 10% deviate ±2.
 
 ## Definition of Done
 A task is complete when ALL of the following are true:
-1. `npx vitest run` — all tests pass (72/72 currently, 8 test files)
+1. `npx vitest run` — all tests pass (80/80 currently, 9 test files)
 2. `npx tsc -p tsconfig.json --noEmit` — no type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
@@ -197,6 +209,12 @@ A task is complete when ALL of the following are true:
 - **Phase system determines base message limit** — discovery(6), personal(10), depth(16) based on encounter count
 - **Momentum can extend conversations** — +4 messages when responsiveness ≥ 80 AND conversation_quality ≥ 80
 - **Pair cooldown scales with familiarity** — 24h → 72h (15+ encounters) → 168h (Ba unlocked)
+- **Heartbeat interval is 30s** — iOS sends heartbeat while active; server transitions stale presence each tick loop
+- **Presence is server-side only** — never exposed to other users
+- **Offline conversation limit is 10/day** — enforced in `runWorldTick()`, counter resets on date rollover
+- **Push notifications max 1/day** — checked via `last_notification_at` on users table
+- **World population target is 50** — real users + NPCs always totals 50; NPCs spawned/killed dynamically
+- **NPC pool has 50 seeds** — each with deep soul profiles (Schwartz values + formative stories)
 - **iOS client is a pure renderer** — all game state is server-authoritative
 - **XcodeGen** — project.yml generates AARU.xcodeproj; don't edit .xcodeproj directly
 - **XcodeBuildMCP** — session defaults configured (profile "aaru"): scheme AARU, iPhone 17 Pro, Debug config

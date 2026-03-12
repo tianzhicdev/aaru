@@ -15,7 +15,8 @@ describe("backend handlers", () => {
   it("generates a soul profile from sparse input", async () => {
     const response = await handleGenerateSoulProfile({ raw_input: "I like cinema." });
     expect(response.status).toBe(200);
-    expect(response.body.interests.length).toBeGreaterThan(0);
+    expect(response.body.display_name.length).toBeGreaterThan(0);
+    expect(response.body.soul_profile.interests.length).toBeGreaterThan(0);
   });
 
   it("ticks the world and starts a conversation", async () => {

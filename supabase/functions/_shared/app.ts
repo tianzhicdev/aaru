@@ -1,7 +1,9 @@
-import { buildKaReply, generateConversationSummary } from "../../../src/domain/ka.ts";
+import { buildKaReply, generateConversationSummary, generateRelationshipMemory } from "../../../src/domain/ka.ts";
+import type { z } from "zod";
 import { accumulateImpression, evaluateImpression, isBaAvailableToViewer } from "../../../src/domain/impression.ts";
 import { generateFallbackSoulProfile } from "../../../src/domain/soulProfile.ts";
 import { endConversation, tickWorld } from "../../../src/domain/world.ts";
+import { findPath } from "../../../src/domain/pathfinding.ts";
 import type { AgentPosition, ConversationMessage, SoulProfile, WorldConfig } from "../../../src/domain/types.ts";
 import {
   createConversation,
@@ -9,6 +11,7 @@ import {
   ensureAvatar,
   ensureNpcPopulation,
   ensureUser,
+  getAgentPosition,
   getAgentPositions,
   getAvatar,
   getImpressionEdge,
@@ -42,9 +45,20 @@ import {
   ensureBaConversation,
   listBaMessages,
   countBaMessages,
+  broadcastToChannel,
   insertBaMessage,
-  getAvatarsByUserIds
+  getAvatarsByUserIds,
+  updateHeartbeat,
+  transitionStalePresence,
+  incrementOfflineConvo,
+  getUserPresence,
+  upsertPushToken,
+  getDeviceTokensForUsers,
+  updateLastNotificationAt,
+  updateUserDisplayName,
+  upsertImpressionMemory
 } from "./db.ts";
+import type { Json } from "./db.ts";
 import {
   BUBBLE_READING_WORDS_PER_SECOND,
   CAMERA_VISIBLE_COLUMNS,
@@ -60,19 +74,27 @@ import {
   WORLD_GRID_COLUMNS,
   WORLD_GRID_ROWS,
   AGENT_MOVE_SPEED,
+  USER_MOVE_SPEED,
   getPairCooldownHours,
-  getEffectiveMessageLimit
+  getEffectiveMessageLimit,
+  getConversationPhase,
+  OFFLINE_MAX_CONVERSATIONS_PER_DAY,
+  MAX_PUSH_NOTIFICATIONS_PER_DAY
 } from "../../../src/domain/constants.ts";
 import { OBSTACLE_CELLS } from "../../../src/domain/obstacle_map.ts";
 import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
 import { fetchInterestNews } from "./xai.ts";
+import { sendConversationSummaryNotification } from "./apns.ts";
+import { worldBroadcastPayloadSchema } from "./contracts.ts";
 
 export interface WorldAgentSnapshot extends AgentPosition {
   display_name: string;
   avatar: AvatarConfig;
   is_self: boolean;
 }
+
+type WorldBroadcastPayload = z.infer<typeof worldBroadcastPayloadSchema>;
 
 type AppUser = Awaited<ReturnType<typeof ensureUser>>;
 
@@ -205,8 +227,48 @@ function toAgentPosition(row: Awaited<ReturnType<typeof getAgentPositions>>[numb
     cooldown_until: row.cooldown_until,
     behavior: row.behavior,
     behavior_ticks_remaining: row.behavior_ticks_remaining,
-    heading: row.heading
+    heading: row.heading,
+    user_target_cell_x: row.user_target_cell_x,
+    user_target_cell_y: row.user_target_cell_y,
+    user_directed: row.user_directed
   };
+}
+
+function buildBroadcastAgent(row: Awaited<ReturnType<typeof getAgentPositions>>[number]) {
+  return {
+    user_id: row.user_id,
+    x: row.x,
+    y: row.y,
+    target_x: row.target_x,
+    target_y: row.target_y,
+    cell_x: row.cell_x,
+    cell_y: row.cell_y,
+    path: row.path ?? [],
+    move_speed: row.move_speed ?? AGENT_MOVE_SPEED,
+    state: row.state,
+    behavior: row.behavior ?? null,
+    heading: row.heading ?? null,
+    active_message: row.active_message,
+    conversation_id: row.conversation_id
+  };
+}
+
+function broadcastTickCounter() {
+  return Math.floor(Date.now() / WORLD_TICK_INTERVAL_MS);
+}
+
+async function broadcastWorldState(
+  instanceId: string,
+  positions: Awaited<ReturnType<typeof getAgentPositions>>,
+  tick: number
+) {
+  const payload: WorldBroadcastPayload = {
+    tick,
+    ts: Date.now(),
+    agents: positions.map(buildBroadcastAgent)
+  };
+  worldBroadcastPayloadSchema.parse(payload);
+  await broadcastToChannel(`world:${instanceId}`, "tick", payload as Json);
 }
 
 function cellCenter(cellX: number, cellY: number) {
@@ -344,6 +406,30 @@ async function buildConversationTopics(soulA: SoulProfile, soulB: SoulProfile) {
   };
 }
 
+function edgeFactors(edge: Awaited<ReturnType<typeof getImpressionEdge>>) {
+  if (!edge) {
+    return undefined;
+  }
+  return {
+    responsiveness: Math.round(edge.responsiveness ?? 0),
+    values_alignment: Math.round(edge.values_alignment ?? 0),
+    conversation_quality: Math.round(edge.conversation_quality ?? 0),
+    interest_overlap: Math.round(edge.interest_overlap ?? 0),
+    novelty: Math.round(edge.novelty ?? 0)
+  };
+}
+
+function relationshipPhase(
+  yourEdge: Awaited<ReturnType<typeof getImpressionEdge>>,
+  theirEdge: Awaited<ReturnType<typeof getImpressionEdge>>
+) {
+  const encounterCount = Math.max(yourEdge?.encounter_count ?? 0, theirEdge?.encounter_count ?? 0);
+  return {
+    encounterCount,
+    phase: getConversationPhase(Math.max(encounterCount, 1))
+  };
+}
+
 export async function bootstrapUser(deviceId: string) {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -351,7 +437,7 @@ export async function bootstrapUser(deviceId: string) {
       const user = await ensureUser(deviceId);
       const instanceId = user.instance_id ?? (await getDefaultInstanceId());
       await pruneDemoWorld(instanceId, user.id);
-      await ensureNpcPopulation();
+      await ensureNpcPopulation(instanceId);
       await ensureSoulProfileForUser(user);
       await ensureAgentPosition(user);
       const soulProfile = await getSoulProfile(user.id);
@@ -379,11 +465,15 @@ export async function bootstrapUser(deviceId: string) {
   throw lastError;
 }
 
-export async function saveSoulProfile(deviceId: string, profile: SoulProfile) {
+export async function saveSoulProfile(deviceId: string, profile: SoulProfile, displayName?: string) {
   const user = await ensureUser(deviceId);
+  const trimmedDisplayName = displayName?.trim();
+  const finalUser = trimmedDisplayName && trimmedDisplayName !== user.display_name
+    ? await updateUserDisplayName(user.id, trimmedDisplayName)
+    : user;
   const saved = await upsertSoulProfile(user.id, profile);
   await ensureAvatar(user.id);
-  return { user_id: user.id, soul_profile: saved };
+  return { user_id: user.id, display_name: finalUser.display_name, soul_profile: saved };
 }
 
 export async function saveAvatar(deviceId: string, avatar: AvatarConfig) {
@@ -452,7 +542,7 @@ function releasePairToWander(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -483,7 +573,7 @@ function dispersePairAfterRejectedConversation(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -537,7 +627,7 @@ async function repairConversationState(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -591,20 +681,11 @@ async function buildWorldSnapshot(
   ]);
   const userById = new Map(users.map((user) => [user.id, user]));
 
-  // Find conversations the viewer is part of
-  const viewerConversationIds = new Set(
-    fresh
-      .filter((row) => row.user_id === viewerUserId && row.conversation_id)
-      .map((row) => row.conversation_id!)
-  );
-
   const agents: WorldAgentSnapshot[] = fresh.map((row) => {
     const pos = toAgentPosition(row);
-    // Only send active_message content for conversations the viewer is in
-    const isViewerConversation = row.conversation_id && viewerConversationIds.has(row.conversation_id);
     return {
       ...pos,
-      active_message: pos.active_message ? (isViewerConversation ? pos.active_message : "...") : null,
+      active_message: pos.active_message,
       display_name: userById.get(row.user_id)?.display_name ?? "Unknown Soul",
       avatar: avatarMap.get(row.user_id) ?? avatarForSeed(userById.get(row.user_id)?.device_id ?? row.user_id),
       is_self: row.user_id === viewerUserId
@@ -700,8 +781,14 @@ async function advanceConversation(conversationId: string) {
   // Evaluate impressions at interval
   const shouldEvaluate = messages.length > 0 && messages.length % IMPRESSION_EVALUATION_INTERVAL === 0;
   if (shouldEvaluate) {
-    const evaluationA = await evaluateImpression(soulA, soulB, transcript);
-    const evaluationB = await evaluateImpression(soulB, soulA, transcript);
+    const evaluationA = await evaluateImpression(soulA, soulB, transcript, {
+      selfName: userA.display_name,
+      otherName: userB.display_name
+    });
+    const evaluationB = await evaluateImpression(soulB, soulA, transcript, {
+      selfName: userB.display_name,
+      otherName: userA.display_name
+    });
     const scoreA = accumulateImpression(reciprocalA?.score ?? 0, evaluationA.score, encounterCountA);
     const scoreB = accumulateImpression(reciprocalB?.score ?? 0, evaluationB.score, encounterCountB);
     const baUnlockedForA = isBaAvailableToViewer(scoreB);
@@ -716,12 +803,24 @@ async function advanceConversation(conversationId: string) {
     await upsertImpressionEdge(
       conversation.user_a_id, conversation.user_b_id,
       { ...evaluationA, score: scoreA }, baUnlockedForA, encounterCountA,
-      { responsiveness: evaluationA.responsiveness, conversationQuality: evaluationA.conversation_quality }
+      {
+        responsiveness: evaluationA.responsiveness,
+        valuesAlignment: evaluationA.values_alignment,
+        conversationQuality: evaluationA.conversation_quality,
+        interestOverlap: evaluationA.interest_overlap,
+        novelty: evaluationA.novelty
+      }
     );
     await upsertImpressionEdge(
       conversation.user_b_id, conversation.user_a_id,
       { ...evaluationB, score: scoreB }, baUnlockedForB, encounterCountB,
-      { responsiveness: evaluationB.responsiveness, conversationQuality: evaluationB.conversation_quality }
+      {
+        responsiveness: evaluationB.responsiveness,
+        valuesAlignment: evaluationB.values_alignment,
+        conversationQuality: evaluationB.conversation_quality,
+        interestOverlap: evaluationB.interest_overlap,
+        novelty: evaluationB.novelty
+      }
     );
   }
 
@@ -733,11 +832,25 @@ async function advanceConversation(conversationId: string) {
   const bestQuality = Math.max(edgeA?.conversation_quality ?? 0, edgeB?.conversation_quality ?? 0);
   const messageLimit = getEffectiveMessageLimit(baseLimit, bestResponsiveness, bestQuality);
   if (messages.length >= messageLimit) {
+    let summary = "";
     try {
-      const summary = await generateConversationSummary(transcript);
+      summary = await generateConversationSummary(transcript);
       await insertConversationSummary(conversationId, conversation.user_a_id, conversation.user_b_id, summary);
     } catch (error) {
       console.error("Failed to store conversation summary:", error);
+    }
+
+    try {
+      const [memoryA, memoryB] = await Promise.all([
+        generateRelationshipMemory(userA.display_name, userB.display_name, transcript),
+        generateRelationshipMemory(userB.display_name, userA.display_name, transcript)
+      ]);
+      await Promise.all([
+        upsertImpressionMemory(conversation.user_a_id, conversation.user_b_id, memoryA || summary),
+        upsertImpressionMemory(conversation.user_b_id, conversation.user_a_id, memoryB || summary)
+      ]);
+    } catch (error) {
+      console.error("Failed to store relationship memory:", error);
     }
 
     await finishConversation(conversationId, {});
@@ -757,6 +870,31 @@ async function advanceConversation(conversationId: string) {
       };
     });
     await upsertAgentPositions(cooled);
+
+    // Notify offline participants about the conversation
+    for (const participant of [userA, userB]) {
+      if (participant.is_npc) continue;
+      try {
+        const presence = await getUserPresence(participant.id);
+        if (!presence || presence.presence === "online") continue;
+        // Max 1 notification per day
+        if (presence.last_notification_at) {
+          const lastNotif = new Date(presence.last_notification_at).getTime();
+          if (Date.now() - lastNotif < 24 * 60 * 60 * 1000) continue;
+        }
+        const tokens = await getDeviceTokensForUsers([participant.id]);
+        if (tokens.length === 0) continue;
+        const otherUser = participant.id === userA.id ? userB : userA;
+        await sendConversationSummaryNotification(
+          tokens.map((t) => t.device_token),
+          otherUser.display_name
+        );
+        await updateLastNotificationAt(participant.id);
+      } catch (error) {
+        console.error("Failed to send conversation notification:", error);
+      }
+    }
+
     return;
   }
 
@@ -847,7 +985,7 @@ async function forceConversationForUser(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -927,7 +1065,7 @@ export async function syncWorld(deviceId: string) {
   const user = await ensureUser(deviceId);
   const instanceId = user.instance_id ?? (await getDefaultInstanceId());
   await pruneDemoWorld(instanceId, user.id);
-  await ensureNpcPopulation();
+  await ensureNpcPopulation(instanceId);
   await ensureSoulProfileForUser(user);
   await ensureAvatarForUser(user);
   await ensureAgentPosition(user);
@@ -982,7 +1120,10 @@ async function runWorldTick(
       cooldown_until: position.cooldown_until,
       behavior: position.behavior,
       behavior_ticks_remaining: position.behavior_ticks_remaining,
-      heading: position.heading
+      heading: position.heading,
+      user_target_cell_x: position.user_target_cell_x,
+      user_target_cell_y: position.user_target_cell_y,
+      user_directed: position.user_directed
     }));
 
     for (const started of result.startedConversations) {
@@ -1035,6 +1176,37 @@ async function runWorldTick(
         continue;
       }
 
+      // Offline limit gate: skip conversation if any non-NPC user is offline and over daily limit
+      let offlineLimitHit = false;
+      for (const participant of [userA, userB]) {
+        if (participant.is_npc) continue;
+        try {
+          const presence = await getUserPresence(participant.id);
+          if (presence && presence.presence === "offline" && presence.daily_offline_convos >= OFFLINE_MAX_CONVERSATIONS_PER_DAY) {
+            offlineLimitHit = true;
+            break;
+          }
+        } catch {
+          // Presence check failure should not block conversations
+        }
+      }
+      if (offlineLimitHit) {
+        dispersePairAfterRejectedConversation(persisted, [started.agentA, started.agentB]);
+        continue;
+      }
+      // Increment offline convo counter for offline non-NPC participants
+      for (const participant of [userA, userB]) {
+        if (participant.is_npc) continue;
+        try {
+          const presence = await getUserPresence(participant.id);
+          if (presence && presence.presence === "offline") {
+            await incrementOfflineConvo(participant.id);
+          }
+        } catch {
+          // Counter increment failure should not block conversations
+        }
+      }
+
       const conversation = await createConversation(instanceId, started.agentA, started.agentB);
       const topicBundle = await buildConversationTopics(
         soulProfileA ?? generateFallbackSoulProfile(userA.display_name),
@@ -1071,6 +1243,13 @@ async function runWorldTick(
 
     await upsertAgentPositions(persisted);
     persisted = await getAgentPositions(instanceId);
+    void broadcastWorldState(instanceId, persisted, broadcastTickCounter()).catch((error) => {
+      console.error(JSON.stringify({
+        event: "world_broadcast_failed",
+        instance_id: instanceId,
+        error: error instanceof Error ? error.message : String(error)
+      }));
+    });
   }
 
   const tickedAt = new Date().toISOString();
@@ -1129,16 +1308,23 @@ export async function listConversationSummaries(deviceId: string) {
       getImpressionEdge(otherId, user.id),
       getBaConversationForPair(user.id, otherId)
     ]);
+    const relationship = relationshipPhase(yourEdge, theirEdge);
     const baMessageCount = baConvo ? await countBaMessages(baConvo.id) : 0;
     return {
       id: conversation.id,
       title: other?.display_name ?? "Unknown Soul",
       impression_score: yourEdge?.score ?? conversation.impression_score,
       impression_summary: yourEdge?.summary ?? conversation.impression_summary ?? "Your Ka is still forming an impression.",
+      impression_factors: edgeFactors(yourEdge),
+      memory_summary: yourEdge?.memory_summary ?? undefined,
       status: conversation.status,
       ba_unlocked: theirEdge?.ba_unlocked ?? false,
       their_impression_score: theirEdge?.score ?? 0,
       their_impression_summary: theirEdge?.summary ?? "They have not opened their Ba to you yet.",
+      their_impression_factors: edgeFactors(theirEdge),
+      their_memory_summary: theirEdge?.memory_summary ?? undefined,
+      encounter_count: relationship.encounterCount,
+      phase: relationship.phase,
       ba_conversation_id: baConvo?.id ?? null,
       ba_message_count: baMessageCount
     };
@@ -1182,14 +1368,21 @@ export async function getConversationDetail(deviceId: string, conversationId: st
       created_at: msg.created_at
     }));
   }
+  const relationship = relationshipPhase(yourEdge, theirEdge);
 
   return {
     id: conversation.id,
     title: otherUser?.display_name ?? "Unknown Soul",
     impression_score: yourEdge?.score ?? conversation.impression_score,
     impression_summary: yourEdge?.summary ?? conversation.impression_summary ?? "",
+    impression_factors: edgeFactors(yourEdge),
+    memory_summary: yourEdge?.memory_summary ?? undefined,
     their_impression_score: theirEdge?.score ?? 0,
     their_impression_summary: theirEdge?.summary ?? "They have not formed a strong enough impression yet.",
+    their_impression_factors: edgeFactors(theirEdge),
+    their_memory_summary: theirEdge?.memory_summary ?? undefined,
+    encounter_count: relationship.encounterCount,
+    phase: relationship.phase,
     status: conversation.status,
     ba_unlocked: theirEdge?.ba_unlocked ?? false,
     other_soul: otherSoul,
@@ -1251,6 +1444,168 @@ export async function sendHumanMessage(deviceId: string, conversationId: string,
   return getConversationDetail(deviceId, conversationId);
 }
 
+// ── Presence handlers ──────────────────────────────────────────
+
+// ── Tap Control ──────────────────────────────────────────────
+
+export async function handleTapCell(
+  deviceId: string,
+  targetCellX: number,
+  targetCellY: number
+) {
+  const user = await ensureUser(deviceId);
+  const position = await getAgentPosition(user.id);
+  if (!position) {
+    throw new Error("Agent position not found");
+  }
+
+  if (position.state === "chatting" || position.state === "cooldown") {
+    return { error: "Agent is busy", status: 409 };
+  }
+
+  if (targetCellX < 0 || targetCellX >= WORLD_GRID_COLUMNS ||
+      targetCellY < 0 || targetCellY >= WORLD_GRID_ROWS) {
+    return { error: "Target cell out of bounds", status: 422 };
+  }
+
+  const currentCellX = position.cell_x;
+  const currentCellY = position.cell_y;
+
+  // Only terrain obstacles block tap-to-cell (not other agents)
+  const blocked = new Set(OBSTACLE_CELLS);
+
+  const path = findPath(
+    { x: currentCellX, y: currentCellY },
+    { x: targetCellX, y: targetCellY },
+    blocked
+  );
+
+  if (path.length === 0) {
+    return { error: "Unreachable destination", status: 422 };
+  }
+
+  // Estimate duration: path.length cells at USER_MOVE_SPEED cells/sec * tick interval
+  const estimatedDurationMs = Math.round(path.length / USER_MOVE_SPEED * WORLD_TICK_INTERVAL_MS);
+
+  // Update agent position
+  await upsertAgentPositions([{
+    ...position,
+    path,
+    state: "user_moving",
+    user_directed: true,
+    user_target_cell_x: targetCellX,
+    user_target_cell_y: targetCellY,
+    move_speed: USER_MOVE_SPEED,
+    behavior: "wander",
+    behavior_ticks_remaining: 0
+  }]);
+
+  return {
+    path,
+    estimated_duration_ms: estimatedDurationMs
+  };
+}
+
+export async function handleTapCharacter(
+  deviceId: string,
+  targetUserId: string
+) {
+  const user = await ensureUser(deviceId);
+  if (user.id === targetUserId) {
+    return { error: "Cannot approach self", status: 422 };
+  }
+
+  const position = await getAgentPosition(user.id);
+  if (!position) {
+    throw new Error("Agent position not found");
+  }
+
+  if (position.state === "chatting" || position.state === "cooldown") {
+    return { error: "Agent is busy", status: 409 };
+  }
+
+  const targetPosition = await getAgentPosition(targetUserId);
+  if (!targetPosition) {
+    return { error: "Target agent not found", status: 422 };
+  }
+
+  const currentCellX = position.cell_x;
+  const currentCellY = position.cell_y;
+  const targetCellX = targetPosition.cell_x;
+  const targetCellY = targetPosition.cell_y;
+
+  // Find an adjacent cell to the target that is walkable
+  const blocked = new Set(OBSTACLE_CELLS);
+  const dx = [-1, 0, 1, -1, 1, -1, 0, 1];
+  const dy = [-1, -1, -1, 0, 0, 1, 1, 1];
+
+  let bestAdjacentCell: { x: number; y: number } | null = null;
+  let bestDist = Infinity;
+
+  for (let d = 0; d < 8; d++) {
+    const ax = targetCellX + dx[d];
+    const ay = targetCellY + dy[d];
+    if (ax < 0 || ax >= WORLD_GRID_COLUMNS || ay < 0 || ay >= WORLD_GRID_ROWS) continue;
+    if (blocked.has(`${ax}:${ay}`)) continue;
+    // Prefer the adjacent cell closest to the user
+    const dist = Math.max(Math.abs(ax - currentCellX), Math.abs(ay - currentCellY));
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestAdjacentCell = { x: ax, y: ay };
+    }
+  }
+
+  if (!bestAdjacentCell) {
+    return { error: "No walkable cell adjacent to target", status: 422 };
+  }
+
+  // If already adjacent, no need to pathfind
+  if (bestAdjacentCell.x === currentCellX && bestAdjacentCell.y === currentCellY) {
+    return { path: [], estimated_duration_ms: 0 };
+  }
+
+  const path = findPath(
+    { x: currentCellX, y: currentCellY },
+    bestAdjacentCell,
+    blocked
+  );
+
+  if (path.length === 0) {
+    return { error: "Cannot reach target", status: 422 };
+  }
+
+  const estimatedDurationMs = Math.round(path.length / USER_MOVE_SPEED * WORLD_TICK_INTERVAL_MS);
+
+  await upsertAgentPositions([{
+    ...position,
+    path,
+    state: "user_moving",
+    user_directed: true,
+    user_target_cell_x: bestAdjacentCell.x,
+    user_target_cell_y: bestAdjacentCell.y,
+    move_speed: USER_MOVE_SPEED,
+    behavior: "wander",
+    behavior_ticks_remaining: 0
+  }]);
+
+  return {
+    path,
+    estimated_duration_ms: estimatedDurationMs
+  };
+}
+
+export async function handleHeartbeat(deviceId: string) {
+  const user = await ensureUser(deviceId);
+  await updateHeartbeat(user.id);
+  return { ok: true };
+}
+
+export async function handleRegisterPushToken(deviceId: string, deviceToken: string, platform: string) {
+  const user = await ensureUser(deviceId);
+  await upsertPushToken(user.id, deviceToken, platform);
+  return { ok: true };
+}
+
 export async function advanceOnlineWorlds() {
   const deadline = Date.now() + WORLD_RUNNER_WINDOW_MS;
   const results = new Map<string, { instance_id: string; ticks: number; count: number }>();
@@ -1261,6 +1616,16 @@ export async function advanceOnlineWorlds() {
   }));
 
   while (Date.now() < deadline) {
+    // Transition stale presence: online→background→offline
+    try {
+      const transitioned = await transitionStalePresence();
+      if (transitioned > 0) {
+        console.log(JSON.stringify({ event: "presence_transitions", count: transitioned }));
+      }
+    } catch (error) {
+      console.error("Failed to transition stale presence:", error);
+    }
+
     const owner = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const leaseExpiresAt = new Date(Date.now() + JOB_LEASE_MS).toISOString();
@@ -1280,7 +1645,7 @@ export async function advanceOnlineWorlds() {
         await ensureSoulProfileForUser(viewer);
         await ensureAvatarForUser(viewer);
       }
-      await ensureNpcPopulation();
+      await ensureNpcPopulation(instance.id);
       const lastTick = instance.last_tick_at ? new Date(instance.last_tick_at).getTime() : 0;
       const elapsedMs = Math.max(WORLD_TICK_INTERVAL_MS, Date.now() - lastTick);
       const stepCount = 1;

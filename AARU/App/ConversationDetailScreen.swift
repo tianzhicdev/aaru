@@ -49,6 +49,11 @@ struct ConversationDetailScreen: View {
             HStack {
                 Text("\(detail.theirImpressionScore)% their impression of you")
                     .font(.headline.bold())
+                Text(detail.phase.capitalized)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.15), in: Capsule())
                 Text(detail.status == "active" ? "Live Ka thread" : "Ended Ka thread")
                     .font(.caption.bold())
                     .padding(.horizontal, 8)
@@ -65,10 +70,37 @@ struct ConversationDetailScreen: View {
                 .foregroundStyle(.secondary)
             Text(detail.impressionSummary)
                 .font(.footnote)
+            if let memory = detail.memorySummary, !memory.isEmpty {
+                Text("Your Ka remembers: \(memory)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if let memory = detail.theirMemorySummary, !memory.isEmpty {
+                Text("Their Ka remembers: \(memory)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if let factors = detail.impressionFactors {
+                factorGrid(title: "Your impression factors", factors: factors)
+            }
+            if let factors = detail.theirImpressionFactors {
+                factorGrid(title: "Their impression factors", factors: factors)
+            }
             UnlockProgressBar(score: detail.theirImpressionScore, isUnlocked: detail.baUnlocked)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
+    }
+
+    private func factorGrid(title: String, factors: ImpressionFactors) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("Responsiveness \(factors.responsiveness) • Values \(factors.valuesAlignment) • Quality \(factors.conversationQuality) • Overlap \(factors.interestOverlap) • Novelty \(factors.novelty)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     // MARK: - Ka Tab

@@ -12,7 +12,7 @@ from PIL import Image
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUTPUT = os.path.join(ROOT, "AARU", "Resources", "Environment", "sunset_beach_map.png")
 
-MAP_SIZE = 1024
+MAP_SIZE = 800
 CELL_SIZE = 16
 GRASS_COLOR = (106, 168, 79, 255)  # pleasant green
 

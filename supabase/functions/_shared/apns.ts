@@ -108,6 +108,19 @@ export async function sendAPNSNotification(
   }
 }
 
+export async function sendConversationSummaryNotification(
+  deviceTokens: string[],
+  otherDisplayName: string
+): Promise<{ sent: number; failed: number }> {
+  const title = "Your Ka had a conversation";
+  const body = `Your Ka met ${otherDisplayName} while you were away. Check in to see what happened.`;
+  const results = await Promise.allSettled(
+    deviceTokens.map(token => sendAPNSNotification(token, title, body))
+  );
+  const sent = results.filter(r => r.status === "fulfilled" && r.value === true).length;
+  return { sent, failed: results.length - sent };
+}
+
 export async function sendBaUnlockNotifications(deviceTokens: string[]): Promise<{ sent: number; failed: number }> {
   const results = await Promise.allSettled(
     deviceTokens.map(token =>

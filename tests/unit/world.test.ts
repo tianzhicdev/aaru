@@ -18,7 +18,8 @@ import {
   WORLD_GRID_COLUMNS,
   WORLD_GRID_ROWS,
   GREEDY_PATH_MIN,
-  GREEDY_PATH_MAX
+  GREEDY_PATH_MAX,
+  WANDER_PATH_MAX
 } from "@aaru/domain/constants.ts";
 
 const baseAgent = (overrides: Partial<AgentPosition>): AgentPosition => ({
@@ -147,8 +148,8 @@ describe("directional path generation", () => {
   it("produces a path within the expected length range", () => {
     for (let i = 0; i < 50; i++) {
       const { path } = generateDirectionalPath(32, 32, pickRandomHeading(), new Set());
-      expect(path.length).toBeGreaterThanOrEqual(DIRECTIONAL_PATH_MIN);
-      expect(path.length).toBeLessThanOrEqual(DIRECTIONAL_PATH_MAX);
+      expect(path.length).toBeGreaterThanOrEqual(1);
+      expect(path.length).toBeLessThanOrEqual(WANDER_PATH_MAX + 8);
     }
   });
 
@@ -166,6 +167,7 @@ describe("directional path generation", () => {
     // Heading 2 = East. Over many runs, majority of steps should move right (dx > 0)
     let eastwardSteps = 0;
     let totalSteps = 0;
+    let eastwardEndpoints = 0;
     for (let i = 0; i < 100; i++) {
       const { path } = generateDirectionalPath(32, 32, 2, new Set());
       let prevX = 32;
@@ -174,9 +176,30 @@ describe("directional path generation", () => {
         totalSteps++;
         prevX = cell.x;
       }
+      const last = path[path.length - 1];
+      if (last && last.x > 32) eastwardEndpoints++;
     }
-    // At least 40% of steps should be eastward (allowing for deviation and boundary bouncing)
-    expect(eastwardSteps / totalSteps).toBeGreaterThan(0.4);
+    expect(eastwardSteps / totalSteps).toBeGreaterThan(0.65);
+    expect(eastwardEndpoints / 100).toBeGreaterThan(0.9);
+  });
+
+  it("builds mostly straight paths toward a distant destination", () => {
+    for (let i = 0; i < 50; i++) {
+      const { path } = generateDirectionalPath(32, 32, 2, new Set());
+      let turns = 0;
+      for (let j = 2; j < path.length; j++) {
+        const dx1 = path[j - 1].x - path[j - 2].x;
+        const dy1 = path[j - 1].y - path[j - 2].y;
+        const dx2 = path[j].x - path[j - 1].x;
+        const dy2 = path[j].y - path[j - 1].y;
+        if (dx1 !== dx2 || dy1 !== dy2) {
+          turns++;
+        }
+      }
+      if (path.length >= 6) {
+        expect(turns).toBeLessThanOrEqual(Math.ceil(path.length / 3));
+      }
+    }
   });
 
   it("stays within grid bounds", () => {
@@ -554,6 +577,149 @@ describe("greedy pathfinding", () => {
         expect(occupied.has(`${cell.x}:${cell.y}`)).toBe(false);
       }
     }
+  });
+});
+
+describe("user-directed movement", () => {
+  it("user-directed agent follows path without selecting new behavior", () => {
+    const agent = baseAgent({
+      cell_x: 10, cell_y: 10,
+      x: 10.5 / 64, y: 10.5 / 64,
+      target_x: 10.5 / 64, target_y: 10.5 / 64,
+      target_cell_x: 10, target_cell_y: 10,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: 13,
+      user_target_cell_y: 10,
+      path: [{ x: 11, y: 10 }, { x: 12, y: 10 }, { x: 13, y: 10 }]
+    });
+
+    const result = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z"));
+    const moved = result.positions[0];
+    expect(moved.cell_x).toBe(11);
+    expect(moved.cell_y).toBe(10);
+    expect(moved.state).toBe("user_moving");
+    expect(moved.user_directed).toBe(true);
+    expect(moved.path).toEqual([{ x: 12, y: 10 }, { x: 13, y: 10 }]);
+  });
+
+  it("user-directed agent transitions to idle on path completion", () => {
+    const agent = baseAgent({
+      cell_x: 12, cell_y: 10,
+      x: 12.5 / 64, y: 10.5 / 64,
+      target_x: 12.5 / 64, target_y: 10.5 / 64,
+      target_cell_x: 12, target_cell_y: 10,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: 13,
+      user_target_cell_y: 10,
+      path: [{ x: 13, y: 10 }]
+    });
+
+    const first = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z")).positions[0];
+    expect(first.cell_x).toBe(13);
+    expect(first.state).toBe("user_moving");
+    expect(first.path).toEqual([]);
+
+    // Next tick: path is empty, should transition to idle
+    const second = tickWorld([first], new Date("2026-03-09T20:00:01.000Z")).positions[0];
+    expect(second.state).toBe("idle");
+    expect(second.user_directed).toBe(false);
+    expect(second.user_target_cell_x).toBeUndefined();
+    expect(second.user_target_cell_y).toBeUndefined();
+  });
+
+  it("user-directed agent with empty path immediately transitions to idle", () => {
+    const agent = baseAgent({
+      cell_x: 13, cell_y: 10,
+      x: 13.5 / 64, y: 10.5 / 64,
+      target_x: 13.5 / 64, target_y: 10.5 / 64,
+      target_cell_x: 13, target_cell_y: 10,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: 13,
+      user_target_cell_y: 10,
+      path: []
+    });
+
+    const result = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z"));
+    const moved = result.positions[0];
+    expect(moved.state).toBe("idle");
+    expect(moved.user_directed).toBe(false);
+    expect(moved.behavior).toBe("idle");
+  });
+
+  it("user-directed agent can be pulled into conversation via adjacency", () => {
+    const userAgent = baseAgent({
+      cell_x: 5, cell_y: 5,
+      x: 5.5 / 64, y: 5.5 / 64,
+      target_x: 5.5 / 64, target_y: 5.5 / 64,
+      target_cell_x: 5, target_cell_y: 5,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: 10,
+      user_target_cell_y: 5,
+      path: [{ x: 6, y: 5 }, { x: 7, y: 5 }]
+    });
+    const npc = baseAgent({
+      cell_x: 6, cell_y: 5,
+      x: 6.5 / 64, y: 5.5 / 64,
+      target_x: 6.5 / 64, target_y: 5.5 / 64,
+      target_cell_x: 6, target_cell_y: 5,
+      behavior: "idle", behavior_ticks_remaining: 5
+    });
+
+    const result = tickWorld([userAgent, npc], new Date("2026-03-09T20:00:00.000Z"));
+    expect(result.startedConversations).toHaveLength(1);
+    expect(result.positions[0].state).toBe("chatting");
+    expect(result.positions[0].user_directed).toBe(false);
+    expect(result.positions[1].state).toBe("chatting");
+  });
+
+  it("user-directed agent clears user_directed when pulled into conversation", () => {
+    const userAgent = baseAgent({
+      cell_x: 5, cell_y: 5,
+      x: 5.5 / 64, y: 5.5 / 64,
+      target_x: 5.5 / 64, target_y: 5.5 / 64,
+      target_cell_x: 5, target_cell_y: 5,
+      state: "user_moving",
+      user_directed: true,
+      user_target_cell_x: 10,
+      user_target_cell_y: 5,
+      path: [{ x: 6, y: 5 }]
+    });
+    const npc = baseAgent({
+      cell_x: 6, cell_y: 5,
+      x: 6.5 / 64, y: 5.5 / 64,
+      target_x: 6.5 / 64, target_y: 5.5 / 64,
+      target_cell_x: 6, target_cell_y: 5
+    });
+
+    const result = tickWorld([userAgent, npc], new Date("2026-03-09T20:00:00.000Z"));
+    expect(result.positions[0].user_directed).toBe(false);
+    expect(result.positions[0].user_target_cell_x).toBeUndefined();
+    expect(result.positions[0].user_target_cell_y).toBeUndefined();
+  });
+
+  it("user-directed agent resumes autonomous after idle ticks expire", () => {
+    // Simulate arriving and idling
+    const agent = baseAgent({
+      cell_x: 13, cell_y: 10,
+      x: 13.5 / 64, y: 10.5 / 64,
+      target_x: 13.5 / 64, target_y: 10.5 / 64,
+      target_cell_x: 13, target_cell_y: 10,
+      state: "idle",
+      behavior: "idle",
+      behavior_ticks_remaining: 1,
+      user_directed: false,
+      path: []
+    });
+
+    const result = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z"));
+    const moved = result.positions[0];
+    // After idle ticks expire, should pick a new behavior
+    expect(moved.behavior).toBeDefined();
+    expect(["wander", "idle", "drift_social", "drift_poi", "retreat"]).toContain(moved.behavior);
   });
 });
 

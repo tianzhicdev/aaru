@@ -54,14 +54,14 @@ final class BackendClient {
         return response
     }
 
-    func generateSoulProfile(rawInput: String) async throws -> SoulProfile {
+    func generateSoulProfile(rawInput: String) async throws -> GeneratedSoulProfile {
         return try await post("generate-soul-profile", body: ["raw_input": rawInput])
     }
 
-    func saveSoulProfile(deviceID: String, profile: SoulProfile) async throws {
-        let _: SaveSoulProfileResponse = try await post(
+    func saveSoulProfile(deviceID: String, profile: SoulProfile, displayName: String? = nil) async throws -> SaveSoulProfileResponse {
+        return try await post(
             "save-soul-profile",
-            body: SaveSoulProfileRequest(deviceID: deviceID, profile: profile),
+            body: SaveSoulProfileRequest(deviceID: deviceID, profile: profile, displayName: displayName),
             retryOnServerError: true
         )
     }
@@ -125,6 +125,41 @@ final class BackendClient {
         return payload.asConversationDetail()
     }
 
+    func tapCell(deviceID: String, cellX: Int, cellY: Int) async throws -> TapCellResponse {
+        return try await post(
+            "tap-cell",
+            body: TapCellRequest(deviceID: deviceID, targetCellX: cellX, targetCellY: cellY)
+        )
+    }
+
+    func tapCharacter(deviceID: String, targetUserID: UUID) async throws -> TapCharacterResponse {
+        return try await post(
+            "tap-character",
+            body: [
+                "device_id": deviceID,
+                "target_user_id": targetUserID.uuidString
+            ]
+        )
+    }
+
+    func heartbeat(deviceID: String) async throws {
+        let _: HeartbeatResponse = try await post(
+            "heartbeat",
+            body: ["device_id": deviceID]
+        )
+    }
+
+    func registerPushToken(deviceID: String, token: String) async throws {
+        let _: HeartbeatResponse = try await post(
+            "register-push-token",
+            body: [
+                "device_id": deviceID,
+                "device_token": token,
+                "platform": "ios"
+            ]
+        )
+    }
+
     func sendHumanMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
         let payload: ConversationDetailPayload = try await post(
             "send-human-message",
@@ -185,13 +220,19 @@ final class BackendClient {
     }
 }
 
+private struct HeartbeatResponse: Decodable {
+    let ok: Bool
+}
+
 private struct SaveSoulProfileRequest: Encodable {
     let deviceID: String
     let profile: SoulProfile
+    let displayName: String?
 
     enum CodingKeys: String, CodingKey {
         case deviceID = "device_id"
         case profile
+        case displayName = "display_name"
     }
 }
 
@@ -205,12 +246,14 @@ private struct SaveAvatarRequest: Encodable {
     }
 }
 
-private struct SaveSoulProfileResponse: Decodable {
+struct SaveSoulProfileResponse: Decodable {
     let userID: UUID
+    let displayName: String
     let soulProfile: SoulProfile
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
+        case displayName = "display_name"
         case soulProfile = "soul_profile"
     }
 }
@@ -235,8 +278,14 @@ private struct ConversationDetailPayload: Decodable {
     let title: String
     let impressionScore: Int
     let impressionSummary: String
+    let impressionFactors: ImpressionFactors?
+    let memorySummary: String?
     let theirImpressionScore: Int
     let theirImpressionSummary: String
+    let theirImpressionFactors: ImpressionFactors?
+    let theirMemorySummary: String?
+    let encounterCount: Int
+    let phase: String
     let status: String
     let baUnlocked: Bool
     let otherSoul: SoulProfile?
@@ -249,8 +298,14 @@ private struct ConversationDetailPayload: Decodable {
         case title
         case impressionScore = "impression_score"
         case impressionSummary = "impression_summary"
+        case impressionFactors = "impression_factors"
+        case memorySummary = "memory_summary"
         case theirImpressionScore = "their_impression_score"
         case theirImpressionSummary = "their_impression_summary"
+        case theirImpressionFactors = "their_impression_factors"
+        case theirMemorySummary = "their_memory_summary"
+        case encounterCount = "encounter_count"
+        case phase
         case status
         case baUnlocked = "ba_unlocked"
         case otherSoul = "other_soul"
@@ -265,8 +320,14 @@ private struct ConversationDetailPayload: Decodable {
             title: title,
             impressionScore: impressionScore,
             impressionSummary: impressionSummary,
+            impressionFactors: impressionFactors,
+            memorySummary: memorySummary,
             theirImpressionScore: theirImpressionScore,
             theirImpressionSummary: theirImpressionSummary,
+            theirImpressionFactors: theirImpressionFactors,
+            theirMemorySummary: theirMemorySummary,
+            encounterCount: encounterCount,
+            phase: phase,
             status: status,
             baUnlocked: baUnlocked,
             otherSoul: otherSoul,
@@ -313,6 +374,38 @@ private struct ConversationMessagePayload: Decodable {
         case senderName = "sender_name"
         case type
         case content
+    }
+}
+
+private struct TapCellRequest: Encodable {
+    let deviceID: String
+    let targetCellX: Int
+    let targetCellY: Int
+
+    enum CodingKeys: String, CodingKey {
+        case deviceID = "device_id"
+        case targetCellX = "target_cell_x"
+        case targetCellY = "target_cell_y"
+    }
+}
+
+struct TapCellResponse: Decodable {
+    let path: [CellCoord]
+    let estimatedDurationMs: Int
+
+    enum CodingKeys: String, CodingKey {
+        case path
+        case estimatedDurationMs = "estimated_duration_ms"
+    }
+}
+
+struct TapCharacterResponse: Decodable {
+    let path: [CellCoord]
+    let estimatedDurationMs: Int
+
+    enum CodingKeys: String, CodingKey {
+        case path
+        case estimatedDurationMs = "estimated_duration_ms"
     }
 }
 

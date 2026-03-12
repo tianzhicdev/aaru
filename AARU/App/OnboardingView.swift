@@ -33,9 +33,17 @@ struct OnboardingView: View {
 
     private var soulStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Describe your soul in a few lines. The Ka will do the first wandering for you.")
+            Text("Describe yourself in a few lines. AARU will generate both a final display name and a sophisticated soul profile for your review.")
                 .font(.headline)
                 .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Final Display Name")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                TextField("Your public name in AARU", text: $model.displayName)
+                    .textFieldStyle(.roundedBorder)
+            }
 
             TextEditor(text: $model.profileInput)
                 .frame(minHeight: 220)
@@ -81,17 +89,18 @@ struct OnboardingView: View {
             }
 
             HStack {
-                Button("Generate Soul Profile") {
+                Button("Generate Name + Soul") {
                     Task { await model.generateSoulProfile() }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.profileInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isLoading)
 
                 if model.soulProfile != nil {
-                    Button("Save Profile") {
+                    Button("Save Name + Profile") {
                         Task { await model.saveSoulProfile() }
                     }
                     .buttonStyle(.bordered)
+                    .disabled(model.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

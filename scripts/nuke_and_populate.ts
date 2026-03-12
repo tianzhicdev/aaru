@@ -110,6 +110,10 @@ function pgArray(arr: string[]): string {
   return `ARRAY[${arr.map(s => `'${esc(s)}'`).join(",")}]::text[]`;
 }
 
+function pgJsonb(obj: unknown): string {
+  return `'${esc(JSON.stringify(obj))}'::jsonb`;
+}
+
 function main() {
   // First, get the instance ID (need it for insert SQL)
   // Use a temp query to get it
@@ -145,7 +149,24 @@ function main() {
     const deviceId = `npc-${name.toLowerCase()}`;
     const personality = PERSONALITIES[i % PERSONALITIES.length];
     const interests = pickN(INTERESTS_POOL, 3, i * 7);
-    const values = pickN(VALUES_POOL, 3, i * 13);
+    const expressedValues = pickN(VALUES_POOL, 3, i * 13);
+    // Generate semi-random Schwartz dimension values (seeded)
+    const s1 = ((i * 1103515245 + 12345) >>> 0) / 0xFFFFFFFF;
+    const s2 = ((i * 1103515245 * 2 + 12345) >>> 0) / 0xFFFFFFFF;
+    const s3 = ((i * 1103515245 * 3 + 12345) >>> 0) / 0xFFFFFFFF;
+    const s4 = ((i * 1103515245 * 4 + 12345) >>> 0) / 0xFFFFFFFF;
+    const soulValues = {
+      self_transcendence: Math.round(s1 * 10) / 10,
+      self_enhancement: Math.round(s2 * 10) / 10,
+      openness_to_change: Math.round(s3 * 10) / 10,
+      conservation: Math.round(s4 * 10) / 10,
+      expressed: expressedValues
+    };
+    const narrative = {
+      formative_stories: [],
+      self_defining_memories: [],
+      narrative_themes: []
+    };
 
     let cx: number, cy: number;
     let attempts = 0;
@@ -167,7 +188,7 @@ function main() {
 
     userRows.push(`('${uid}', '${esc(deviceId)}', '${esc(name)}', '${instanceId}', true)`);
 
-    soulRows.push(`('${uid}', '${esc(`${name} is ${personality}.`)}', ${pgArray(interests)}, ${pgArray(values)}, ARRAY['cruelty']::text[], '${esc(`${name} is a wandering soul in the world of AARU.`)}', ARRAY[]::text[])`);
+    soulRows.push(`('${uid}', '${esc(`${name} is ${personality}.`)}', ${pgArray(interests)}, ${pgJsonb(soulValues)}, ${pgJsonb(narrative)}, ARRAY['cruelty']::text[], '${esc(`${name} is a wandering soul in the world of AARU.`)}', ARRAY[]::text[])`);
 
     avatarRows.push(`('${uid}', '${esc(avatar.body_shape)}', '${esc(avatar.skin_tone)}', '${esc(avatar.hair_style)}', '${esc(avatar.hair_color)}', '${esc(avatar.eyes)}', '${esc(avatar.outfit_top)}', '${esc(avatar.outfit_bottom)}', ${avatar.accessory ? `'${esc(avatar.accessory)}'` : "NULL"}, '${esc(avatar.aura_color)}'${avatar.sprite_id ? `, '${esc(avatar.sprite_id)}'` : ", NULL"})`);
 
@@ -200,7 +221,7 @@ WHERE id = '${instanceId}';
 INSERT INTO users (id, device_id, display_name, instance_id, is_npc) VALUES
 ${userRows.join(",\n")};
 
-INSERT INTO soul_profiles (user_id, personality, interests, values, avoid_topics, raw_input, guessed_fields) VALUES
+INSERT INTO soul_profiles (user_id, personality, interests, values, narrative, avoid_topics, raw_input, guessed_fields) VALUES
 ${soulRows.join(",\n")};
 
 INSERT INTO avatars (user_id, body_shape, skin_tone, hair_style, hair_color, eyes, outfit_top, outfit_bottom, accessory, aura_color, sprite_id) VALUES

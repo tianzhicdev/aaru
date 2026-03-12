@@ -1,6 +1,8 @@
 export type UUID = string;
 
-export type AgentState = "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+export type AgentState = "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
+
+export type PresenceState = "online" | "background" | "offline";
 
 export type AgentBehavior = "wander" | "idle" | "drift_social" | "drift_poi" | "retreat";
 
@@ -46,6 +48,14 @@ export interface ImpressionEvaluation {
   novelty?: number;           // 0-100
 }
 
+export interface ImpressionFactors {
+  responsiveness: number;
+  values_alignment: number;
+  conversation_quality: number;
+  interest_overlap: number;
+  novelty: number;
+}
+
 export interface CellCoord {
   x: number;
   y: number;
@@ -70,6 +80,9 @@ export interface AgentPosition {
   behavior?: AgentBehavior;
   behavior_ticks_remaining?: number;
   heading?: number; // 0-7 compass direction
+  user_target_cell_x?: number | null;
+  user_target_cell_y?: number | null;
+  user_directed?: boolean | null;
 }
 
 export interface WorldTickResult {

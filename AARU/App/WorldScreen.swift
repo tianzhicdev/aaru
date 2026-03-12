@@ -4,7 +4,7 @@ import UIKit
 
 struct WorldScreen: View {
     @EnvironmentObject private var model: AppModel
-    @State private var scene = WorldScene(size: CGSize(width: 1_024, height: 1_024))
+    @State private var scene = WorldScene(size: CGSize(width: 800, height: 800))
 
     private var liveThreadCount: Int {
         Set(model.worldAgents.compactMap(\.conversationID)).count
@@ -65,17 +65,26 @@ struct WorldScreen: View {
         .task {
             scene.scaleMode = .aspectFill
             scene.updateConfig(model.worldConfig)
-            scene.syncAgents(model.worldAgents, debugMode: model.debugModeEnabled)
+            scene.syncAgents(model.worldAgents)
+            scene.onTapCell = { [weak model] cellX, cellY in
+                guard let model = model else { return }
+                Task { @MainActor in
+                    await model.tapCell(cellX: cellX, cellY: cellY)
+                }
+            }
+            scene.onTapCharacter = { [weak model] userId in
+                guard let model = model else { return }
+                Task { @MainActor in
+                    await model.tapCharacter(targetUserId: userId)
+                }
+            }
         }
         .onChange(of: model.worldAgents) { _, agents in
-            scene.syncAgents(agents, debugMode: model.debugModeEnabled)
+            scene.syncAgents(agents)
         }
         .onChange(of: model.worldConfig) { _, config in
             scene.updateConfig(config)
-            scene.syncAgents(model.worldAgents, debugMode: model.debugModeEnabled)
-        }
-        .onChange(of: model.debugModeEnabled) { _, _ in
-            scene.syncAgents(model.worldAgents, debugMode: model.debugModeEnabled)
+            scene.syncAgents(model.worldAgents)
         }
     }
 
@@ -93,25 +102,72 @@ struct WorldScreen: View {
     }
 }
 
+private struct DebugOverlay: View {
+    let events: [DebugEvent]
+    let stats: [AgentDebugStat]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Debug")
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.95))
+
+            ForEach(stats.prefix(4)) { stat in
+                let heading = stat.heading.map(String.init) ?? "-"
+                let cell = stat.lastCell.map { "(\($0.x),\($0.y))" } ?? "(-,-)"
+                Text("\(stat.displayName): \(stat.behavior) H\(heading) P\(stat.pathLength) R\(stat.replanCount) B\(stat.behaviorChangeCount) \(cell)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.white.opacity(0.95))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Divider().overlay(.white.opacity(0.2))
+
+            ForEach(events.prefix(8)) { event in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(event.timestamp.formatted(date: .omitted, time: .standard))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text(event.message)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.92))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: 300, alignment: .leading)
+        .background(Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        }
+    }
+}
+
 // MARK: - WorldScene
 
 final class WorldScene: SKScene {
     private var worldConfig = WorldConfig.default
     private let cellSize: CGFloat = 16
-    private var worldSize = CGSize(width: 1_024, height: 1_024)
+    private var worldSize = CGSize(width: 800, height: 800)
     private let mapNode = SKNode()
     private let backdropLayer = SKNode()
     private var agentNodes: [UUID: AgentVisualNode] = [:]
     private var selfAgentNode: AgentVisualNode?
     private let conversationLayer = SKNode()
     private let cameraNode = SKCameraNode()
-    private var columns = 64
-    private var rows = 64
+    private var columns = 50
+    private var rows = 50
     private var lastUpdateTime: TimeInterval = 0
     private var zoomLevel: CGFloat = 1.0
     private let minZoom: CGFloat = 0.25
     private let maxZoom: CGFloat = 3.0
     private let zoomStep: CGFloat = 1.3
+
+    // Tap callbacks
+    var onTapCell: ((Int, Int) -> Void)?
+    var onTapCharacter: ((UUID) -> Void)?
 
     override func didMove(to view: SKView) {
         backgroundColor = UIColor(red: 0.80, green: 0.91, blue: 0.89, alpha: 1)
@@ -197,7 +253,7 @@ final class WorldScene: SKScene {
             node.setPath(
                 waypoints: waypoints,
                 speed: pointsPerSecond,
-                isMoving: agent.state == "wandering" || agent.state == "approaching"
+                isMoving: agent.state == "wandering" || agent.state == "approaching" || agent.state == "user_moving"
             )
 
             // Place new nodes at their starting position
@@ -222,9 +278,7 @@ final class WorldScene: SKScene {
             // Track self-agent for camera constraint
             if agent.isSelf, selfAgentNode !== node {
                 selfAgentNode = node
-                cameraNode.constraints = [
-                    SKConstraint.distance(SKRange(constantValue: 0), to: node)
-                ]
+                updateCameraConstraints(for: node)
             }
         }
 
@@ -248,12 +302,87 @@ final class WorldScene: SKScene {
         }
     }
 
+    // MARK: - Touch Handling
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: mapNode)
+
+        // Priority 1: Check if tapped on an agent
+        if let (agentId, _) = agentAt(location) {
+            onTapCharacter?(agentId)
+            highlightAgent(agentId)
+            return
+        }
+
+        // Priority 2: Tap empty cell
+        let cellX = Int(location.x / cellSize)
+        let cellY = Int((worldSize.height - location.y) / cellSize)
+        guard cellX >= 0, cellX < columns, cellY >= 0, cellY < rows else { return }
+        onTapCell?(cellX, cellY)
+        showTapIndicator(cellX: cellX, cellY: cellY)
+    }
+
+    private func agentAt(_ point: CGPoint) -> (id: UUID, node: AgentVisualNode)? {
+        let tapRadius: CGFloat = 12
+        for (id, node) in agentNodes {
+            let nodePos = node.position
+            let distance = hypot(point.x - nodePos.x, point.y - nodePos.y)
+            if distance < tapRadius {
+                return (id, node)
+            }
+        }
+        return nil
+    }
+
+    func showTapIndicator(cellX: Int, cellY: Int) {
+        mapNode.childNode(withName: "tapIndicator")?.removeFromParent()
+
+        let point = cellToPoint(cellX, cellY)
+        let indicator = SKShapeNode(circleOfRadius: 3)
+        indicator.fillColor = UIColor.white.withAlphaComponent(0.6)
+        indicator.strokeColor = UIColor.white.withAlphaComponent(0.3)
+        indicator.position = point
+        indicator.name = "tapIndicator"
+        indicator.zPosition = 5
+        mapNode.addChild(indicator)
+
+        let pulse = SKAction.sequence([
+            SKAction.scale(to: 1.3, duration: 0.3),
+            SKAction.scale(to: 0.8, duration: 0.3)
+        ])
+        let fadeOut = SKAction.sequence([
+            SKAction.wait(forDuration: 2.0),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ])
+        indicator.run(SKAction.group([
+            SKAction.repeatForever(pulse),
+            fadeOut
+        ]))
+    }
+
+    func highlightAgent(_ agentId: UUID) {
+        guard let node = agentNodes[agentId] else { return }
+        let highlight = SKShapeNode(circleOfRadius: 10)
+        highlight.fillColor = .clear
+        highlight.strokeColor = UIColor.white.withAlphaComponent(0.5)
+        highlight.lineWidth = 1
+        highlight.name = "tapHighlight"
+        node.addChild(highlight)
+
+        highlight.run(SKAction.sequence([
+            SKAction.fadeOut(withDuration: 0.8),
+            SKAction.removeFromParent()
+        ]))
+    }
+
     // MARK: - Helpers
 
     private func cellToPoint(_ cellX: Int, _ cellY: Int) -> CGPoint {
         CGPoint(
             x: (CGFloat(cellX) + 0.5) / CGFloat(columns) * worldSize.width,
-            y: (CGFloat(cellY) + 0.5) / CGFloat(rows) * worldSize.height
+            y: worldSize.height - (CGFloat(cellY) + 0.5) / CGFloat(rows) * worldSize.height
         )
     }
 
@@ -309,6 +438,23 @@ final class WorldScene: SKScene {
         let verticalScale = (CGFloat(worldConfig.cameraVisibleRows) * cellSize) / max(size.height, 1)
         let baseScale = max(horizontalScale, verticalScale)
         cameraNode.setScale(baseScale / zoomLevel)
+        if let node = selfAgentNode {
+            updateCameraConstraints(for: node)
+        }
+    }
+
+    private func updateCameraConstraints(for node: SKNode) {
+        let scale = cameraNode.xScale
+        let viewWidth = size.width * scale
+        let viewHeight = size.height * scale
+        let halfW = viewWidth * 0.5
+        let halfH = viewHeight * 0.5
+        let xRange = SKRange(lowerLimit: halfW, upperLimit: worldSize.width - halfW)
+        let yRange = SKRange(lowerLimit: halfH, upperLimit: worldSize.height - halfH)
+        cameraNode.constraints = [
+            SKConstraint.distance(SKRange(constantValue: 0), to: node),
+            SKConstraint.positionX(xRange, y: yRange)
+        ]
     }
 }
 

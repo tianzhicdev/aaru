@@ -1,11 +1,14 @@
-import { soulProfileSchema, impressionEvaluationSchema, agentPositionSchema, conversationMessageSchema, avatarConfigSchema, worldConfigSchema, worldMovementEventSchema } from "../../../src/domain/schemas.ts";
+import { soulProfileSchema, impressionEvaluationSchema, impressionFactorsSchema, agentPositionSchema, conversationMessageSchema, avatarConfigSchema, worldConfigSchema, worldMovementEventSchema, cellCoordSchema } from "../../../src/domain/schemas.ts";
 import { z } from "zod";
 
 export const generateSoulProfileRequestSchema = z.object({
   raw_input: z.string().default("")
 });
 
-export const generateSoulProfileResponseSchema = soulProfileSchema;
+export const generateSoulProfileResponseSchema = z.object({
+  display_name: z.string().min(1),
+  soul_profile: soulProfileSchema
+});
 
 export const worldTickRequestSchema = z.object({
   positions: z.array(agentPositionSchema),
@@ -44,6 +47,8 @@ export const evaluateCompatibilityRequestSchema = z.object({
   soulA: soulProfileSchema,
   soulB: soulProfileSchema,
   transcript: z.array(conversationMessageSchema),
+  self_name: z.string().optional(),
+  other_name: z.string().optional(),
   previousScore: z.number().min(0).max(100).default(0),
   reciprocalScore: z.number().min(0).max(100).default(0),
   encounterCount: z.number().int().nonnegative().optional()
@@ -64,8 +69,14 @@ export const conversationSummarySchema = z.object({
   title: z.string(),
   impression_score: z.number().min(0).max(100),
   impression_summary: z.string(),
+  impression_factors: impressionFactorsSchema.optional(),
+  memory_summary: z.string().optional(),
   their_impression_score: z.number().min(0).max(100),
   their_impression_summary: z.string(),
+  their_impression_factors: impressionFactorsSchema.optional(),
+  their_memory_summary: z.string().optional(),
+  encounter_count: z.number().int().nonnegative().default(0),
+  phase: z.enum(["discovery", "personal", "depth"]).default("discovery"),
   status: z.string(),
   ba_unlocked: z.boolean(),
   ba_conversation_id: z.string().uuid().nullable().optional(),
@@ -94,7 +105,8 @@ export const bootstrapUserResponseSchema = z.object({
 
 export const saveSoulProfileRequestSchema = z.object({
   device_id: z.string().min(4),
-  profile: soulProfileSchema
+  profile: soulProfileSchema,
+  display_name: z.string().min(1).optional()
 });
 
 export const saveAvatarRequestSchema = z.object({
@@ -104,6 +116,29 @@ export const saveAvatarRequestSchema = z.object({
 
 export const syncWorldRequestSchema = z.object({
   device_id: z.string().min(4)
+});
+
+export const broadcastAgentSchema = z.object({
+  user_id: z.string().uuid(),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  target_x: z.number().min(0).max(1),
+  target_y: z.number().min(0).max(1),
+  cell_x: z.number().int().nullable(),
+  cell_y: z.number().int().nullable(),
+  path: z.array(cellCoordSchema).default([]),
+  move_speed: z.number().nonnegative().default(1.8),
+  state: agentPositionSchema.shape.state,
+  behavior: agentPositionSchema.shape.behavior.nullable(),
+  heading: z.number().int().min(0).max(7).nullable(),
+  active_message: z.string().nullable(),
+  conversation_id: z.string().uuid().nullable()
+});
+
+export const worldBroadcastPayloadSchema = z.object({
+  tick: z.number().int().nonnegative(),
+  ts: z.number().nonnegative(),
+  agents: z.array(broadcastAgentSchema)
 });
 
 export const syncWorldResponseSchema = z.object({
@@ -148,8 +183,14 @@ export const conversationDetailSchema = z.object({
   title: z.string(),
   impression_score: z.number().min(0).max(100),
   impression_summary: z.string(),
+  impression_factors: impressionFactorsSchema.optional(),
+  memory_summary: z.string().optional(),
   their_impression_score: z.number().min(0).max(100),
   their_impression_summary: z.string(),
+  their_impression_factors: impressionFactorsSchema.optional(),
+  their_memory_summary: z.string().optional(),
+  encounter_count: z.number().int().nonnegative().default(0),
+  phase: z.enum(["discovery", "personal", "depth"]).default("discovery"),
   status: z.string(),
   ba_unlocked: z.boolean(),
   other_soul: soulProfileSchema.nullable(),
@@ -168,6 +209,41 @@ export const sendBaMessageRequestSchema = z.object({
   device_id: z.string().min(4),
   conversation_id: z.string().uuid(),
   content: z.string().min(1)
+});
+
+// ── Presence ──────────────────────────────────────────────────
+
+export const heartbeatRequestSchema = z.object({
+  device_id: z.string().min(4)
+});
+
+export const registerPushTokenRequestSchema = z.object({
+  device_id: z.string().min(4),
+  device_token: z.string().min(1),
+  platform: z.enum(["ios", "android"]).default("ios")
+});
+
+// ── User Tap Control ──────────────────────────────────────────────
+
+export const tapCellRequestSchema = z.object({
+  device_id: z.string().min(4),
+  target_cell_x: z.number().int().min(0),
+  target_cell_y: z.number().int().min(0)
+});
+
+export const tapCellResponseSchema = z.object({
+  path: z.array(z.object({ x: z.number().int(), y: z.number().int() })),
+  estimated_duration_ms: z.number().int().nonnegative()
+});
+
+export const tapCharacterRequestSchema = z.object({
+  device_id: z.string().min(4),
+  target_user_id: z.string().uuid()
+});
+
+export const tapCharacterResponseSchema = z.object({
+  path: z.array(z.object({ x: z.number().int(), y: z.number().int() })),
+  estimated_duration_ms: z.number().int().nonnegative()
 });
 
 // ── Transcription ──────────────────────────────────────────────

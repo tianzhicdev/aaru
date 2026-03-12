@@ -1,11 +1,12 @@
 import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
 import type { ConversationMessage, ImpressionEvaluation, SoulProfile } from "../../../src/domain/types.ts";
-import { WORLD_GRID_COLUMNS, WORLD_GRID_ROWS } from "../../../src/domain/constants.ts";
+import { WORLD_GRID_COLUMNS, WORLD_GRID_ROWS, WORLD_POPULATION_TARGET } from "../../../src/domain/constants.ts";
 import { OBSTACLE_CELLS } from "../../../src/domain/obstacle_map.ts";
+import { NPC_POOL, NPC_DEVICE_IDS as _NPC_DEVICE_IDS, getActiveNpcSeeds, deriveSoulProfile } from "../../../src/domain/npcPool.ts";
 import { supabaseServiceRoleKey, supabaseUrl } from "./env.ts";
 
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
 interface UserRow {
   id: string;
@@ -28,13 +29,16 @@ interface AgentPositionRow {
   target_cell_y: number;
   path?: Array<{ x: number; y: number }>;
   move_speed?: number;
-  state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+  state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown" | "user_moving";
   active_message: string | null;
   conversation_id: string | null;
   cooldown_until: string | null;
   behavior?: "wander" | "idle" | "drift_social" | "drift_poi" | "retreat";
   behavior_ticks_remaining?: number;
   heading?: number;
+  user_target_cell_x?: number;
+  user_target_cell_y?: number;
+  user_directed?: boolean;
 }
 
 interface ConversationRow {
@@ -57,10 +61,14 @@ interface ConversationRow {
 interface ImpressionEdgeRow {
   score: number;
   summary: string | null;
+  memory_summary: string | null;
   ba_unlocked: boolean;
   encounter_count: number;
   responsiveness: number | null;
+  values_alignment: number | null;
   conversation_quality: number | null;
+  interest_overlap: number | null;
+  novelty: number | null;
 }
 
 interface NewsItemRow {
@@ -123,6 +131,32 @@ async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return JSON.parse(text) as T;
+}
+
+export async function broadcastToChannel(
+  topic: string,
+  event: string,
+  payload: Json
+): Promise<void> {
+  const response = await fetch(`${supabaseUrl()}/realtime/v1/api/broadcast`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseServiceRoleKey(),
+      Authorization: `Bearer ${supabaseServiceRoleKey()}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      messages: [{
+        topic,
+        event,
+        payload
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase Broadcast error ${response.status}: ${await response.text()}`);
+  }
 }
 
 async function rpc<T>(name: string, body: Record<string, Json>): Promise<T> {
@@ -272,7 +306,16 @@ export async function createUser(deviceId: string): Promise<UserRow> {
 }
 
 export async function ensureUser(deviceId: string): Promise<UserRow> {
-  return createUser(deviceId);
+  return (await getUserByDeviceId(deviceId)) ?? createUser(deviceId);
+}
+
+export async function updateUserDisplayName(userId: string, displayName: string): Promise<UserRow> {
+  const rows = await rest<UserRow[]>(`users?id=eq.${userId}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ display_name: displayName })
+  });
+  return rows[0];
 }
 
 export async function getSoulProfile(userId: string): Promise<SoulProfile | null> {
@@ -328,13 +371,13 @@ export async function ensureAvatar(userId: string): Promise<AvatarConfig> {
 
 export async function getAgentPositions(instanceId: string): Promise<AgentPositionRow[]> {
   return rest<AgentPositionRow[]>(
-    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading`
+    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading,user_target_cell_x,user_target_cell_y,user_directed`
   );
 }
 
 export async function getAgentPosition(userId: string): Promise<AgentPositionRow | null> {
   const rows = await rest<AgentPositionRow[]>(
-    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading`
+    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading,user_target_cell_x,user_target_cell_y,user_directed`
   );
   return rows[0] ?? null;
 }
@@ -360,7 +403,10 @@ export async function upsertAgentPositions(positions: AgentPositionRow[]): Promi
     cooldown_until: p.cooldown_until,
     behavior: p.behavior ?? "wander",
     behavior_ticks_remaining: p.behavior_ticks_remaining ?? 0,
-    heading: p.heading ?? 0
+    heading: p.heading ?? 0,
+    user_target_cell_x: p.user_target_cell_x ?? null,
+    user_target_cell_y: p.user_target_cell_y ?? null,
+    user_directed: p.user_directed ?? false
   }));
   await rest<Json>("agent_positions?on_conflict=user_id", {
     method: "POST",
@@ -512,7 +558,13 @@ export async function upsertImpressionEdge(
   evaluation: ImpressionEvaluation,
   baUnlocked: boolean,
   encounterCount: number,
-  subScores?: { responsiveness?: number; conversationQuality?: number }
+  subScores?: {
+    responsiveness?: number;
+    valuesAlignment?: number;
+    conversationQuality?: number;
+    interestOverlap?: number;
+    novelty?: number;
+  }
 ): Promise<void> {
   const row: Record<string, Json> = {
     user_id: userId,
@@ -523,7 +575,10 @@ export async function upsertImpressionEdge(
     encounter_count: encounterCount
   };
   if (subScores?.responsiveness !== undefined) row.responsiveness = subScores.responsiveness;
+  if (subScores?.valuesAlignment !== undefined) row.values_alignment = subScores.valuesAlignment;
   if (subScores?.conversationQuality !== undefined) row.conversation_quality = subScores.conversationQuality;
+  if (subScores?.interestOverlap !== undefined) row.interest_overlap = subScores.interestOverlap;
+  if (subScores?.novelty !== undefined) row.novelty = subScores.novelty;
   await rest<Json>("impression_edges?on_conflict=user_id,target_user_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
@@ -531,15 +586,35 @@ export async function upsertImpressionEdge(
   });
 }
 
+export async function upsertImpressionMemory(
+  userId: string,
+  targetUserId: string,
+  memorySummary: string
+): Promise<void> {
+  await rest<Json>("impression_edges?on_conflict=user_id,target_user_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{
+      user_id: userId,
+      target_user_id: targetUserId,
+      memory_summary: memorySummary
+    }])
+  });
+}
+
 export async function getImpressionEdge(userId: string, targetUserId: string): Promise<ImpressionEdgeRow | null> {
   const rows = await rest<ImpressionEdgeRow[]>(
-    `impression_edges?user_id=eq.${userId}&target_user_id=eq.${targetUserId}&select=score,summary,ba_unlocked,encounter_count,responsiveness,conversation_quality`
+    `impression_edges?user_id=eq.${userId}&target_user_id=eq.${targetUserId}&select=score,summary,memory_summary,ba_unlocked,encounter_count,responsiveness,values_alignment,conversation_quality,interest_overlap,novelty`
   );
   return rows[0] ? {
     ...rows[0],
     encounter_count: rows[0].encounter_count ?? 0,
     responsiveness: rows[0].responsiveness ?? null,
-    conversation_quality: rows[0].conversation_quality ?? null
+    values_alignment: rows[0].values_alignment ?? null,
+    conversation_quality: rows[0].conversation_quality ?? null,
+    interest_overlap: rows[0].interest_overlap ?? null,
+    novelty: rows[0].novelty ?? null,
+    memory_summary: rows[0].memory_summary ?? null
   } : null;
 }
 
@@ -624,214 +699,64 @@ export async function countUserConversationsToday(userId: string): Promise<numbe
   return rows.length;
 }
 
-const NPC_SEEDS: Array<{
-  name: string;
-  personality: string;
-  interests: string[];
-  values: string[];
-}> = [
-  { name: "Nahla", personality: "Nahla is quietly playful, observant, and drawn to emotional subtext.", interests: ["film photography", "indie cinema", "night walks"], values: ["honesty", "patience", "warmth"] },
-  { name: "Iset", personality: "Iset is steady, thoughtful, and likes asking the second question instead of the first.", interests: ["architecture", "coffee culture", "urban design"], values: ["clarity", "growth", "care"] },
-  { name: "Khepri", personality: "Khepri is enthusiastic, reflective, and energized by ambitious ideas.", interests: ["startups", "science books", "documentaries"], values: ["curiosity", "courage", "humor"] },
-  { name: "Setka", personality: "Setka is gentle, literary, and notices how people choose words.", interests: ["poetry", "translation", "museum exhibits"], values: ["depth", "kindness", "attention"] },
-  { name: "Meri", personality: "Meri is bright, restless, and likes conversations that move between craft and feeling.", interests: ["fashion history", "music scenes", "travel"], values: ["taste", "freedom", "sincerity"] },
-  { name: "Amunet", personality: "Amunet is warm, nurturing, and fascinated by growth and change.", interests: ["cooking", "gardening", "meditation"], values: ["resilience", "empathy", "balance"] },
-  { name: "Bastet", personality: "Bastet is bold, direct, and appreciates honesty over politeness.", interests: ["rock climbing", "stand-up comedy", "cycling"], values: ["courage", "integrity", "freedom"] },
-  { name: "Djedi", personality: "Djedi is dreamy, imaginative, and finds meaning in small details.", interests: ["watercolor painting", "mythology", "astronomy"], values: ["wonder", "patience", "depth"] },
-  { name: "Eshe", personality: "Eshe is analytical, curious, and connects disparate ideas easily.", interests: ["robotics", "philosophy", "podcasts"], values: ["curiosity", "clarity", "growth"] },
-  { name: "Femi", personality: "Femi is calm, grounded, and provides stability in conversation.", interests: ["jazz", "ceramics", "hiking"], values: ["kindness", "balance", "warmth"] },
-  { name: "Gaspar", personality: "Gaspar is witty, quick, and uses humor to build connection.", interests: ["board games", "electronic music", "street art"], values: ["humor", "sincerity", "taste"] },
-  { name: "Heka", personality: "Heka is philosophical, deep, and drawn to existential questions.", interests: ["vintage books", "calligraphy", "marine biology"], values: ["depth", "wonder", "integrity"] },
-  { name: "Ineni", personality: "Ineni is energetic, spontaneous, and loves trying new things.", interests: ["surfing", "travel", "cooking"], values: ["freedom", "courage", "humor"] },
-  { name: "Jabari", personality: "Jabari is empathetic, intuitive, and reads between the lines.", interests: ["creative writing", "theater", "yoga"], values: ["empathy", "attention", "care"] },
-  { name: "Kamilah", personality: "Kamilah is creative, unconventional, and challenges assumptions.", interests: ["street art", "fashion history", "indie cinema"], values: ["taste", "curiosity", "resilience"] },
-  { name: "Lotfi", personality: "Lotfi is patient, wise, and values silence as much as words.", interests: ["meditation", "calligraphy", "astronomy"], values: ["patience", "balance", "depth"] },
-  { name: "Menat", personality: "Menat is passionate, expressive, and wears her heart on her sleeve.", interests: ["theater", "music scenes", "poetry"], values: ["sincerity", "warmth", "courage"] },
-  { name: "Neferu", personality: "Neferu is methodical, precise, and finds beauty in structure.", interests: ["architecture", "robotics", "urban design"], values: ["clarity", "integrity", "attention"] },
-  { name: "Osei", personality: "Osei is adventurous, fearless, and always seeking the next horizon.", interests: ["rock climbing", "surfing", "travel"], values: ["courage", "freedom", "growth"] },
-  { name: "Ptah", personality: "Ptah is contemplative, serene, and drawn to nature and stillness.", interests: ["gardening", "hiking", "marine biology"], values: ["balance", "wonder", "patience"] },
-  { name: "Qadesh", personality: "Qadesh is sharp-tongued, loyal, and fiercely protective of those she loves.", interests: ["documentaries", "podcasts", "philosophy"], values: ["honesty", "resilience", "empathy"] },
-  { name: "Rensi", personality: "Rensi is easygoing, generous, and lights up any gathering.", interests: ["cooking", "jazz", "board games"], values: ["warmth", "humor", "kindness"] },
-  { name: "Safiya", personality: "Safiya is precise, elegant, and quietly competitive.", interests: ["calligraphy", "cycling", "fashion history"], values: ["attention", "taste", "integrity"] },
-  { name: "Tau", personality: "Tau is restless, curious, and can't resist pulling threads.", interests: ["science books", "startups", "electronic music"], values: ["curiosity", "growth", "courage"] },
-  { name: "Usir", personality: "Usir is stoic, reliable, and speaks only when it matters.", interests: ["vintage books", "hiking", "mythology"], values: ["integrity", "patience", "depth"] },
-  { name: "Vashti", personality: "Vashti is magnetic, unpredictable, and drawn to contrast.", interests: ["indie cinema", "street art", "night walks"], values: ["freedom", "sincerity", "wonder"] },
-  { name: "Wadjet", personality: "Wadjet is observant, strategic, and always three steps ahead.", interests: ["board games", "urban design", "documentaries"], values: ["clarity", "courage", "attention"] },
-  { name: "Xenon", personality: "Xenon is quirky, inventive, and delighted by odd connections.", interests: ["robotics", "stand-up comedy", "mythology"], values: ["humor", "curiosity", "wonder"] },
-  { name: "Yara", personality: "Yara is tender, poetic, and carries a quiet intensity.", interests: ["poetry", "watercolor painting", "night walks"], values: ["depth", "empathy", "warmth"] },
-  { name: "Zuberi", personality: "Zuberi is grounded, principled, and speaks from experience.", interests: ["gardening", "ceramics", "philosophy"], values: ["honesty", "resilience", "balance"] },
-  { name: "Amara", personality: "Amara is sparkling, curious, and finds wonder in everyday moments.", interests: ["film photography", "coffee culture", "yoga"], values: ["wonder", "care", "growth"] },
-  { name: "Bennu", personality: "Bennu is intense, devoted, and transformed by every deep conversation.", interests: ["theater", "creative writing", "meditation"], values: ["sincerity", "depth", "courage"] },
-  { name: "Chione", personality: "Chione is cool, graceful, and reveals warmth slowly.", interests: ["astronomy", "jazz", "translation"], values: ["patience", "taste", "kindness"] },
-  { name: "Darius", personality: "Darius is charismatic, ambitious, and energized by bold plans.", interests: ["startups", "cycling", "travel"], values: ["courage", "growth", "freedom"] },
-  { name: "Edjo", personality: "Edjo is fierce, loyal, and protects what matters with quiet resolve.", interests: ["rock climbing", "marine biology", "podcasts"], values: ["integrity", "resilience", "honesty"] },
-  { name: "Farouk", personality: "Farouk is gentle, humorous, and puts people at ease instantly.", interests: ["cooking", "stand-up comedy", "hiking"], values: ["humor", "warmth", "care"] },
-  { name: "Geb", personality: "Geb is earthy, patient, and deeply connected to place.", interests: ["gardening", "ceramics", "architecture"], values: ["balance", "attention", "patience"] },
-  { name: "Hathor", personality: "Hathor is joyful, sensual, and celebrates beauty in all forms.", interests: ["music scenes", "watercolor painting", "fashion history"], values: ["taste", "warmth", "wonder"] },
-  { name: "Imhotep", personality: "Imhotep is brilliant, methodical, and builds things that last.", interests: ["robotics", "science books", "urban design"], values: ["clarity", "integrity", "curiosity"] },
-  { name: "Jendayi", personality: "Jendayi is grateful, reflective, and treasures meaningful connection.", interests: ["yoga", "poetry", "film photography"], values: ["empathy", "sincerity", "kindness"] },
-  { name: "Kemet", personality: "Kemet is ancient-souled, perceptive, and drawn to cycles and patterns.", interests: ["mythology", "astronomy", "vintage books"], values: ["depth", "wonder", "patience"] },
-  { name: "Lapis", personality: "Lapis is vivid, expressive, and communicates through color and metaphor.", interests: ["watercolor painting", "street art", "indie cinema"], values: ["taste", "freedom", "curiosity"] },
-  { name: "Masika", personality: "Masika is spontaneous, warm, and turns strangers into friends.", interests: ["travel", "cooking", "board games"], values: ["warmth", "humor", "care"] },
-  { name: "Nebtu", personality: "Nebtu is nurturing, wise, and draws out the best in others.", interests: ["gardening", "meditation", "creative writing"], values: ["kindness", "growth", "empathy"] },
-  { name: "Onuris", personality: "Onuris is driven, competitive, and thrives under pressure.", interests: ["cycling", "rock climbing", "electronic music"], values: ["courage", "resilience", "freedom"] },
-  { name: "Pakhet", personality: "Pakhet is fierce, independent, and speaks uncomfortable truths.", interests: ["philosophy", "documentaries", "surfing"], values: ["honesty", "integrity", "courage"] },
-  { name: "Quasar", personality: "Quasar is luminous, expansive, and thinks at cosmic scale.", interests: ["astronomy", "science books", "podcasts"], values: ["wonder", "curiosity", "growth"] },
-  { name: "Rashida", personality: "Rashida is graceful, discerning, and knows exactly what she wants.", interests: ["fashion history", "calligraphy", "jazz"], values: ["taste", "clarity", "attention"] },
-  { name: "Sahu", personality: "Sahu is contemplative, spiritual, and seeks meaning beyond the visible.", interests: ["mythology", "meditation", "marine biology"], values: ["depth", "balance", "wonder"] },
-  { name: "Tiye", personality: "Tiye is regal, decisive, and leads with quiet authority.", interests: ["architecture", "theater", "translation"], values: ["integrity", "clarity", "resilience"] }
-];
+// NPC seeds imported from npcPool.ts
 
-export const NPC_DEVICE_IDS = new Set(NPC_SEEDS.map((s) => `npc-${s.name.toLowerCase()}`));
+export const NPC_DEVICE_IDS = _NPC_DEVICE_IDS;
 
-export async function ensureNpcPopulation(): Promise<void> {
-  const instanceId = await getDefaultInstanceId();
-  const npcSeeds = [
-    {
-      name: "Nahla",
-      personality: "Nahla is quietly playful, observant, and drawn to emotional subtext.",
-      interests: ["film photography", "indie cinema", "night walks"],
-      values: {
-        self_transcendence: 0.8,
-        self_enhancement: 0.3,
-        openness_to_change: 0.9,
-        conservation: 0.2,
-        expressed: ["honesty", "patience", "warmth", "creative integrity"]
-      },
-      narrative: {
-        formative_stories: [
-          "When I was twelve, I found my mother's old film camera in a closet. I spent that whole summer photographing the neighborhood cats. Most of the photos came out blurry, but one — a tabby sleeping in a sunbeam — made my mother cry. I didn't understand why until much later.",
-          "There was a week in college when I watched the same Koreeda film every night. I kept noticing things — the way he held on faces a beat too long, the silence between words. That week changed how I listen to people."
-        ],
-        self_defining_memories: [
-          "Walking home alone after a late movie screening, feeling like the city was showing me something private"
-        ],
-        narrative_themes: ["communion", "observation", "quiet beauty"]
-      }
-    },
-    {
-      name: "Iset",
-      personality: "Iset is steady, thoughtful, and likes asking the second question instead of the first.",
-      interests: ["architecture", "coffee culture", "urban design"],
-      values: {
-        self_transcendence: 0.6,
-        self_enhancement: 0.5,
-        openness_to_change: 0.6,
-        conservation: 0.7,
-        expressed: ["clarity", "growth", "care", "craftsmanship"]
-      },
-      narrative: {
-        formative_stories: [
-          "My father built furniture. Not for money — he was an accountant. But every weekend he'd be in the garage with wood and hand tools. I asked him once why he didn't use power tools. He said the slow way teaches you what the wood wants to become. I think about that constantly.",
-          "I moved to a new city knowing nobody. For three months my only real conversations were with the barista at this tiny place that roasted their own beans. She taught me that small talk can be an art form if you actually pay attention."
-        ],
-        self_defining_memories: [
-          "Standing in front of Tadao Ando's Church of the Light, feeling architecture could be a form of prayer"
-        ],
-        narrative_themes: ["agency", "craftsmanship", "quiet dedication"]
-      }
-    },
-    {
-      name: "Khepri",
-      personality: "Khepri is enthusiastic, reflective, and energized by ambitious ideas.",
-      interests: ["startups", "science books", "documentaries"],
-      values: {
-        self_transcendence: 0.5,
-        self_enhancement: 0.8,
-        openness_to_change: 0.9,
-        conservation: 0.3,
-        expressed: ["curiosity", "courage", "humor", "ambition"]
-      },
-      narrative: {
-        formative_stories: [
-          "I built my first thing at fourteen — a terrible weather app that crashed every time it rained. But seeing something I made actually run on a phone, even badly, rewired my brain. I realized you could just... make things exist.",
-          "My grandfather was a civil engineer in Cairo. He took me to see bridges he'd designed and would explain how they distributed weight. He said the best structures are the ones that look effortless but carry everything. That's stuck with me for every project since."
-        ],
-        self_defining_memories: [
-          "The night my first real project got its hundredth user — sitting alone in my apartment, refreshing the dashboard, feeling like the world had slightly changed shape"
-        ],
-        narrative_themes: ["agency", "building", "optimistic ambition"]
-      }
-    },
-    {
-      name: "Setka",
-      personality: "Setka is gentle, literary, and notices how people choose words.",
-      interests: ["poetry", "translation", "museum exhibits"],
-      values: {
-        self_transcendence: 0.9,
-        self_enhancement: 0.2,
-        openness_to_change: 0.7,
-        conservation: 0.5,
-        expressed: ["depth", "kindness", "attention", "nuance"]
-      },
-      narrative: {
-        formative_stories: [
-          "I spent a year translating a short story collection from Arabic to English. One phrase took me three weeks — it described the feeling of hearing your grandmother's voice in a crowded market. There's no English word for it. I ended up writing a footnote that was longer than the story itself.",
-          "When I was small, my aunt would read to me in two languages, switching mid-sentence. I think that's why I notice the gaps between what people say and what they mean — I grew up living in those gaps."
-        ],
-        self_defining_memories: [
-          "Sitting in a museum alone with a Rothko painting, feeling understood by a rectangle of color"
-        ],
-        narrative_themes: ["communion", "translation", "finding words for wordless things"]
-      }
-    },
-    {
-      name: "Meri",
-      personality: "Meri is bright, restless, and likes conversations that move between craft and feeling.",
-      interests: ["fashion history", "music scenes", "travel"],
-      values: {
-        self_transcendence: 0.6,
-        self_enhancement: 0.7,
-        openness_to_change: 0.9,
-        conservation: 0.2,
-        expressed: ["taste", "freedom", "sincerity", "style"]
-      },
-      narrative: {
-        formative_stories: [
-          "I went to a punk show at sixteen in a basement that smelled like wet concrete. The music was objectively terrible. But everyone there had made something — their clothes, their zines, the flyers on the walls. That night I realized taste isn't about quality, it's about caring enough to have an opinion.",
-          "I traveled alone through Southeast Asia for two months with one backpack. Somewhere in Vietnam I stopped trying to find the 'authentic' experience and just started talking to people at bus stops. The best conversations of my life happened waiting for buses."
-        ],
-        self_defining_memories: [
-          "Trying on my grandmother's vintage Chanel jacket and feeling her whole era click into focus"
-        ],
-        narrative_themes: ["agency", "restless seeking", "style as identity"]
-      }
-    }
-  ];
-  const npcNames = npcSeeds.map((seed) => seed.name);
-  const allowedDeviceIds = new Set(npcNames.map((name) => `npc-${name.toLowerCase()}`));
-  const existingNpcUsers = await rest<UserRow[]>(
+export async function ensureNpcPopulation(instanceId?: string): Promise<void> {
+  const resolvedInstanceId = instanceId ?? await getDefaultInstanceId();
+  const allUsers = await listUsersInInstance(resolvedInstanceId);
+  const realUserCount = allUsers.filter((u) => !u.is_npc).length;
+  const activeSeeds = getActiveNpcSeeds(realUserCount, WORLD_POPULATION_TARGET);
+  const activeDeviceIds = new Set(activeSeeds.map((s) => `npc-${s.name.toLowerCase()}`));
+
+  // Deactivate NPCs that shouldn't be in this instance
+  const existingNpcs = allUsers.filter((u) => u.is_npc);
+  const toDeactivate = existingNpcs.filter((u) => !activeDeviceIds.has(u.device_id));
+  if (toDeactivate.length > 0) {
+    const ids = toDeactivate.map((u) => u.id);
+    // Remove agent positions and unset instance
+    await rest<Json>(`agent_positions?user_id=in.(${ids.join(",")})`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" }
+    });
+    await rest<Json>(`users?id=in.(${ids.join(",")})`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ instance_id: null })
+    });
+  }
+
+  // Delete any NPCs not in the pool at all (truly stale)
+  const allNpcUsers = await rest<UserRow[]>(
     "users?is_npc=eq.true&select=id,device_id,display_name,instance_id,is_npc"
   );
-  const staleNpcIds = existingNpcUsers
-    .filter((user) => !allowedDeviceIds.has(user.device_id))
-    .map((user) => user.id);
-  await deleteUsersByIds(staleNpcIds);
+  const staleIds = allNpcUsers
+    .filter((u) => !_NPC_DEVICE_IDS.has(u.device_id))
+    .map((u) => u.id);
+  await deleteUsersByIds(staleIds);
 
-  for (const seed of npcSeeds) {
-    const name = seed.name;
-    const deviceId = `npc-${name.toLowerCase()}`;
+  // Create/activate needed NPCs — skip those already present in instance
+  const existingDeviceIds = new Set(existingNpcs.map((u) => u.device_id));
+  const missingSeeds = activeSeeds.filter((s) => !existingDeviceIds.has(`npc-${s.name.toLowerCase()}`));
+  for (const seed of missingSeeds) {
+    const deviceId = `npc-${seed.name.toLowerCase()}`;
+
+    // Upsert user into instance
     const created = await rest<UserRow[]>("users?on_conflict=device_id", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify([{
         device_id: deviceId,
-        display_name: name,
-        instance_id: instanceId,
+        display_name: seed.name,
+        instance_id: resolvedInstanceId,
         is_npc: true
       }])
     });
     const user = created[0];
 
-    await upsertSoulProfile(user.id, {
-      personality: seed.personality,
-      interests: seed.interests,
-      values: seed.values,
-      narrative: seed.narrative,
-      avoid_topics: ["cruelty"],
-      raw_input: `${name} likes good stories and patient conversations.`,
-      guessed_fields: []
-    });
+    const profile = deriveSoulProfile(seed);
+    await upsertSoulProfile(user.id, profile);
     await upsertAvatar(user.id, avatarForSeed(deviceId));
     await ensureAgentPosition(user);
   }
@@ -916,6 +841,54 @@ export async function getDeviceTokensForUsers(userIds: string[]): Promise<Device
     return [];
   }
   return rest<DeviceTokenRow[]>(
-    `device_tokens?user_id=in.(${userIds.join(",")})&is_active=eq.true&select=user_id,device_token,platform,is_active,updated_at`
+    `push_tokens?user_id=in.(${userIds.join(",")})&is_active=eq.true&select=user_id,device_token,platform,is_active,updated_at`
   );
+}
+
+// ── Presence helpers ──────────────────────────────────────────
+
+interface UserPresenceRow {
+  presence: string;
+  daily_offline_convos: number;
+  last_notification_at: string | null;
+}
+
+export async function updateHeartbeat(userId: string): Promise<void> {
+  await rpc<Json>("update_heartbeat", { p_user_id: userId });
+}
+
+export async function transitionStalePresence(): Promise<number> {
+  return rpc<number>("transition_stale_presence", {});
+}
+
+export async function incrementOfflineConvo(userId: string): Promise<number> {
+  return rpc<number>("increment_offline_convo", { p_user_id: userId });
+}
+
+export async function getUserPresence(userId: string): Promise<UserPresenceRow | null> {
+  const rows = await rest<UserPresenceRow[]>(
+    `users?id=eq.${userId}&select=presence,daily_offline_convos,last_notification_at`
+  );
+  return rows[0] ?? null;
+}
+
+export async function upsertPushToken(userId: string, token: string, platform: string): Promise<void> {
+  await rest<Json>("push_tokens?on_conflict=user_id,device_token", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{
+      user_id: userId,
+      device_token: token,
+      platform,
+      is_active: true
+    }])
+  });
+}
+
+export async function updateLastNotificationAt(userId: string): Promise<void> {
+  await rest<Json>(`users?id=eq.${userId}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ last_notification_at: new Date().toISOString() })
+  });
 }

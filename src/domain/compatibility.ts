@@ -13,9 +13,13 @@ export function shouldEvaluateCompatibility(messageCount: number) {
 export async function evaluateCompatibility(
   soulA: SoulProfile,
   soulB: SoulProfile,
-  transcript: ConversationMessage[]
+  transcript: ConversationMessage[],
+  names?: {
+    selfName?: string;
+    otherName?: string;
+  }
 ): Promise<ImpressionEvaluation> {
-  return await evaluateImpression(soulA, soulB, transcript);
+  return await evaluateImpression(soulA, soulB, transcript, names);
 }
 
 export function accumulateCompatibility(previousScore: number, nextScore: number, encounterCount?: number) {

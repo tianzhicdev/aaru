@@ -18,8 +18,8 @@ export async function evaluateCompatibility(
   return await evaluateImpression(soulA, soulB, transcript);
 }
 
-export function accumulateCompatibility(previousScore: number, nextScore: number) {
-  return accumulateImpression(previousScore, nextScore);
+export function accumulateCompatibility(previousScore: number, nextScore: number, encounterCount?: number) {
+  return accumulateImpression(previousScore, nextScore, encounterCount);
 }
 
 export function isBaUnlocked(_scoreAtoB: number, scoreBtoA?: number) {

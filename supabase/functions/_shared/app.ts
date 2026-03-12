@@ -694,12 +694,13 @@ async function advanceConversation(conversationId: string) {
       processing_owner: null,
       processing_expires_at: null
     });
-    await upsertImpressionEdge(conversation.user_a_id, conversation.user_b_id, { ...evaluationA, score: scoreA }, baUnlockedForA);
+    await upsertImpressionEdge(conversation.user_a_id, conversation.user_b_id, { ...evaluationA, score: scoreA }, baUnlockedForA, (reciprocalA?.encounter_count ?? 0) + 1);
     await upsertImpressionEdge(
       conversation.user_b_id,
       conversation.user_a_id,
       { ...evaluationB, score: scoreB },
-      baUnlockedForB
+      baUnlockedForB,
+      (reciprocalB?.encounter_count ?? 0) + 1
     );
 
     if (messages.length >= KA_MESSAGES_PER_CONVERSATION) {

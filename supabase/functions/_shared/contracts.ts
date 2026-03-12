@@ -32,7 +32,10 @@ export const kaConverseRequestSchema = z.object({
   selfName: z.string(),
   soulProfile: soulProfileSchema,
   newsSnippets: z.array(z.string()).default([]),
-  history: z.array(conversationMessageSchema)
+  history: z.array(conversationMessageSchema),
+  suggestedTopics: z.array(z.string()).optional(),
+  previousConversationSummary: z.string().optional(),
+  encounterCount: z.number().int().nonnegative().optional()
 });
 
 export const kaConverseResponseSchema = conversationMessageSchema;
@@ -42,7 +45,8 @@ export const evaluateCompatibilityRequestSchema = z.object({
   soulB: soulProfileSchema,
   transcript: z.array(conversationMessageSchema),
   previousScore: z.number().min(0).max(100).default(0),
-  reciprocalScore: z.number().min(0).max(100).default(0)
+  reciprocalScore: z.number().min(0).max(100).default(0),
+  encounterCount: z.number().int().nonnegative().optional()
 });
 
 export const evaluateCompatibilityResponseSchema = z.object({

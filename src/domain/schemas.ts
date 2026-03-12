@@ -4,10 +4,25 @@ import {
   WORLD_GRID_ROWS
 } from "./constants.ts";
 
+export const soulValuesSchema = z.object({
+  self_transcendence: z.number().min(0).max(1),
+  self_enhancement: z.number().min(0).max(1),
+  openness_to_change: z.number().min(0).max(1),
+  conservation: z.number().min(0).max(1),
+  expressed: z.array(z.string())
+});
+
+export const soulNarrativeSchema = z.object({
+  formative_stories: z.array(z.string()),
+  self_defining_memories: z.array(z.string()),
+  narrative_themes: z.array(z.string())
+});
+
 export const soulProfileSchema = z.object({
   personality: z.string().min(1),
   interests: z.array(z.string()).min(1),
-  values: z.array(z.string()).min(1),
+  values: soulValuesSchema,
+  narrative: soulNarrativeSchema,
   avoid_topics: z.array(z.string()),
   raw_input: z.string(),
   guessed_fields: z.array(z.string()).default([])
@@ -15,7 +30,12 @@ export const soulProfileSchema = z.object({
 
 export const impressionEvaluationSchema = z.object({
   score: z.number().min(0).max(100),
-  summary: z.string().min(1).max(280)
+  summary: z.string().min(1).max(280),
+  responsiveness: z.number().min(0).max(100).optional(),
+  values_alignment: z.number().min(0).max(100).optional(),
+  conversation_quality: z.number().min(0).max(100).optional(),
+  interest_overlap: z.number().min(0).max(100).optional(),
+  novelty: z.number().min(0).max(100).optional()
 });
 
 export const cellCoordSchema = z.object({

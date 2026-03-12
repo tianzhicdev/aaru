@@ -64,7 +64,18 @@ describe("backend handlers", () => {
       soulProfile: {
         personality: "Curious and warm.",
         interests: ["cinema", "running"],
-        values: ["honesty", "growth"],
+        values: {
+          self_transcendence: 0.5,
+          self_enhancement: 0.5,
+          openness_to_change: 0.5,
+          conservation: 0.5,
+          expressed: ["honesty", "growth"]
+        },
+        narrative: {
+          formative_stories: [],
+          self_defining_memories: [],
+          narrative_themes: []
+        },
         avoid_topics: ["cruelty"],
         raw_input: "I like cinema and running.",
         guessed_fields: []
@@ -86,7 +97,18 @@ describe("backend handlers", () => {
       soulA: {
         personality: "Curious and warm.",
         interests: ["cinema", "running"],
-        values: ["honesty", "growth"],
+        values: {
+          self_transcendence: 0.5,
+          self_enhancement: 0.5,
+          openness_to_change: 0.5,
+          conservation: 0.5,
+          expressed: ["honesty", "growth"]
+        },
+        narrative: {
+          formative_stories: [],
+          self_defining_memories: [],
+          narrative_themes: []
+        },
         avoid_topics: [],
         raw_input: "A",
         guessed_fields: []
@@ -94,7 +116,18 @@ describe("backend handlers", () => {
       soulB: {
         personality: "Reflective and warm.",
         interests: ["cinema", "travel"],
-        values: ["growth", "humor"],
+        values: {
+          self_transcendence: 0.6,
+          self_enhancement: 0.4,
+          openness_to_change: 0.5,
+          conservation: 0.5,
+          expressed: ["growth", "humor"]
+        },
+        narrative: {
+          formative_stories: [],
+          self_defining_memories: [],
+          narrative_themes: []
+        },
         avoid_topics: [],
         raw_input: "B",
         guessed_fields: []

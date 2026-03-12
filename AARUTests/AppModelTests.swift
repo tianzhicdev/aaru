@@ -47,7 +47,8 @@ final class AppModelTests: XCTestCase {
         model.soulProfile = SoulProfile(
             personality: "Curious",
             interests: ["film"],
-            values: ["honesty"],
+            values: SoulValues(selfTranscendence: 0.5, selfEnhancement: 0.5, opennessToChange: 0.5, conservation: 0.5, expressed: ["honesty"]),
+            narrative: SoulNarrative(formativeStories: [], selfDefiningMemories: [], narrativeThemes: []),
             avoidTopics: [],
             rawInput: "film",
             guessedFields: []
@@ -59,7 +60,8 @@ final class AppModelTests: XCTestCase {
               "soul_profile":{
                 "personality":"Curious",
                 "interests":["film"],
-                "values":["honesty"],
+                "values":{"self_transcendence":0.5,"self_enhancement":0.5,"openness_to_change":0.5,"conservation":0.5,"expressed":["honesty"]},
+                "narrative":{"formative_stories":[],"self_defining_memories":[],"narrative_themes":[]},
                 "avoid_topics":[],
                 "raw_input":"film",
                 "guessed_fields":[]

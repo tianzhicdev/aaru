@@ -1,9 +1,38 @@
 import Foundation
 
+struct SoulValues: Codable, Equatable {
+    var selfTranscendence: Double
+    var selfEnhancement: Double
+    var opennessToChange: Double
+    var conservation: Double
+    var expressed: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case selfTranscendence = "self_transcendence"
+        case selfEnhancement = "self_enhancement"
+        case opennessToChange = "openness_to_change"
+        case conservation
+        case expressed
+    }
+}
+
+struct SoulNarrative: Codable, Equatable {
+    var formativeStories: [String]
+    var selfDefiningMemories: [String]
+    var narrativeThemes: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case formativeStories = "formative_stories"
+        case selfDefiningMemories = "self_defining_memories"
+        case narrativeThemes = "narrative_themes"
+    }
+}
+
 struct SoulProfile: Codable, Equatable {
     var personality: String
     var interests: [String]
-    var values: [String]
+    var values: SoulValues
+    var narrative: SoulNarrative
     var avoidTopics: [String]
     var rawInput: String
     var guessedFields: [String]
@@ -12,6 +41,7 @@ struct SoulProfile: Codable, Equatable {
         case personality
         case interests
         case values
+        case narrative
         case avoidTopics = "avoid_topics"
         case rawInput = "raw_input"
         case guessedFields = "guessed_fields"

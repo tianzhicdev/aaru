@@ -556,3 +556,79 @@ describe("greedy pathfinding", () => {
     }
   });
 });
+
+describe("directional wander arc coherence", () => {
+  it("agent follows a coherent arc over multiple ticks, not Brownian jitter", () => {
+    // Run multiple trials to get a statistical signal
+    let totalRatio = 0;
+    const trials = 20;
+    for (let t = 0; t < trials; t++) {
+      const agent = baseAgent({
+        x: 48.5 / 96, y: 32.5 / 64,
+        target_x: 48.5 / 96, target_y: 32.5 / 64,
+        cell_x: 48, cell_y: 32,
+        target_cell_x: 48, target_cell_y: 32,
+        state: "wandering",
+        behavior: "wander",
+        behavior_ticks_remaining: 10,
+        heading: 2, // east
+        path: []
+      });
+
+      const positions: { x: number; y: number }[] = [];
+      let current = agent;
+      for (let i = 0; i < 15; i++) {
+        const result = tickWorld([current], new Date("2026-03-09T20:00:00.000Z"));
+        current = result.positions[0];
+        const cx = Math.round(current.x * 96);
+        const cy = Math.round(current.y * 64);
+        positions.push({ x: cx, y: cy });
+      }
+
+      let totalDist = 0;
+      for (let i = 1; i < positions.length; i++) {
+        totalDist += Math.abs(positions[i].x - positions[i - 1].x)
+                   + Math.abs(positions[i].y - positions[i - 1].y);
+      }
+      const start = positions[0];
+      const end = positions[positions.length - 1];
+      const netDisplacement = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+
+      if (totalDist > 0) {
+        totalRatio += netDisplacement / totalDist;
+      }
+    }
+
+    // Average displacement/distance ratio across trials should be > 0.2
+    // (pure Brownian over 15 steps ≈ 0.1, directional wander ≈ 0.3-0.5)
+    const avgRatio = totalRatio / trials;
+    expect(avgRatio).toBeGreaterThan(0.2);
+  });
+
+  it("path is preserved across ticks when behavior stays the same", () => {
+    // Agent with wander behavior and a pre-set path
+    const agent = baseAgent({
+      x: 20.5 / 96, y: 20.5 / 64,
+      target_x: 21.5 / 96, target_y: 20.5 / 64,
+      cell_x: 20, cell_y: 20,
+      target_cell_x: 21, target_cell_y: 20,
+      state: "wandering",
+      behavior: "wander",
+      behavior_ticks_remaining: 3,
+      heading: 2,
+      path: [{ x: 21, y: 20 }, { x: 22, y: 20 }, { x: 23, y: 20 }]
+    });
+
+    // After one tick, agent should have consumed first waypoint and kept the rest
+    const result = tickWorld([agent], new Date("2026-03-09T20:00:00.000Z"));
+    const next = result.positions[0];
+
+    // Agent moved to first waypoint
+    expect(next.cell_x).toBe(21);
+    expect(next.cell_y).toBe(20);
+    // Remaining path should have the rest (not regenerated from scratch)
+    expect(next.path.length).toBe(2);
+    expect(next.path[0]).toEqual({ x: 22, y: 20 });
+    expect(next.path[1]).toEqual({ x: 23, y: 20 });
+  });
+});

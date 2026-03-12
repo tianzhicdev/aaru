@@ -10,7 +10,7 @@ struct EditableSoulProfileCard: View {
 
             EditableField(label: "Personality", text: $profile.personality, isMultiline: true)
             EditableArrayField(label: "Interests", items: $profile.interests)
-            EditableArrayField(label: "Values", items: $profile.values)
+            EditableArrayField(label: "Values", items: $profile.values.expressed)
             EditableArrayField(label: "Avoid", items: $profile.avoidTopics)
 
             if !profile.guessedFields.isEmpty {

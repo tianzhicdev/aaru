@@ -7,7 +7,7 @@ function readEnv(name: string): string | undefined {
 
 export const env = {
   xaiToken: readEnv("XAI_TOKEN"),
-  groqToken: readEnv("GROQ_TOKEN"),
+  groqApiKey: readEnv("GROQ_API_KEY"),
   supabaseProjectId: readEnv("SUPABASE_PROJECT_ID"),
   supabaseSecretKey: readEnv("SUPABASE_SECRET_KEY"),
   supabasePassword: readEnv("SUPABASE_PW")

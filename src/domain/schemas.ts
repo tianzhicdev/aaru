@@ -30,7 +30,7 @@ export const soulProfileSchema = z.object({
 
 export const impressionEvaluationSchema = z.object({
   score: z.number().min(0).max(100),
-  summary: z.string().min(1).max(280),
+  summary: z.string().min(1).max(500),
   responsiveness: z.number().min(0).max(100).optional(),
   values_alignment: z.number().min(0).max(100).optional(),
   conversation_quality: z.number().min(0).max(100).optional(),

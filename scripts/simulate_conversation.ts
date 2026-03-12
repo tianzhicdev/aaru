@@ -280,9 +280,9 @@ async function main() {
   console.log(`    Stories: ${soulB.narrative.formative_stories.length} | Memories: ${soulB.narrative.self_defining_memories.length}`);
 
   // Check Groq connectivity
-  const apiKey = process.env.GROQ_API_KEY ?? process.env.GROQ_TOKEN;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    console.log(red("\n  ⚠ No GROQ_API_KEY or GROQ_TOKEN found! All calls will use fallback.\n"));
+    console.log(red("\n  ⚠ No GROQ_API_KEY found! All calls will use fallback.\n"));
   } else {
     console.log(green(`\n  ✓ Groq API key found (${apiKey.slice(0, 8)}...)`));
   }

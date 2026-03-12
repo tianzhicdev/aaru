@@ -51,7 +51,18 @@ describe("evaluateImpressionFallback sub-scores", () => {
   const soul = (overrides: Partial<SoulProfile>): SoulProfile => ({
     personality: "Curious and kind",
     interests: ["film", "music", "travel"],
-    values: ["honesty", "growth"],
+    values: {
+      self_transcendence: 0.7,
+      self_enhancement: 0.4,
+      openness_to_change: 0.8,
+      conservation: 0.3,
+      expressed: ["honesty", "growth"]
+    },
+    narrative: {
+      formative_stories: [],
+      self_defining_memories: [],
+      narrative_themes: []
+    },
     avoid_topics: [],
     raw_input: "sample",
     guessed_fields: [],

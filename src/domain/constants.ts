@@ -16,8 +16,32 @@ export const CONVERSATION_SPEAKING_WORDS_PER_SECOND = 2.7;
 export const CONVERSATION_TURN_GAP_MS = 300;
 export const MIN_BUBBLE_DISPLAY_MS = 1_500;
 export const MIN_REPLY_DELAY_MS = 2_000;
-export const CAMERA_VISIBLE_COLUMNS = 28;
-export const CAMERA_VISIBLE_ROWS = 36;
+export const CAMERA_VISIBLE_COLUMNS = 7;
+export const CAMERA_VISIBLE_ROWS = 9;
+
+// ── Phase-aware conversation limits (from soul-v2) ──
+export const EARLY_PHASE_MESSAGES = 6;
+export const MIDDLE_PHASE_MESSAGES = 10;
+export const DEEP_PHASE_MESSAGES = 16;
+export const EARLY_PHASE_MAX_ENCOUNTERS = 5;
+export const MIDDLE_PHASE_MAX_ENCOUNTERS = 12;
+
+export type ConversationPhase = "discovery" | "personal" | "depth";
+
+export function getConversationPhase(encounterCount: number): ConversationPhase {
+  if (encounterCount <= EARLY_PHASE_MAX_ENCOUNTERS) return "discovery";
+  if (encounterCount <= MIDDLE_PHASE_MAX_ENCOUNTERS) return "personal";
+  return "depth";
+}
+
+export function getMessagesForEncounter(encounterCount: number): number {
+  const phase = getConversationPhase(encounterCount);
+  switch (phase) {
+    case "discovery": return EARLY_PHASE_MESSAGES;
+    case "personal": return MIDDLE_PHASE_MESSAGES;
+    case "depth": return DEEP_PHASE_MESSAGES;
+  }
+}
 
 // ── Momentum-based conversation extension ──
 export const CONVERSATION_EXTENSION_MESSAGES = 4;

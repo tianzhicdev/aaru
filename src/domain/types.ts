@@ -12,10 +12,25 @@ export interface POI {
   capacity: number;
 }
 
+export interface SoulValues {
+  self_transcendence: number;   // 0-1 (universalism, benevolence)
+  self_enhancement: number;     // 0-1 (achievement, power)
+  openness_to_change: number;   // 0-1 (self-direction, stimulation)
+  conservation: number;         // 0-1 (security, tradition)
+  expressed: string[];          // free text for Ka conversation
+}
+
+export interface SoulNarrative {
+  formative_stories: string[];      // 2-3 user-provided anecdotes
+  self_defining_memories: string[]; // core emotional moments
+  narrative_themes: string[];       // agency, communion, redemption, etc.
+}
+
 export interface SoulProfile {
   personality: string;
   interests: string[];
-  values: string[];
+  values: SoulValues;
+  narrative: SoulNarrative;
   avoid_topics: string[];
   raw_input: string;
   guessed_fields: string[];
@@ -24,8 +39,11 @@ export interface SoulProfile {
 export interface ImpressionEvaluation {
   score: number;
   summary: string;
-  responsiveness?: number;
-  conversation_quality?: number;
+  responsiveness?: number;    // 0-100
+  values_alignment?: number;  // 0-100
+  conversation_quality?: number; // 0-100
+  interest_overlap?: number;  // 0-100
+  novelty?: number;           // 0-100
 }
 
 export interface CellCoord {
@@ -100,4 +118,5 @@ export interface KaConversationContext {
   suggestedTopics?: string[];
   history: ConversationMessage[];
   previousConversationSummary?: string;
+  encounterCount?: number;  // how many times this pair has met
 }

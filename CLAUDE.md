@@ -73,13 +73,29 @@ maestro test maestro/<flow>.yaml  # single flow
 - `AARUTests/` — XCTest unit tests
 
 ### Key domain files
-- `world.ts` — 10x14 grid simulation, agent movement, conversation initiation
+- `world.ts` — 96x64 grid simulation, agent movement, conversation initiation
 - `ka.ts` — Ka system prompt building, LLM reply with fallback
 - `impression.ts` — Heuristic + LLM impression scoring, accumulation
 - `compatibility.ts` — Thin wrapper over impression for API surface
 - `soulProfile.ts` — Profile generation and merging
 - `constants.ts` — Magic numbers (grid size, thresholds, limits)
 - `schemas.ts` — Zod schemas for runtime validation
+- `obstacle_map.ts` — Walkable/blocked cell data for the world grid
+
+### Scripts (scripts/)
+- `build_sprite_atlas.py` — Generates SpriteKit texture atlas from individual sprite sheets
+- `build_tmx_map.py` — Builds Tiled TMX map from tileset sources
+- `compose_map.py` — Composes final map image from layers
+- `analyze_map_obstacles.py` — Extracts obstacle data from the map for pathfinding
+- `regenerate_sprite_faces.py` — Regenerates avatar face sprites
+- `generate_app_icons.swift` — App icon generation
+- `simulate_conversation.ts` — Runs a simulated Ka conversation for testing
+- `supabase-link.sh` — Links local Supabase project
+
+### Map & Environment
+- Tileset PNGs in `AARU/Resources/Tilesets/`
+- Environment map in `AARU/Resources/Environment/` (TMX + rendered PNG)
+- Sprite atlas in `AARU/Resources/Sprites.atlas/`
 
 ## Code Style Conventions
 
@@ -110,11 +126,12 @@ A task is complete when ALL of the following are true:
 ## Known Constraints & Gotchas
 - **No Groq API key in CI/test** — all LLM-dependent code must have fallback paths. Tests exercise fallbacks.
 - **evaluateCompatibility is async** — always `await` it (was a bug, now fixed)
-- **Grid is 10 columns x 14 rows** — cell coordinates are 0-indexed integers
+- **Grid is 96 columns x 64 rows** — cell coordinates are 0-indexed integers
 - **Impression threshold for Ba unlock is 72** — defined in constants.ts
 - **Accumulation uses 55/45 weighted blend** — previous score weighted more heavily
 - **iOS client is a pure renderer** — all game state is server-authoritative
 - **XcodeGen** — project.yml generates AARU.xcodeproj; don't edit .xcodeproj directly
+- **XcodeBuildMCP** — session defaults configured (profile "aaru"): scheme AARU, iPhone 17 Pro, Debug config
 
 ## Autonomous Operating Loop
 When given a task:

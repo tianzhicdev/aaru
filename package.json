@@ -16,6 +16,7 @@
     "supabase:link": "sh scripts/supabase-link.sh"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "@types/node": "^24.6.0",
     "dotenv": "^17.2.3",
     "typescript": "^5.9.2",

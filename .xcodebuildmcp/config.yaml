@@ -1,0 +1,13 @@
+schemaVersion: 1
+sessionDefaultsProfiles:
+  aaru:
+    projectPath: /Users/tianzhichen/projects/aaru/AARU.xcodeproj
+    scheme: AARU
+    configuration: Debug
+    simulatorName: iPhone 17 Pro
+    simulatorId: 4D138DDB-1013-4F7F-86E1-C57533178421
+    simulatorPlatform: iOS Simulator
+    useLatestOS: true
+    derivedDataPath: /Users/tianzhichen/projects/aaru/DerivedData
+    bundleId: com.tianzhichen.aaru
+activeSessionDefaultsProfile: aaru

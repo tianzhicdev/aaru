@@ -79,7 +79,7 @@ struct ConversationDetailScreen: View {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     ForEach(detail.messages) { message in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("\(message.type == "ka_generated" ? "🤖" : "👤") \(message.senderName)")
+                            Text("\(message.type == "ka_generated" ? "Ka" : "You") \(message.senderName)")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                             Text(message.content)
@@ -129,7 +129,7 @@ struct ConversationDetailScreen: View {
                         }
                         ForEach(detail.baMessages) { message in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("👤 \(message.senderName)")
+                                Text("Ba \(message.senderName)")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
                                 Text(message.content)

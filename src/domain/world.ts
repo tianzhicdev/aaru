@@ -478,6 +478,11 @@ function advanceOnPath(agent: AgentPosition, occupied: Set<string>, allAgents?: 
   const decision = selectBehavior(agent, allAgents);
   const ticksLeft = Math.max(0, decision.ticks - 1);
 
+  // If behavior just changed (re-rolled), clear leftover path so the new behavior
+  // generates a fresh path with its own heading/target instead of following stale waypoints
+  const behaviorChanged = agent.behavior !== decision.behavior ||
+    (!agent.behavior_ticks_remaining || agent.behavior_ticks_remaining <= 0);
+
   // ── Idle behavior: stay put ──
   if (decision.behavior === "idle") {
     return {
@@ -492,7 +497,7 @@ function advanceOnPath(agent: AgentPosition, occupied: Set<string>, allAgents?: 
   }
 
   // ── Movement behaviors: follow existing path or generate new one ──
-  const path = agent.path ?? [];
+  const path = behaviorChanged ? [] : (agent.path ?? []);
   let nextCell: CellCoord;
   let remainingPath: CellCoord[];
   let heading = decision.heading ?? agent.heading ?? pickRandomHeading();

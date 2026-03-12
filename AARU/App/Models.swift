@@ -58,7 +58,7 @@ struct AvatarConfig: Codable, Equatable {
     }
 
     init(
-        spriteId: String = "m01_explorer",
+        spriteId: String = "human_shorthair_light_default",
         bodyShape: String = "slender",
         skinTone: String = "amber",
         hairStyle: String = "wave",
@@ -82,7 +82,7 @@ struct AvatarConfig: Codable, Equatable {
     }
 
     static let `default` = AvatarConfig(
-        spriteId: "m01_explorer",
+        spriteId: "human_shorthair",
         bodyShape: "slender",
         skinTone: "amber",
         hairStyle: "wave",
@@ -96,17 +96,22 @@ struct AvatarConfig: Codable, Equatable {
 }
 
 enum AvatarSprites {
-    static let all: [String] = [
-        "m01_explorer", "m02_artisan", "m03_sage", "m04_rebel",
-        "m05_gentleman", "m06_farmer", "m07_nomad", "m08_scholar",
-        "m09_athlete", "m10_hipster", "m11_dapper", "m12_surfer",
-        "m13_dreads", "m14_cowlick",
-        "f01_wanderer", "f02_mystic", "f03_scholar", "f04_punk",
-        "f05_botanist", "f06_dancer", "f07_royal", "f08_mechanic",
-        "f09_artist", "f10_adventurer", "f11_studious", "f12_natural",
-        "f13_sporty", "f14_cozy",
-        "t01_student", "t02_skater",
-    ]
+    static let hairStyles = ["bowlhair", "curlyhair", "longhair", "mophair", "shorthair", "spikeyhair"]
+    static let skinTones = ["light", "medium", "dark"]
+    static let hairColors = ["default", "blonde", "ginger", "black", "white"]
+
+    static let all: [String] = {
+        var ids: [String] = []
+        for hair in hairStyles {
+            for skin in skinTones {
+                for color in hairColors {
+                    ids.append("human_\(hair)_\(skin)_\(color)")
+                }
+            }
+        }
+        ids.append(contentsOf: ["goblin", "skeleton"])
+        return ids
+    }()
 }
 
 struct CellCoord: Codable, Equatable {
@@ -125,6 +130,9 @@ struct WorldAgent: Codable, Equatable, Identifiable {
     var path: [CellCoord]
     var moveSpeed: Double
     var state: String
+    var behavior: String?
+    var behaviorTicksRemaining: Int?
+    var heading: Int?
     var activeMessage: String?
     var conversationID: UUID?
     var displayName: String
@@ -142,6 +150,9 @@ struct WorldAgent: Codable, Equatable, Identifiable {
         case path
         case moveSpeed = "move_speed"
         case state
+        case behavior
+        case behaviorTicksRemaining = "behavior_ticks_remaining"
+        case heading
         case activeMessage = "active_message"
         case conversationID = "conversation_id"
         case displayName = "display_name"
@@ -214,8 +225,8 @@ struct WorldConfig: Codable, Equatable {
     }
 
     static let `default` = WorldConfig(
-        gridColumns: 50,
-        gridRows: 50,
+        gridColumns: 64,
+        gridRows: 64,
         worldTickMs: 1_000,
         moveAnimationMs: 900,
         bubbleReadingWPS: 4,
@@ -223,8 +234,8 @@ struct WorldConfig: Codable, Equatable {
         conversationTurnGapMs: 300,
         minBubbleDisplayMs: 1_500,
         minReplyDelayMs: 2_000,
-        cameraVisibleColumns: 7,
-        cameraVisibleRows: 9,
+        cameraVisibleColumns: 28,
+        cameraVisibleRows: 36,
         agentMoveSpeed: 1.8
     )
 }

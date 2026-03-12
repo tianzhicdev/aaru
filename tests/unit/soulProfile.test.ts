@@ -6,18 +6,28 @@ describe("soul profile generation", () => {
     const profile = generateFallbackSoulProfile("hi");
 
     expect(profile.interests.length).toBeGreaterThan(0);
-    expect(profile.values.length).toBeGreaterThan(0);
+    expect(profile.values.expressed.length).toBeGreaterThan(0);
+    expect(profile.values.self_transcendence).toBeGreaterThanOrEqual(0);
+    expect(profile.values.self_transcendence).toBeLessThanOrEqual(1);
+    expect(profile.narrative).toBeDefined();
     expect(profile.guessed_fields.length).toBeGreaterThan(0);
   });
 
   it("preserves explicit generated fields and marks missing ones as guessed", () => {
     const profile = mergeGeneratedSoulProfile("I love film and running", {
       interests: ["film", "running"],
-      values: ["honesty"]
+      values: {
+        self_transcendence: 0.8,
+        self_enhancement: 0.3,
+        openness_to_change: 0.7,
+        conservation: 0.2,
+        expressed: ["honesty"]
+      }
     });
 
     expect(profile.interests).toEqual(["film", "running"]);
-    expect(profile.values).toEqual(["honesty"]);
+    expect(profile.values.expressed).toEqual(["honesty"]);
+    expect(profile.values.self_transcendence).toBe(0.8);
     expect(profile.guessed_fields).toContain("personality");
   });
 });

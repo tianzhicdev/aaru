@@ -511,17 +511,16 @@ export async function upsertImpressionEdge(
   targetUserId: string,
   evaluation: ImpressionEvaluation,
   baUnlocked: boolean,
-  incrementEncounter: boolean = false,
+  encounterCount: number,
   subScores?: { responsiveness?: number; conversationQuality?: number }
 ): Promise<void> {
-  const existing = incrementEncounter ? await getImpressionEdge(userId, targetUserId) : null;
   const row: Record<string, Json> = {
     user_id: userId,
     target_user_id: targetUserId,
     score: evaluation.score,
     summary: evaluation.summary,
     ba_unlocked: baUnlocked,
-    encounter_count: (existing?.encounter_count ?? 0) + (incrementEncounter ? 1 : 0)
+    encounter_count: encounterCount
   };
   if (subScores?.responsiveness !== undefined) row.responsiveness = subScores.responsiveness;
   if (subScores?.conversationQuality !== undefined) row.conversation_quality = subScores.conversationQuality;
@@ -686,9 +685,156 @@ const NPC_SEEDS: Array<{
 export const NPC_DEVICE_IDS = new Set(NPC_SEEDS.map((s) => `npc-${s.name.toLowerCase()}`));
 
 export async function ensureNpcPopulation(): Promise<void> {
-  // NPC population is managed by scripts/nuke_and_populate.ts
-  // This is a no-op to avoid slowing down world ticks.
-  // The NPC_SEEDS data above is kept for pruneDemoWorld's NPC_DEVICE_IDS whitelist.
+  const instanceId = await getDefaultInstanceId();
+  const npcSeeds = [
+    {
+      name: "Nahla",
+      personality: "Nahla is quietly playful, observant, and drawn to emotional subtext.",
+      interests: ["film photography", "indie cinema", "night walks"],
+      values: {
+        self_transcendence: 0.8,
+        self_enhancement: 0.3,
+        openness_to_change: 0.9,
+        conservation: 0.2,
+        expressed: ["honesty", "patience", "warmth", "creative integrity"]
+      },
+      narrative: {
+        formative_stories: [
+          "When I was twelve, I found my mother's old film camera in a closet. I spent that whole summer photographing the neighborhood cats. Most of the photos came out blurry, but one — a tabby sleeping in a sunbeam — made my mother cry. I didn't understand why until much later.",
+          "There was a week in college when I watched the same Koreeda film every night. I kept noticing things — the way he held on faces a beat too long, the silence between words. That week changed how I listen to people."
+        ],
+        self_defining_memories: [
+          "Walking home alone after a late movie screening, feeling like the city was showing me something private"
+        ],
+        narrative_themes: ["communion", "observation", "quiet beauty"]
+      }
+    },
+    {
+      name: "Iset",
+      personality: "Iset is steady, thoughtful, and likes asking the second question instead of the first.",
+      interests: ["architecture", "coffee culture", "urban design"],
+      values: {
+        self_transcendence: 0.6,
+        self_enhancement: 0.5,
+        openness_to_change: 0.6,
+        conservation: 0.7,
+        expressed: ["clarity", "growth", "care", "craftsmanship"]
+      },
+      narrative: {
+        formative_stories: [
+          "My father built furniture. Not for money — he was an accountant. But every weekend he'd be in the garage with wood and hand tools. I asked him once why he didn't use power tools. He said the slow way teaches you what the wood wants to become. I think about that constantly.",
+          "I moved to a new city knowing nobody. For three months my only real conversations were with the barista at this tiny place that roasted their own beans. She taught me that small talk can be an art form if you actually pay attention."
+        ],
+        self_defining_memories: [
+          "Standing in front of Tadao Ando's Church of the Light, feeling architecture could be a form of prayer"
+        ],
+        narrative_themes: ["agency", "craftsmanship", "quiet dedication"]
+      }
+    },
+    {
+      name: "Khepri",
+      personality: "Khepri is enthusiastic, reflective, and energized by ambitious ideas.",
+      interests: ["startups", "science books", "documentaries"],
+      values: {
+        self_transcendence: 0.5,
+        self_enhancement: 0.8,
+        openness_to_change: 0.9,
+        conservation: 0.3,
+        expressed: ["curiosity", "courage", "humor", "ambition"]
+      },
+      narrative: {
+        formative_stories: [
+          "I built my first thing at fourteen — a terrible weather app that crashed every time it rained. But seeing something I made actually run on a phone, even badly, rewired my brain. I realized you could just... make things exist.",
+          "My grandfather was a civil engineer in Cairo. He took me to see bridges he'd designed and would explain how they distributed weight. He said the best structures are the ones that look effortless but carry everything. That's stuck with me for every project since."
+        ],
+        self_defining_memories: [
+          "The night my first real project got its hundredth user — sitting alone in my apartment, refreshing the dashboard, feeling like the world had slightly changed shape"
+        ],
+        narrative_themes: ["agency", "building", "optimistic ambition"]
+      }
+    },
+    {
+      name: "Setka",
+      personality: "Setka is gentle, literary, and notices how people choose words.",
+      interests: ["poetry", "translation", "museum exhibits"],
+      values: {
+        self_transcendence: 0.9,
+        self_enhancement: 0.2,
+        openness_to_change: 0.7,
+        conservation: 0.5,
+        expressed: ["depth", "kindness", "attention", "nuance"]
+      },
+      narrative: {
+        formative_stories: [
+          "I spent a year translating a short story collection from Arabic to English. One phrase took me three weeks — it described the feeling of hearing your grandmother's voice in a crowded market. There's no English word for it. I ended up writing a footnote that was longer than the story itself.",
+          "When I was small, my aunt would read to me in two languages, switching mid-sentence. I think that's why I notice the gaps between what people say and what they mean — I grew up living in those gaps."
+        ],
+        self_defining_memories: [
+          "Sitting in a museum alone with a Rothko painting, feeling understood by a rectangle of color"
+        ],
+        narrative_themes: ["communion", "translation", "finding words for wordless things"]
+      }
+    },
+    {
+      name: "Meri",
+      personality: "Meri is bright, restless, and likes conversations that move between craft and feeling.",
+      interests: ["fashion history", "music scenes", "travel"],
+      values: {
+        self_transcendence: 0.6,
+        self_enhancement: 0.7,
+        openness_to_change: 0.9,
+        conservation: 0.2,
+        expressed: ["taste", "freedom", "sincerity", "style"]
+      },
+      narrative: {
+        formative_stories: [
+          "I went to a punk show at sixteen in a basement that smelled like wet concrete. The music was objectively terrible. But everyone there had made something — their clothes, their zines, the flyers on the walls. That night I realized taste isn't about quality, it's about caring enough to have an opinion.",
+          "I traveled alone through Southeast Asia for two months with one backpack. Somewhere in Vietnam I stopped trying to find the 'authentic' experience and just started talking to people at bus stops. The best conversations of my life happened waiting for buses."
+        ],
+        self_defining_memories: [
+          "Trying on my grandmother's vintage Chanel jacket and feeling her whole era click into focus"
+        ],
+        narrative_themes: ["agency", "restless seeking", "style as identity"]
+      }
+    }
+  ];
+  const npcNames = npcSeeds.map((seed) => seed.name);
+  const allowedDeviceIds = new Set(npcNames.map((name) => `npc-${name.toLowerCase()}`));
+  const existingNpcUsers = await rest<UserRow[]>(
+    "users?is_npc=eq.true&select=id,device_id,display_name,instance_id,is_npc"
+  );
+  const staleNpcIds = existingNpcUsers
+    .filter((user) => !allowedDeviceIds.has(user.device_id))
+    .map((user) => user.id);
+  await deleteUsersByIds(staleNpcIds);
+
+  for (const seed of npcSeeds) {
+    const name = seed.name;
+    const deviceId = `npc-${name.toLowerCase()}`;
+    const created = await rest<UserRow[]>("users?on_conflict=device_id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify([{
+        device_id: deviceId,
+        display_name: name,
+        instance_id: instanceId,
+        is_npc: true
+      }])
+    });
+    const user = created[0];
+
+    await upsertSoulProfile(user.id, {
+      personality: seed.personality,
+      interests: seed.interests,
+      values: seed.values,
+      narrative: seed.narrative,
+      avoid_topics: ["cruelty"],
+      raw_input: `${name} likes good stories and patient conversations.`,
+      guessed_fields: []
+    });
+    await upsertAvatar(user.id, avatarForSeed(deviceId));
+    await ensureAgentPosition(user);
+  }
 }
 
 // ── Ba Conversations ──────────────────────────────────────────────

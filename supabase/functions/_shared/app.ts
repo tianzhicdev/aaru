@@ -52,7 +52,7 @@ import {
   CONVERSATION_SPEAKING_WORDS_PER_SECOND,
   CONVERSATION_TURN_GAP_MS,
   IMPRESSION_EVALUATION_INTERVAL,
-  KA_MESSAGES_PER_CONVERSATION,
+  getMessagesForEncounter,
   MIN_BUBBLE_DISPLAY_MS,
   MIN_REPLY_DELAY_MS,
   MOVE_ANIMATION_MS,
@@ -690,15 +690,20 @@ async function advanceConversation(conversationId: string) {
     content,
     created_at
   }));
-  const shouldEvaluate = messages.length > 0 && messages.length % IMPRESSION_EVALUATION_INTERVAL === 0;
+  // Look up encounter counts for this pair
+  const reciprocalA = await getImpressionEdge(conversation.user_a_id, conversation.user_b_id);
+  const reciprocalB = await getImpressionEdge(conversation.user_b_id, conversation.user_a_id);
+  const encounterCountA = (reciprocalA?.encounter_count ?? 0) + 1;
+  const encounterCountB = (reciprocalB?.encounter_count ?? 0) + 1;
+  const encounterCount = Math.min(encounterCountA, encounterCountB);
 
+  // Evaluate impressions at interval
+  const shouldEvaluate = messages.length > 0 && messages.length % IMPRESSION_EVALUATION_INTERVAL === 0;
   if (shouldEvaluate) {
     const evaluationA = await evaluateImpression(soulA, soulB, transcript);
     const evaluationB = await evaluateImpression(soulB, soulA, transcript);
-    const reciprocalA = await getImpressionEdge(conversation.user_a_id, conversation.user_b_id);
-    const reciprocalB = await getImpressionEdge(conversation.user_b_id, conversation.user_a_id);
-    const scoreA = accumulateImpression(reciprocalA?.score ?? 0, evaluationA.score);
-    const scoreB = accumulateImpression(reciprocalB?.score ?? 0, evaluationB.score);
+    const scoreA = accumulateImpression(reciprocalA?.score ?? 0, evaluationA.score, encounterCountA);
+    const scoreB = accumulateImpression(reciprocalB?.score ?? 0, evaluationB.score, encounterCountB);
     const baUnlockedForA = isBaAvailableToViewer(scoreB);
     const baUnlockedForB = isBaAvailableToViewer(scoreA);
 
@@ -708,56 +713,51 @@ async function advanceConversation(conversationId: string) {
       processing_owner: null,
       processing_expires_at: null
     });
-    // Use the best sub-scores from either side to determine momentum extension
-    const bestResponsiveness = Math.max(
-      evaluationA.responsiveness ?? 0,
-      evaluationB.responsiveness ?? 0
-    );
-    const bestQuality = Math.max(
-      evaluationA.conversation_quality ?? 0,
-      evaluationB.conversation_quality ?? 0
-    );
-    const effectiveLimit = getEffectiveMessageLimit(KA_MESSAGES_PER_CONVERSATION, bestResponsiveness, bestQuality);
-    const isConversationEnding = messages.length >= effectiveLimit;
     await upsertImpressionEdge(
       conversation.user_a_id, conversation.user_b_id,
-      { ...evaluationA, score: scoreA }, baUnlockedForA, isConversationEnding,
+      { ...evaluationA, score: scoreA }, baUnlockedForA, encounterCountA,
       { responsiveness: evaluationA.responsiveness, conversationQuality: evaluationA.conversation_quality }
     );
     await upsertImpressionEdge(
       conversation.user_b_id, conversation.user_a_id,
-      { ...evaluationB, score: scoreB }, baUnlockedForB, isConversationEnding,
+      { ...evaluationB, score: scoreB }, baUnlockedForB, encounterCountB,
       { responsiveness: evaluationB.responsiveness, conversationQuality: evaluationB.conversation_quality }
     );
+  }
 
-    if (isConversationEnding) {
-      // Generate and store conversation summary for future reference
-      try {
-        const summary = await generateConversationSummary(transcript);
-        await insertConversationSummary(conversationId, conversation.user_a_id, conversation.user_b_id, summary);
-      } catch (error) {
-        console.error("Failed to store conversation summary:", error);
-      }
-
-      await finishConversation(conversationId, {});
-
-      const positions = await getAgentPositions(userA.instance_id ?? await getDefaultInstanceId());
-      const cooled = positions.map((row) => {
-        if (row.conversation_id !== conversationId) {
-          return row;
-        }
-        const ended = endConversation(toAgentPosition(row));
-        return {
-          ...row,
-          state: ended.state,
-          conversation_id: null,
-          active_message: null,
-          cooldown_until: ended.cooldown_until
-        };
-      });
-      await upsertAgentPositions(cooled);
-      return;
+  // Phase-aware conversation end check with momentum extension
+  const baseLimit = getMessagesForEncounter(encounterCount);
+  const edgeA = await getImpressionEdge(conversation.user_a_id, conversation.user_b_id);
+  const edgeB = await getImpressionEdge(conversation.user_b_id, conversation.user_a_id);
+  const bestResponsiveness = Math.max(edgeA?.responsiveness ?? 0, edgeB?.responsiveness ?? 0);
+  const bestQuality = Math.max(edgeA?.conversation_quality ?? 0, edgeB?.conversation_quality ?? 0);
+  const messageLimit = getEffectiveMessageLimit(baseLimit, bestResponsiveness, bestQuality);
+  if (messages.length >= messageLimit) {
+    try {
+      const summary = await generateConversationSummary(transcript);
+      await insertConversationSummary(conversationId, conversation.user_a_id, conversation.user_b_id, summary);
+    } catch (error) {
+      console.error("Failed to store conversation summary:", error);
     }
+
+    await finishConversation(conversationId, {});
+
+    const positions = await getAgentPositions(userA.instance_id ?? await getDefaultInstanceId());
+    const cooled = positions.map((row) => {
+      if (row.conversation_id !== conversationId) {
+        return row;
+      }
+      const ended = endConversation(toAgentPosition(row));
+      return {
+        ...row,
+        state: ended.state,
+        conversation_id: null,
+        active_message: null,
+        cooldown_until: ended.cooldown_until
+      };
+    });
+    await upsertAgentPositions(cooled);
+    return;
   }
 
   const lastSpeakerId = messages.at(-1)?.user_id;
@@ -770,9 +770,9 @@ async function advanceConversation(conversationId: string) {
   }
 
   // Fetch previous conversation summary for context
+  const otherUserId = nextSpeaker.user.id === userA.id ? userB.id : userA.id;
   let previousConversationSummary: string | undefined;
   try {
-    const otherUserId = nextSpeaker.user.id === userA.id ? userB.id : userA.id;
     const recentSummaries = await listRecentConversationSummaries(nextSpeaker.user.id, otherUserId, 1);
     if (recentSummaries.length > 0) {
       previousConversationSummary = recentSummaries[0].summary;
@@ -788,7 +788,8 @@ async function advanceConversation(conversationId: string) {
     newsSnippets: topicBundle.newsSnippets,
     suggestedTopics: conversation.topic_seed?.length ? conversation.topic_seed : topicBundle.seedTopics,
     history: messages,
-    previousConversationSummary
+    previousConversationSummary,
+    encounterCount
   });
 
   await insertMessage(conversationId, nextSpeaker.user.id, "ka_generated", reply.content);

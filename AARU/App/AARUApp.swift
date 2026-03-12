@@ -7,6 +7,7 @@ struct AARUApp: App {
     init() {
         let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         _model = StateObject(wrappedValue: AppModel(autoBootstrap: !isRunningTests))
+        SpriteSheetHelper.preload()
     }
 
     var body: some Scene {

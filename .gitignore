@@ -12,6 +12,9 @@ xcuserdata
 supabase/.branches
 supabase/.temp
 
+# Simulation logs
+logs/
+
 # Build artifacts
 generated-avatars/
 generate_avatars.py

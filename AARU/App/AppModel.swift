@@ -386,8 +386,17 @@ final class AppModel: ObservableObject {
         agents[index].path = newRow.path
         agents[index].moveSpeed = newRow.moveSpeed
         agents[index].state = newRow.state
-        agents[index].activeMessage = newRow.activeMessage
         agents[index].conversationID = newRow.conversationID
+
+        // Only show active_message content for conversations the viewer is in
+        if let convoId = newRow.conversationID,
+           let selfAgent = agents.first(where: \.isSelf),
+           selfAgent.conversationID == convoId {
+            agents[index].activeMessage = newRow.activeMessage
+        } else {
+            agents[index].activeMessage = newRow.activeMessage != nil ? "..." : nil
+        }
+
         worldAgents = agents
 
         appendDebugEvent("\(name) update state=\(newRow.state) cell=(\(newRow.cellX ?? -1),\(newRow.cellY ?? -1))")

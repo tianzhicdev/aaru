@@ -48,7 +48,11 @@ export function evaluateImpressionFallback(
     ? `${sharedInterests.length > 0 ? `You keep circling back to ${sharedInterests.slice(0, 2).join(" and ")}` : "The pull is more about tone than obvious overlap"}, and ${sharedValues.length > 0 ? `their sense of ${sharedValues.slice(0, 2).join(" and ")} reads as genuine` : "you still need more signal before trusting the fit"}.`
     : "They feel intriguing, but the connection still depends more on curiosity than on proven alignment.";
 
-  return impressionEvaluationSchema.parse({ score, summary });
+  // Sub-scores: responsiveness from engagement, quality from interest+value overlap
+  const responsiveness = Math.round(Math.min(100, engagementScore / 18 * 100));
+  const conversation_quality = Math.round(Math.min(100, (interestScore + valueScore) / 62 * 100));
+
+  return impressionEvaluationSchema.parse({ score, summary, responsiveness, conversation_quality });
 }
 
 export async function evaluateImpression(
@@ -57,19 +61,20 @@ export async function evaluateImpression(
   transcript: ConversationMessage[]
 ): Promise<ImpressionEvaluation> {
   try {
-    const systemPrompt = `You are evaluating how compatible two people are based on their conversation and soul profiles. Return only valid JSON in this format: {"score": 0-100, "summary": "1-2 sentence impression summary"}.
+    const systemPrompt = `You are evaluating how compatible two people are based on their conversation and soul profiles. Return only valid JSON in this format: {"score": 0-100, "summary": "one sentence under 200 characters", "responsiveness": 0-100, "conversation_quality": 0-100}.
 
 Score guidelines:
-- 0-30: Poor compatibility, major differences
-- 31-60: Some compatibility, mixed signals
-- 61-85: Good compatibility, shared values/interests
-- 86-100: Exceptional compatibility, deep connection
+- score: overall compatibility (0-30 poor, 31-60 mixed, 61-85 good, 86-100 exceptional)
+- responsiveness: how engaged and responsive both parties are in the conversation (0-100)
+- conversation_quality: depth, substance, and chemistry of the exchange (0-100)
 
 Consider:
 - Shared interests and values
 - Conversation flow and engagement
 - Emotional resonance and understanding
-- Personal chemistry and intrigue`;
+- Personal chemistry and intrigue
+
+IMPORTANT: Keep the summary under 200 characters. Return only JSON, no other text.`;
 
     const conversationText = transcript.map(msg => msg.content).join("\n");
 

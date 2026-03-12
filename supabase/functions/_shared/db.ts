@@ -58,6 +58,9 @@ interface ImpressionEdgeRow {
   score: number;
   summary: string | null;
   ba_unlocked: boolean;
+  encounter_count: number;
+  responsiveness: number | null;
+  conversation_quality: number | null;
 }
 
 interface NewsItemRow {
@@ -507,26 +510,38 @@ export async function upsertImpressionEdge(
   userId: string,
   targetUserId: string,
   evaluation: ImpressionEvaluation,
-  baUnlocked: boolean
+  baUnlocked: boolean,
+  incrementEncounter: boolean = false,
+  subScores?: { responsiveness?: number; conversationQuality?: number }
 ): Promise<void> {
+  const existing = incrementEncounter ? await getImpressionEdge(userId, targetUserId) : null;
+  const row: Record<string, Json> = {
+    user_id: userId,
+    target_user_id: targetUserId,
+    score: evaluation.score,
+    summary: evaluation.summary,
+    ba_unlocked: baUnlocked,
+    encounter_count: (existing?.encounter_count ?? 0) + (incrementEncounter ? 1 : 0)
+  };
+  if (subScores?.responsiveness !== undefined) row.responsiveness = subScores.responsiveness;
+  if (subScores?.conversationQuality !== undefined) row.conversation_quality = subScores.conversationQuality;
   await rest<Json>("impression_edges?on_conflict=user_id,target_user_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{
-      user_id: userId,
-      target_user_id: targetUserId,
-      score: evaluation.score,
-      summary: evaluation.summary,
-      ba_unlocked: baUnlocked
-    }])
+    body: JSON.stringify([row])
   });
 }
 
 export async function getImpressionEdge(userId: string, targetUserId: string): Promise<ImpressionEdgeRow | null> {
   const rows = await rest<ImpressionEdgeRow[]>(
-    `impression_edges?user_id=eq.${userId}&target_user_id=eq.${targetUserId}&select=score,summary,ba_unlocked`
+    `impression_edges?user_id=eq.${userId}&target_user_id=eq.${targetUserId}&select=score,summary,ba_unlocked,encounter_count,responsiveness,conversation_quality`
   );
-  return rows[0] ?? null;
+  return rows[0] ? {
+    ...rows[0],
+    encounter_count: rows[0].encounter_count ?? 0,
+    responsiveness: rows[0].responsiveness ?? null,
+    conversation_quality: rows[0].conversation_quality ?? null
+  } : null;
 }
 
 export async function listFreshNewsItems(topics: string[], sinceIso: string): Promise<NewsItemRow[]> {

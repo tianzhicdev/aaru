@@ -42,7 +42,8 @@ import {
   ensureBaConversation,
   listBaMessages,
   countBaMessages,
-  insertBaMessage
+  insertBaMessage,
+  getAvatarsByUserIds
 } from "./db.ts";
 import {
   BUBBLE_READING_WORDS_PER_SECOND,
@@ -58,8 +59,11 @@ import {
   WORLD_TICK_INTERVAL_MS,
   WORLD_GRID_COLUMNS,
   WORLD_GRID_ROWS,
-  AGENT_MOVE_SPEED
+  AGENT_MOVE_SPEED,
+  getPairCooldownHours,
+  getEffectiveMessageLimit
 } from "../../../src/domain/constants.ts";
+import { OBSTACLE_CELLS } from "../../../src/domain/obstacle_map.ts";
 import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
 import { fetchInterestNews } from "./xai.ts";
@@ -72,13 +76,7 @@ export interface WorldAgentSnapshot extends AgentPosition {
 
 type AppUser = Awaited<ReturnType<typeof ensureUser>>;
 
-const DEMO_WORLD_NPC_DEVICE_IDS = new Set([
-  "npc-nahla",
-  "npc-iset",
-  "npc-khepri",
-  "npc-setka",
-  "npc-meri"
-]);
+// NPC population managed by scripts/nuke_and_populate.ts
 const JOB_LEASE_MS = 20_000;
 const WORLD_RUNNER_WINDOW_MS = 55_000;
 
@@ -204,7 +202,10 @@ function toAgentPosition(row: Awaited<ReturnType<typeof getAgentPositions>>[numb
     state: row.state,
     active_message: row.active_message,
     conversation_id: row.conversation_id,
-    cooldown_until: row.cooldown_until
+    cooldown_until: row.cooldown_until,
+    behavior: row.behavior,
+    behavior_ticks_remaining: row.behavior_ticks_remaining,
+    heading: row.heading
   };
 }
 
@@ -220,9 +221,10 @@ function randomTargetCell(exclude?: string) {
   for (let cellY = 0; cellY < WORLD_GRID_ROWS; cellY += 1) {
     for (let cellX = 0; cellX < WORLD_GRID_COLUMNS; cellX += 1) {
       const key = `${cellX}:${cellY}`;
-      if (key !== exclude) {
-        cells.push({ x: cellX, y: cellY });
+      if (key === exclude || OBSTACLE_CELLS.has(key)) {
+        continue;
       }
+      cells.push({ x: cellX, y: cellY });
     }
   }
   return cells[Math.floor(Math.random() * cells.length)] ?? { x: 0, y: 0 };
@@ -255,7 +257,8 @@ function neighboringCells(cellX: number, cellY: number) {
       }
       const nextX = Math.max(0, Math.min(WORLD_GRID_COLUMNS - 1, cellX + dx));
       const nextY = Math.max(0, Math.min(WORLD_GRID_ROWS - 1, cellY + dy));
-      if (!cells.some((cell) => cell.x === nextX && cell.y === nextY)) {
+      const key = `${nextX}:${nextY}`;
+      if (!OBSTACLE_CELLS.has(key) && !cells.some((cell) => cell.x === nextX && cell.y === nextY)) {
         cells.push({ x: nextX, y: nextY });
       }
     }
@@ -421,18 +424,18 @@ async function ensureAvatarForUser(user: AppUser) {
   return upsertAvatar(user.id, avatarForSeed(user.device_id));
 }
 
-async function pruneDemoWorld(instanceId: string, viewerUserId: string) {
-  const users = await listUsersInInstance(instanceId);
-  const staleUserIds = users
-    .filter((user) => user.id !== viewerUserId)
-    .filter((user) => user.is_npc && !DEMO_WORLD_NPC_DEVICE_IDS.has(user.device_id))
-    .map((user) => user.id);
-
-  await deleteUsersByIds(staleUserIds);
+async function pruneDemoWorld(_instanceId: string, _viewerUserId: string) {
+  // No-op: NPC population is managed by scripts/nuke_and_populate.ts
 }
 
-async function hasRecentConversation(userA: string, userB: string) {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+async function hasRecentConversation(
+  userA: string,
+  userB: string,
+  encounterCount: number = 0,
+  baUnlocked: boolean = false
+) {
+  const cooldownHours = getPairCooldownHours(encounterCount, baUnlocked);
+  const since = new Date(Date.now() - cooldownHours * 60 * 60 * 1000).toISOString();
   const rows = await listRecentConversationsBetweenUsers(userA, userB, since);
   return rows.length > 0;
 }
@@ -449,7 +452,7 @@ function releasePairToWander(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -480,7 +483,7 @@ function dispersePairAfterRejectedConversation(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -534,7 +537,7 @@ async function repairConversationState(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -581,21 +584,32 @@ async function buildWorldSnapshot(
   }> = []
 ) {
   const fresh = await getAgentPositions(instanceId);
-  const users = await listUsersByIds(fresh.map((row) => row.user_id));
+  const userIds = fresh.map((row) => row.user_id);
+  const [users, avatarMap] = await Promise.all([
+    listUsersByIds(userIds),
+    getAvatarsByUserIds(userIds)
+  ]);
   const userById = new Map(users.map((user) => [user.id, user]));
-  const avatars = await Promise.all(
-    fresh.map(async (row) => {
-      const user = userById.get(row.user_id);
-      return user ? ensureAvatarForUser(user) : ensureAvatar(row.user_id);
-    })
+
+  // Find conversations the viewer is part of
+  const viewerConversationIds = new Set(
+    fresh
+      .filter((row) => row.user_id === viewerUserId && row.conversation_id)
+      .map((row) => row.conversation_id!)
   );
 
-  const agents: WorldAgentSnapshot[] = fresh.map((row, index) => ({
-    ...toAgentPosition(row),
-    display_name: userById.get(row.user_id)?.display_name ?? "Unknown Soul",
-    avatar: avatars[index] ?? defaultAvatarConfig,
-    is_self: row.user_id === viewerUserId
-  }))
+  const agents: WorldAgentSnapshot[] = fresh.map((row) => {
+    const pos = toAgentPosition(row);
+    // Only send active_message content for conversations the viewer is in
+    const isViewerConversation = row.conversation_id && viewerConversationIds.has(row.conversation_id);
+    return {
+      ...pos,
+      active_message: pos.active_message ? (isViewerConversation ? pos.active_message : "...") : null,
+      display_name: userById.get(row.user_id)?.display_name ?? "Unknown Soul",
+      avatar: avatarMap.get(row.user_id) ?? avatarForSeed(userById.get(row.user_id)?.device_id ?? row.user_id),
+      is_self: row.user_id === viewerUserId
+    };
+  })
     .sort((a, b) => {
       if (a.is_self !== b.is_self) {
         return a.is_self ? -1 : 1;
@@ -694,15 +708,29 @@ async function advanceConversation(conversationId: string) {
       processing_owner: null,
       processing_expires_at: null
     });
-    await upsertImpressionEdge(conversation.user_a_id, conversation.user_b_id, { ...evaluationA, score: scoreA }, baUnlockedForA);
+    // Use the best sub-scores from either side to determine momentum extension
+    const bestResponsiveness = Math.max(
+      evaluationA.responsiveness ?? 0,
+      evaluationB.responsiveness ?? 0
+    );
+    const bestQuality = Math.max(
+      evaluationA.conversation_quality ?? 0,
+      evaluationB.conversation_quality ?? 0
+    );
+    const effectiveLimit = getEffectiveMessageLimit(KA_MESSAGES_PER_CONVERSATION, bestResponsiveness, bestQuality);
+    const isConversationEnding = messages.length >= effectiveLimit;
     await upsertImpressionEdge(
-      conversation.user_b_id,
-      conversation.user_a_id,
-      { ...evaluationB, score: scoreB },
-      baUnlockedForB
+      conversation.user_a_id, conversation.user_b_id,
+      { ...evaluationA, score: scoreA }, baUnlockedForA, isConversationEnding,
+      { responsiveness: evaluationA.responsiveness, conversationQuality: evaluationA.conversation_quality }
+    );
+    await upsertImpressionEdge(
+      conversation.user_b_id, conversation.user_a_id,
+      { ...evaluationB, score: scoreB }, baUnlockedForB, isConversationEnding,
+      { responsiveness: evaluationB.responsiveness, conversationQuality: evaluationB.conversation_quality }
     );
 
-    if (messages.length >= KA_MESSAGES_PER_CONVERSATION) {
+    if (isConversationEnding) {
       // Generate and store conversation summary for future reference
       try {
         const summary = await generateConversationSummary(transcript);
@@ -765,15 +793,16 @@ async function advanceConversation(conversationId: string) {
 
   await insertMessage(conversationId, nextSpeaker.user.id, "ka_generated", reply.content);
   await markConversationTurn(conversationId, messages.length + 1, conversationReplyDelayMs(reply.content));
-  const positions = await getAgentPositions(userA.instance_id ?? await getDefaultInstanceId());
+  const instanceId2 = userA.instance_id ?? await getDefaultInstanceId();
+  const positions = await getAgentPositions(instanceId2);
   const updated = positions.map((row) =>
     row.conversation_id === conversationId
-      ? { ...row, active_message: reply.content }
+      ? { ...row, active_message: row.user_id === nextSpeaker.user.id ? reply.content : null }
       : row
   );
   await upsertAgentPositions(updated);
   scheduleActiveMessageClear(
-    userA.instance_id ?? await getDefaultInstanceId(),
+    instanceId2,
     conversationId,
     nextSpeaker.user.id,
     reply.content
@@ -817,7 +846,7 @@ async function forceConversationForUser(
     cell_y: number;
     target_cell_x: number;
     target_cell_y: number;
-    state: "wandering" | "approaching" | "chatting" | "cooldown";
+    state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
     active_message: string | null;
     conversation_id: string | null;
     cooldown_until: string | null;
@@ -854,7 +883,11 @@ async function forceConversationForUser(
 
   const eligibleWithoutRecent: typeof eligible = [];
   for (const position of eligible) {
-    if (!(await hasRecentConversation(userId, position.user_id))) {
+    const edge = await getImpressionEdge(userId, position.user_id);
+    const theirEdge = await getImpressionEdge(position.user_id, userId);
+    const encounterCount = edge?.encounter_count ?? 0;
+    const baUnlocked = theirEdge?.ba_unlocked ?? false;
+    if (!(await hasRecentConversation(userId, position.user_id, encounterCount, baUnlocked))) {
       eligibleWithoutRecent.push(position);
     }
   }
@@ -881,7 +914,7 @@ async function forceConversationForUser(
   scheduleActiveMessageClear(instanceId, conversation.id, candidate.user_id, firstLine);
   userPosition.state = "chatting";
   userPosition.conversation_id = conversation.id;
-  userPosition.active_message = firstLine;
+  userPosition.active_message = null;
   userPosition.cooldown_until = null;
   candidate.state = "chatting";
   candidate.conversation_id = conversation.id;
@@ -945,11 +978,18 @@ async function runWorldTick(
       state: position.state,
       active_message: position.active_message,
       conversation_id: position.conversation_id,
-      cooldown_until: position.cooldown_until
+      cooldown_until: position.cooldown_until,
+      behavior: position.behavior,
+      behavior_ticks_remaining: position.behavior_ticks_remaining,
+      heading: position.heading
     }));
 
     for (const started of result.startedConversations) {
-      if (await hasRecentConversation(started.agentA, started.agentB)) {
+      const edgeAB = await getImpressionEdge(started.agentA, started.agentB);
+      const edgeBA = await getImpressionEdge(started.agentB, started.agentA);
+      const encounterCount = Math.max(edgeAB?.encounter_count ?? 0, edgeBA?.encounter_count ?? 0);
+      const baUnlocked = (edgeAB?.ba_unlocked ?? false) || (edgeBA?.ba_unlocked ?? false);
+      if (await hasRecentConversation(started.agentA, started.agentB, encounterCount, baUnlocked)) {
         const beforeByUserId = new Map(
           persisted
             .filter((row) => row.user_id === started.agentA || row.user_id === started.agentB)
@@ -1008,9 +1048,13 @@ async function runWorldTick(
       await markConversationTurn(conversation.id, 1, conversationReplyDelayMs(firstLine));
       scheduleActiveMessageClear(instanceId, conversation.id, started.agentA, firstLine);
       for (const row of persisted) {
-        if (row.user_id === started.agentA || row.user_id === started.agentB) {
+        if (row.user_id === started.agentA) {
           row.conversation_id = conversation.id;
           row.active_message = firstLine;
+          row.cooldown_until = null;
+        } else if (row.user_id === started.agentB) {
+          row.conversation_id = conversation.id;
+          row.active_message = null;
           row.cooldown_until = null;
         }
       }

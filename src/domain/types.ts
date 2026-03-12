@@ -24,6 +24,8 @@ export interface SoulProfile {
 export interface ImpressionEvaluation {
   score: number;
   summary: string;
+  responsiveness?: number;
+  conversation_quality?: number;
 }
 
 export interface CellCoord {

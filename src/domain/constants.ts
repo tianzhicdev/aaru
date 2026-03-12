@@ -19,6 +19,39 @@ export const MIN_REPLY_DELAY_MS = 2_000;
 export const CAMERA_VISIBLE_COLUMNS = 28;
 export const CAMERA_VISIBLE_ROWS = 36;
 
+// ── Momentum-based conversation extension ──
+export const CONVERSATION_EXTENSION_MESSAGES = 4;
+export const MOMENTUM_QUALITY_THRESHOLD = 80;
+export const MOMENTUM_RESPONSIVENESS_THRESHOLD = 80;
+
+export function getEffectiveMessageLimit(
+  baseLimit: number,
+  responsiveness: number | undefined,
+  conversationQuality: number | undefined
+): number {
+  if (
+    responsiveness !== undefined &&
+    conversationQuality !== undefined &&
+    responsiveness >= MOMENTUM_RESPONSIVENESS_THRESHOLD &&
+    conversationQuality >= MOMENTUM_QUALITY_THRESHOLD
+  ) {
+    return baseLimit + CONVERSATION_EXTENSION_MESSAGES;
+  }
+  return baseLimit;
+}
+
+// ── Pair cooldown / encounter decay ──
+export const DEFAULT_PAIR_COOLDOWN_HOURS = 24;
+export const ACQUAINTANCE_ENCOUNTER_THRESHOLD = 15;
+export const ACQUAINTANCE_COOLDOWN_HOURS = 72;
+export const BA_UNLOCKED_COOLDOWN_HOURS = 168;
+
+export function getPairCooldownHours(encounterCount: number, baUnlocked: boolean): number {
+  if (baUnlocked) return BA_UNLOCKED_COOLDOWN_HOURS;
+  if (encounterCount >= ACQUAINTANCE_ENCOUNTER_THRESHOLD) return ACQUAINTANCE_COOLDOWN_HOURS;
+  return DEFAULT_PAIR_COOLDOWN_HOURS;
+}
+
 // ── Behavior system (Phase 1) ──
 export const BEHAVIOR_TICK_MIN = 5;
 export const BEHAVIOR_TICK_MAX = 10;

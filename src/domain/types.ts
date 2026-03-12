@@ -1,6 +1,16 @@
 export type UUID = string;
 
-export type AgentState = "wandering" | "approaching" | "chatting" | "cooldown";
+export type AgentState = "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
+
+export type AgentBehavior = "wander" | "idle" | "drift_social" | "drift_poi" | "retreat";
+
+export interface POI {
+  x: number;
+  y: number;
+  label: string;
+  radius: number;
+  capacity: number;
+}
 
 export interface SoulProfile {
   personality: string;
@@ -37,6 +47,9 @@ export interface AgentPosition {
   active_message: string | null;
   conversation_id: UUID | null;
   cooldown_until: string | null;
+  behavior?: AgentBehavior;
+  behavior_ticks_remaining?: number;
+  heading?: number; // 0-7 compass direction
 }
 
 export interface WorldTickResult {

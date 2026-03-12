@@ -15,7 +15,7 @@ export const soulProfileSchema = z.object({
 
 export const impressionEvaluationSchema = z.object({
   score: z.number().min(0).max(100),
-  summary: z.string().min(1).max(280)
+  summary: z.string().min(1).max(500)
 });
 
 export const cellCoordSchema = z.object({
@@ -35,7 +35,10 @@ export const agentPositionSchema = z.object({
   target_cell_y: z.number().int().min(0).max(WORLD_GRID_ROWS - 1).optional(),
   path: z.array(cellCoordSchema).default([]),
   move_speed: z.number().nonnegative().default(1.8),
-  state: z.enum(["wandering", "approaching", "chatting", "cooldown"]),
+  state: z.enum(["wandering", "idle", "approaching", "chatting", "cooldown"]),
+  behavior: z.enum(["wander", "idle", "drift_social", "drift_poi", "retreat"]).optional(),
+  behavior_ticks_remaining: z.number().int().nonnegative().optional(),
+  heading: z.number().int().min(0).max(7).optional(),
   active_message: z.string().nullable(),
   conversation_id: z.string().uuid().nullable(),
   cooldown_until: z.string().datetime({ offset: true }).nullable()
@@ -57,6 +60,7 @@ export const conversationMessageSchema = z.object({
 });
 
 export const avatarConfigSchema = z.object({
+  sprite_id: z.string().min(1),
   body_shape: z.string().min(1),
   skin_tone: z.string().min(1),
   hair_style: z.string().min(1),

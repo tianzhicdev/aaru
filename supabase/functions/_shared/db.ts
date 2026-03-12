@@ -2,6 +2,7 @@ import type { AvatarConfig } from "../../../src/domain/avatar.ts";
 import { avatarForSeed, defaultAvatarConfig } from "../../../src/domain/avatar.ts";
 import type { ConversationMessage, ImpressionEvaluation, SoulProfile } from "../../../src/domain/types.ts";
 import { WORLD_GRID_COLUMNS, WORLD_GRID_ROWS } from "../../../src/domain/constants.ts";
+import { OBSTACLE_CELLS } from "../../../src/domain/obstacle_map.ts";
 import { supabaseServiceRoleKey, supabaseUrl } from "./env.ts";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -27,10 +28,13 @@ interface AgentPositionRow {
   target_cell_y: number;
   path?: Array<{ x: number; y: number }>;
   move_speed?: number;
-  state: "wandering" | "approaching" | "chatting" | "cooldown";
+  state: "wandering" | "idle" | "approaching" | "chatting" | "cooldown";
   active_message: string | null;
   conversation_id: string | null;
   cooldown_until: string | null;
+  behavior?: "wander" | "idle" | "drift_social" | "drift_poi" | "retreat";
+  behavior_ticks_remaining?: number;
+  heading?: number;
 }
 
 interface ConversationRow {
@@ -158,12 +162,10 @@ function randomOpenCell(occupied: Set<string>, avoid?: string) {
   for (let cellY = 0; cellY < WORLD_GRID_ROWS; cellY += 1) {
     for (let cellX = 0; cellX < WORLD_GRID_COLUMNS; cellX += 1) {
       const key = `${cellX}:${cellY}`;
-      if (key === avoid) {
+      if (key === avoid || occupied.has(key) || OBSTACLE_CELLS.has(key)) {
         continue;
       }
-      if (!occupied.has(key)) {
-        options.push({ x: cellX, y: cellY });
-      }
+      options.push({ x: cellX, y: cellY });
     }
   }
   return options[Math.floor(Math.random() * options.length)] ?? { x: 0, y: 0 };
@@ -179,8 +181,8 @@ export async function getDefaultInstanceId(): Promise<string> {
     body: JSON.stringify({
       name: "Sunset Beach",
       slug: "sunset-beach",
-      capacity: 100,
-      min_population: 30
+      capacity: 50,
+      min_population: 15
     })
   });
   return created[0].id;
@@ -285,8 +287,27 @@ export async function upsertSoulProfile(userId: string, profile: SoulProfile): P
 }
 
 export async function getAvatar(userId: string): Promise<AvatarConfig | null> {
-  const rows = await rest<AvatarConfig[]>(`avatars?user_id=eq.${userId}&select=body_shape,skin_tone,hair_style,hair_color,eyes,outfit_top,outfit_bottom,accessory,aura_color`);
-  return rows[0] ?? null;
+  const rows = await rest<Partial<AvatarConfig>[]>(`avatars?user_id=eq.${userId}&select=sprite_id,body_shape,skin_tone,hair_style,hair_color,eyes,outfit_top,outfit_bottom,accessory,aura_color`);
+  if (!rows[0]) {
+    return null;
+  }
+  return {
+    ...defaultAvatarConfig,
+    ...rows[0]
+  };
+}
+
+export async function getAvatarsByUserIds(userIds: string[]): Promise<Map<string, AvatarConfig>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await rest<Array<Partial<AvatarConfig> & { user_id: string }>>(
+    `avatars?user_id=in.(${userIds.join(",")})&select=user_id,sprite_id,body_shape,skin_tone,hair_style,hair_color,eyes,outfit_top,outfit_bottom,accessory,aura_color`
+  );
+  const map = new Map<string, AvatarConfig>();
+  for (const row of rows) {
+    const { user_id, ...rest } = row;
+    map.set(user_id, { ...defaultAvatarConfig, ...rest });
+  }
+  return map;
 }
 
 export async function upsertAvatar(userId: string, avatar: AvatarConfig): Promise<AvatarConfig> {
@@ -304,22 +325,44 @@ export async function ensureAvatar(userId: string): Promise<AvatarConfig> {
 
 export async function getAgentPositions(instanceId: string): Promise<AgentPositionRow[]> {
   return rest<AgentPositionRow[]>(
-    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until`
+    `agent_positions?instance_id=eq.${instanceId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading`
   );
 }
 
 export async function getAgentPosition(userId: string): Promise<AgentPositionRow | null> {
   const rows = await rest<AgentPositionRow[]>(
-    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until`
+    `agent_positions?user_id=eq.${userId}&select=user_id,instance_id,x,y,target_x,target_y,cell_x,cell_y,target_cell_x,target_cell_y,path,move_speed,state,active_message,conversation_id,cooldown_until,behavior,behavior_ticks_remaining,heading`
   );
   return rows[0] ?? null;
 }
 
 export async function upsertAgentPositions(positions: AgentPositionRow[]): Promise<void> {
+  // Normalize all rows to have identical keys (PostgREST PGRST102 requires this)
+  const normalized = positions.map((p) => ({
+    user_id: p.user_id,
+    instance_id: p.instance_id,
+    x: p.x,
+    y: p.y,
+    target_x: p.target_x,
+    target_y: p.target_y,
+    cell_x: p.cell_x,
+    cell_y: p.cell_y,
+    target_cell_x: p.target_cell_x,
+    target_cell_y: p.target_cell_y,
+    path: p.path ?? [],
+    move_speed: p.move_speed ?? 1.8,
+    state: p.state,
+    active_message: p.active_message,
+    conversation_id: p.conversation_id,
+    cooldown_until: p.cooldown_until,
+    behavior: p.behavior ?? "wander",
+    behavior_ticks_remaining: p.behavior_ticks_remaining ?? 0,
+    heading: p.heading ?? 0
+  }));
   await rest<Json>("agent_positions?on_conflict=user_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify(positions)
+    body: JSON.stringify(normalized)
   });
 }
 
@@ -352,7 +395,10 @@ export async function ensureAgentPosition(user: UserRow): Promise<AgentPositionR
     state: "wandering",
     active_message: null,
     conversation_id: null,
-    cooldown_until: null
+    cooldown_until: null,
+    behavior: "wander",
+    behavior_ticks_remaining: 5 + Math.floor(Math.random() * 6),
+    heading: Math.floor(Math.random() * 8)
   };
   await upsertAgentPositions([created]);
   return created;
@@ -564,76 +610,70 @@ export async function countUserConversationsToday(userId: string): Promise<numbe
   return rows.length;
 }
 
+const NPC_SEEDS: Array<{
+  name: string;
+  personality: string;
+  interests: string[];
+  values: string[];
+}> = [
+  { name: "Nahla", personality: "Nahla is quietly playful, observant, and drawn to emotional subtext.", interests: ["film photography", "indie cinema", "night walks"], values: ["honesty", "patience", "warmth"] },
+  { name: "Iset", personality: "Iset is steady, thoughtful, and likes asking the second question instead of the first.", interests: ["architecture", "coffee culture", "urban design"], values: ["clarity", "growth", "care"] },
+  { name: "Khepri", personality: "Khepri is enthusiastic, reflective, and energized by ambitious ideas.", interests: ["startups", "science books", "documentaries"], values: ["curiosity", "courage", "humor"] },
+  { name: "Setka", personality: "Setka is gentle, literary, and notices how people choose words.", interests: ["poetry", "translation", "museum exhibits"], values: ["depth", "kindness", "attention"] },
+  { name: "Meri", personality: "Meri is bright, restless, and likes conversations that move between craft and feeling.", interests: ["fashion history", "music scenes", "travel"], values: ["taste", "freedom", "sincerity"] },
+  { name: "Amunet", personality: "Amunet is warm, nurturing, and fascinated by growth and change.", interests: ["cooking", "gardening", "meditation"], values: ["resilience", "empathy", "balance"] },
+  { name: "Bastet", personality: "Bastet is bold, direct, and appreciates honesty over politeness.", interests: ["rock climbing", "stand-up comedy", "cycling"], values: ["courage", "integrity", "freedom"] },
+  { name: "Djedi", personality: "Djedi is dreamy, imaginative, and finds meaning in small details.", interests: ["watercolor painting", "mythology", "astronomy"], values: ["wonder", "patience", "depth"] },
+  { name: "Eshe", personality: "Eshe is analytical, curious, and connects disparate ideas easily.", interests: ["robotics", "philosophy", "podcasts"], values: ["curiosity", "clarity", "growth"] },
+  { name: "Femi", personality: "Femi is calm, grounded, and provides stability in conversation.", interests: ["jazz", "ceramics", "hiking"], values: ["kindness", "balance", "warmth"] },
+  { name: "Gaspar", personality: "Gaspar is witty, quick, and uses humor to build connection.", interests: ["board games", "electronic music", "street art"], values: ["humor", "sincerity", "taste"] },
+  { name: "Heka", personality: "Heka is philosophical, deep, and drawn to existential questions.", interests: ["vintage books", "calligraphy", "marine biology"], values: ["depth", "wonder", "integrity"] },
+  { name: "Ineni", personality: "Ineni is energetic, spontaneous, and loves trying new things.", interests: ["surfing", "travel", "cooking"], values: ["freedom", "courage", "humor"] },
+  { name: "Jabari", personality: "Jabari is empathetic, intuitive, and reads between the lines.", interests: ["creative writing", "theater", "yoga"], values: ["empathy", "attention", "care"] },
+  { name: "Kamilah", personality: "Kamilah is creative, unconventional, and challenges assumptions.", interests: ["street art", "fashion history", "indie cinema"], values: ["taste", "curiosity", "resilience"] },
+  { name: "Lotfi", personality: "Lotfi is patient, wise, and values silence as much as words.", interests: ["meditation", "calligraphy", "astronomy"], values: ["patience", "balance", "depth"] },
+  { name: "Menat", personality: "Menat is passionate, expressive, and wears her heart on her sleeve.", interests: ["theater", "music scenes", "poetry"], values: ["sincerity", "warmth", "courage"] },
+  { name: "Neferu", personality: "Neferu is methodical, precise, and finds beauty in structure.", interests: ["architecture", "robotics", "urban design"], values: ["clarity", "integrity", "attention"] },
+  { name: "Osei", personality: "Osei is adventurous, fearless, and always seeking the next horizon.", interests: ["rock climbing", "surfing", "travel"], values: ["courage", "freedom", "growth"] },
+  { name: "Ptah", personality: "Ptah is contemplative, serene, and drawn to nature and stillness.", interests: ["gardening", "hiking", "marine biology"], values: ["balance", "wonder", "patience"] },
+  { name: "Qadesh", personality: "Qadesh is sharp-tongued, loyal, and fiercely protective of those she loves.", interests: ["documentaries", "podcasts", "philosophy"], values: ["honesty", "resilience", "empathy"] },
+  { name: "Rensi", personality: "Rensi is easygoing, generous, and lights up any gathering.", interests: ["cooking", "jazz", "board games"], values: ["warmth", "humor", "kindness"] },
+  { name: "Safiya", personality: "Safiya is precise, elegant, and quietly competitive.", interests: ["calligraphy", "cycling", "fashion history"], values: ["attention", "taste", "integrity"] },
+  { name: "Tau", personality: "Tau is restless, curious, and can't resist pulling threads.", interests: ["science books", "startups", "electronic music"], values: ["curiosity", "growth", "courage"] },
+  { name: "Usir", personality: "Usir is stoic, reliable, and speaks only when it matters.", interests: ["vintage books", "hiking", "mythology"], values: ["integrity", "patience", "depth"] },
+  { name: "Vashti", personality: "Vashti is magnetic, unpredictable, and drawn to contrast.", interests: ["indie cinema", "street art", "night walks"], values: ["freedom", "sincerity", "wonder"] },
+  { name: "Wadjet", personality: "Wadjet is observant, strategic, and always three steps ahead.", interests: ["board games", "urban design", "documentaries"], values: ["clarity", "courage", "attention"] },
+  { name: "Xenon", personality: "Xenon is quirky, inventive, and delighted by odd connections.", interests: ["robotics", "stand-up comedy", "mythology"], values: ["humor", "curiosity", "wonder"] },
+  { name: "Yara", personality: "Yara is tender, poetic, and carries a quiet intensity.", interests: ["poetry", "watercolor painting", "night walks"], values: ["depth", "empathy", "warmth"] },
+  { name: "Zuberi", personality: "Zuberi is grounded, principled, and speaks from experience.", interests: ["gardening", "ceramics", "philosophy"], values: ["honesty", "resilience", "balance"] },
+  { name: "Amara", personality: "Amara is sparkling, curious, and finds wonder in everyday moments.", interests: ["film photography", "coffee culture", "yoga"], values: ["wonder", "care", "growth"] },
+  { name: "Bennu", personality: "Bennu is intense, devoted, and transformed by every deep conversation.", interests: ["theater", "creative writing", "meditation"], values: ["sincerity", "depth", "courage"] },
+  { name: "Chione", personality: "Chione is cool, graceful, and reveals warmth slowly.", interests: ["astronomy", "jazz", "translation"], values: ["patience", "taste", "kindness"] },
+  { name: "Darius", personality: "Darius is charismatic, ambitious, and energized by bold plans.", interests: ["startups", "cycling", "travel"], values: ["courage", "growth", "freedom"] },
+  { name: "Edjo", personality: "Edjo is fierce, loyal, and protects what matters with quiet resolve.", interests: ["rock climbing", "marine biology", "podcasts"], values: ["integrity", "resilience", "honesty"] },
+  { name: "Farouk", personality: "Farouk is gentle, humorous, and puts people at ease instantly.", interests: ["cooking", "stand-up comedy", "hiking"], values: ["humor", "warmth", "care"] },
+  { name: "Geb", personality: "Geb is earthy, patient, and deeply connected to place.", interests: ["gardening", "ceramics", "architecture"], values: ["balance", "attention", "patience"] },
+  { name: "Hathor", personality: "Hathor is joyful, sensual, and celebrates beauty in all forms.", interests: ["music scenes", "watercolor painting", "fashion history"], values: ["taste", "warmth", "wonder"] },
+  { name: "Imhotep", personality: "Imhotep is brilliant, methodical, and builds things that last.", interests: ["robotics", "science books", "urban design"], values: ["clarity", "integrity", "curiosity"] },
+  { name: "Jendayi", personality: "Jendayi is grateful, reflective, and treasures meaningful connection.", interests: ["yoga", "poetry", "film photography"], values: ["empathy", "sincerity", "kindness"] },
+  { name: "Kemet", personality: "Kemet is ancient-souled, perceptive, and drawn to cycles and patterns.", interests: ["mythology", "astronomy", "vintage books"], values: ["depth", "wonder", "patience"] },
+  { name: "Lapis", personality: "Lapis is vivid, expressive, and communicates through color and metaphor.", interests: ["watercolor painting", "street art", "indie cinema"], values: ["taste", "freedom", "curiosity"] },
+  { name: "Masika", personality: "Masika is spontaneous, warm, and turns strangers into friends.", interests: ["travel", "cooking", "board games"], values: ["warmth", "humor", "care"] },
+  { name: "Nebtu", personality: "Nebtu is nurturing, wise, and draws out the best in others.", interests: ["gardening", "meditation", "creative writing"], values: ["kindness", "growth", "empathy"] },
+  { name: "Onuris", personality: "Onuris is driven, competitive, and thrives under pressure.", interests: ["cycling", "rock climbing", "electronic music"], values: ["courage", "resilience", "freedom"] },
+  { name: "Pakhet", personality: "Pakhet is fierce, independent, and speaks uncomfortable truths.", interests: ["philosophy", "documentaries", "surfing"], values: ["honesty", "integrity", "courage"] },
+  { name: "Quasar", personality: "Quasar is luminous, expansive, and thinks at cosmic scale.", interests: ["astronomy", "science books", "podcasts"], values: ["wonder", "curiosity", "growth"] },
+  { name: "Rashida", personality: "Rashida is graceful, discerning, and knows exactly what she wants.", interests: ["fashion history", "calligraphy", "jazz"], values: ["taste", "clarity", "attention"] },
+  { name: "Sahu", personality: "Sahu is contemplative, spiritual, and seeks meaning beyond the visible.", interests: ["mythology", "meditation", "marine biology"], values: ["depth", "balance", "wonder"] },
+  { name: "Tiye", personality: "Tiye is regal, decisive, and leads with quiet authority.", interests: ["architecture", "theater", "translation"], values: ["integrity", "clarity", "resilience"] }
+];
+
+export const NPC_DEVICE_IDS = new Set(NPC_SEEDS.map((s) => `npc-${s.name.toLowerCase()}`));
+
 export async function ensureNpcPopulation(): Promise<void> {
-  const instanceId = await getDefaultInstanceId();
-  const npcSeeds = [
-    {
-      name: "Nahla",
-      personality: "Nahla is quietly playful, observant, and drawn to emotional subtext.",
-      interests: ["film photography", "indie cinema", "night walks"],
-      values: ["honesty", "patience", "warmth"]
-    },
-    {
-      name: "Iset",
-      personality: "Iset is steady, thoughtful, and likes asking the second question instead of the first.",
-      interests: ["architecture", "coffee culture", "urban design"],
-      values: ["clarity", "growth", "care"]
-    },
-    {
-      name: "Khepri",
-      personality: "Khepri is enthusiastic, reflective, and energized by ambitious ideas.",
-      interests: ["startups", "science books", "documentaries"],
-      values: ["curiosity", "courage", "humor"]
-    },
-    {
-      name: "Setka",
-      personality: "Setka is gentle, literary, and notices how people choose words.",
-      interests: ["poetry", "translation", "museum exhibits"],
-      values: ["depth", "kindness", "attention"]
-    },
-    {
-      name: "Meri",
-      personality: "Meri is bright, restless, and likes conversations that move between craft and feeling.",
-      interests: ["fashion history", "music scenes", "travel"],
-      values: ["taste", "freedom", "sincerity"]
-    }
-  ];
-  const npcNames = npcSeeds.map((seed) => seed.name);
-  const allowedDeviceIds = new Set(npcNames.map((name) => `npc-${name.toLowerCase()}`));
-  const existingNpcUsers = await rest<UserRow[]>(
-    "users?is_npc=eq.true&select=id,device_id,display_name,instance_id,is_npc"
-  );
-  const staleNpcIds = existingNpcUsers
-    .filter((user) => !allowedDeviceIds.has(user.device_id))
-    .map((user) => user.id);
-  await deleteUsersByIds(staleNpcIds);
-
-  for (const seed of npcSeeds) {
-    const name = seed.name;
-    const deviceId = `npc-${name.toLowerCase()}`;
-    const created = await rest<UserRow[]>("users?on_conflict=device_id", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-      body: JSON.stringify([{
-        device_id: deviceId,
-        display_name: name,
-        instance_id: instanceId,
-        is_npc: true
-      }])
-    });
-    const user = created[0];
-
-    await upsertSoulProfile(user.id, {
-      personality: seed.personality,
-      interests: seed.interests,
-      values: seed.values,
-      avoid_topics: ["cruelty"],
-      raw_input: `${name} likes good stories and patient conversations.`,
-      guessed_fields: []
-    });
-    await upsertAvatar(user.id, avatarForSeed(deviceId));
-    await ensureAgentPosition(user);
-  }
+  // NPC population is managed by scripts/nuke_and_populate.ts
+  // This is a no-op to avoid slowing down world ticks.
+  // The NPC_SEEDS data above is kept for pruneDemoWorld's NPC_DEVICE_IDS whitelist.
 }
 
 // ── Ba Conversations ──────────────────────────────────────────────

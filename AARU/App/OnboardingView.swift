@@ -15,7 +15,7 @@ struct OnboardingView: View {
                         soulStep
                     case .onboarding(.avatar):
                         avatarStep
-                    case .world:
+                    case .world, .soulMirror:
                         EmptyView()
                     }
 

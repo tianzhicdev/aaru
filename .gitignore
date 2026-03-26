@@ -17,3 +17,4 @@ generated-avatars/
 generate_avatars.py
 TestResults/
 TestResults.xcresult/
+.gstack/

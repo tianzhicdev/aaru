@@ -45,6 +45,51 @@ export const conversationMessageSchema = z.object({
   created_at: z.string().datetime({ offset: true }).optional()
 });
 
+// Soul Mirror schemas
+export const soulFileSchema = z.object({
+  user_id: z.string().uuid().optional(),
+  essence: z.string().nullable().default(null),
+  tensions: z.array(z.object({
+    left: z.string(),
+    right: z.string(),
+    position: z.number().min(0).max(100).optional()
+  })).default([]),
+  comes_alive: z.string().nullable().default(null),
+  running_from: z.string().nullable().default(null),
+  your_words: z.array(z.string()).default([]),
+  evolution: z.array(z.object({
+    session: z.number(),
+    insight: z.string(),
+    date: z.string()
+  })).default([]),
+  session_count: z.number().int().default(0)
+});
+
+export const soulSessionSchema = z.object({
+  id: z.string().uuid().optional(),
+  user_id: z.string().uuid(),
+  session_number: z.number().int().min(1),
+  status: z.enum(["in_session", "extracting", "complete", "failed"]).default("in_session"),
+  exchange_count: z.number().int().default(0),
+  started_at: z.string().datetime({ offset: true }).optional(),
+  completed_at: z.string().datetime({ offset: true }).nullable().optional(),
+  next_available_at: z.string().datetime({ offset: true }).nullable().optional(),
+  extraction_error: z.string().nullable().optional()
+});
+
+export const soulMessageSchema = z.object({
+  id: z.string().uuid().optional(),
+  session_id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1),
+  created_at: z.string().datetime({ offset: true }).optional()
+});
+
+export type SoulFile = z.infer<typeof soulFileSchema>;
+export type SoulSession = z.infer<typeof soulSessionSchema>;
+export type SoulMessage = z.infer<typeof soulMessageSchema>;
+
 export const avatarConfigSchema = z.object({
   body_shape: z.string().min(1),
   skin_tone: z.string().min(1),

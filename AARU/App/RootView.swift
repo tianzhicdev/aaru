@@ -10,6 +10,8 @@ struct RootView: View {
                 OnboardingView()
             case .world:
                 MainTabView()
+            case .soulMirror:
+                SoulFileScreen()
             }
         }
         .background(

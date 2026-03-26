@@ -19,6 +19,19 @@ final class AppModel: ObservableObject {
     @Published var audioRecorder = AudioRecorder()
     @Published var isTranscribing = false
 
+    // Soul Mirror state
+    @Published var soulFile: SoulFile = .empty
+    @Published var canStartSoulSession = false
+    @Published var cooldownRemainingMs = 0
+    @Published var nextSessionNumber = 1
+    @Published var activeSoulSession: SoulSessionInfo?
+    @Published var soulMessages: [SoulMessage] = []
+    @Published var soulStreamingText = ""
+    @Published var isSoulStreaming = false
+    @Published var showSoulConversation = false
+    @Published var soulSessionResult: SoulSessionResult?
+    @Published var showSessionComplete = false
+
     let backend: BackendClient
     let deviceID: String
     private(set) var userID: UUID?
@@ -60,7 +73,10 @@ final class AppModel: ObservableObject {
             worldCount = payload.world.count
             worldMovementEvents = payload.world.movementEvents
             conversations = payload.conversations.map(Self.preview(from:))
-            stage = payload.soulProfile == nil ? .onboarding(.soul) : .world
+            stage = payload.soulProfile == nil ? .onboarding(.soul) : .soulMirror
+            if stage == .soulMirror {
+                Task { await bootstrapSoul() }
+            }
             startRealtime()
             logger.info("Bootstrap complete with \(self.worldCount) agents and \(self.conversations.count) conversations")
         } catch {
@@ -106,14 +122,13 @@ final class AppModel: ObservableObject {
 
         do {
             try await backend.saveAvatar(deviceID: deviceID, avatar: avatar)
-            stage = .world
+            stage = .soulMirror
             if backend.sessionToken == nil {
                 await bootstrap()
             } else {
-                await refreshWorld()
+                await bootstrapSoul()
             }
-            stage = .world
-            logger.info("Saved avatar and entered world")
+            logger.info("Saved avatar and entered soul mirror")
         } catch {
             errorMessage = error.localizedDescription
             logger.error("Saving avatar failed: \(error.localizedDescription, privacy: .public)")
@@ -273,6 +288,147 @@ final class AppModel: ObservableObject {
 
     func configurePersistedSession() {
         backend.sessionToken = SessionIdentity.current()
+    }
+
+    // MARK: - Soul Mirror
+
+    func bootstrapSoul() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response = try await backend.bootstrapSoul(deviceID: deviceID)
+            if let token = response.token {
+                backend.sessionToken = token
+                SessionIdentity.save(token)
+            }
+            soulFile = response.soulFile ?? .empty
+            activeSoulSession = response.activeSession
+            canStartSoulSession = response.canStartSession
+            cooldownRemainingMs = response.cooldownRemainingMs
+            nextSessionNumber = response.nextSessionNumber
+
+            // Cache soul file locally
+            cacheSoulFile(soulFile)
+
+            logger.info("Soul bootstrap complete: session \(self.nextSessionNumber), canStart=\(self.canStartSoulSession)")
+        } catch {
+            // Try loading cached soul file
+            if let cached = loadCachedSoulFile() {
+                soulFile = cached
+                logger.info("Loaded cached soul file")
+            }
+            errorMessage = error.localizedDescription
+            logger.error("Soul bootstrap failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func refreshSoulFile() async {
+        do {
+            let response = try await backend.getSoulFile()
+            soulFile = response.soulFile
+            cooldownRemainingMs = response.cooldownRemainingMs
+            canStartSoulSession = !response.cooldownActive
+            cacheSoulFile(soulFile)
+        } catch {
+            logger.error("Soul file refresh failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func sendSoulMessage(_ text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !isSoulStreaming else { return }
+
+        let userMessage = SoulMessage(id: UUID(), role: "user", content: trimmed)
+        soulMessages.append(userMessage)
+        isSoulStreaming = true
+        soulStreamingText = ""
+
+        do {
+            try await backend.soulConverseStream(
+                message: trimmed,
+                sessionID: activeSoulSession?.id,
+                onToken: { [weak self] token in
+                    Task { @MainActor in
+                        self?.soulStreamingText += token
+                    }
+                },
+                onSessionClosing: { [weak self] in
+                    Task { @MainActor in
+                        self?.logger.info("Session closing")
+                    }
+                },
+                onSessionComplete: { [weak self] result in
+                    Task { @MainActor in
+                        self?.soulSessionResult = result
+                        if let updatedSoulFile = result.soulFile {
+                            self?.soulFile = updatedSoulFile
+                            self?.cacheSoulFile(updatedSoulFile)
+                        }
+                        self?.canStartSoulSession = false
+                        self?.showSessionComplete = true
+                    }
+                },
+                onError: { [weak self] message in
+                    Task { @MainActor in
+                        self?.logger.error("SSE error: \(message, privacy: .public)")
+                    }
+                }
+            )
+
+            // Stream complete — add the full assistant message
+            if !soulStreamingText.isEmpty {
+                let assistantMessage = SoulMessage(
+                    id: UUID(),
+                    role: "assistant",
+                    content: soulStreamingText
+                )
+                soulMessages.append(assistantMessage)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("Soul converse failed: \(error.localizedDescription, privacy: .public)")
+        }
+
+        isSoulStreaming = false
+        soulStreamingText = ""
+    }
+
+    func startSoulSession() {
+        soulMessages = []
+        soulSessionResult = nil
+        showSessionComplete = false
+        showSoulConversation = true
+    }
+
+    func endSoulConversation() {
+        showSoulConversation = false
+        soulMessages = []
+        soulStreamingText = ""
+        Task {
+            await refreshSoulFile()
+        }
+    }
+
+    func dismissSessionComplete() {
+        showSessionComplete = false
+        showSoulConversation = false
+        soulMessages = []
+        Task {
+            await bootstrapSoul()
+        }
+    }
+
+    private func cacheSoulFile(_ file: SoulFile) {
+        if let data = try? JSONEncoder().encode(file) {
+            UserDefaults.standard.set(data, forKey: "cached_soul_file")
+        }
+    }
+
+    private func loadCachedSoulFile() -> SoulFile? {
+        guard let data = UserDefaults.standard.data(forKey: "cached_soul_file") else { return nil }
+        return try? JSONDecoder().decode(SoulFile.self, from: data)
     }
 
     func scheduleWorldRefresh() {

@@ -187,6 +187,128 @@ enum AARUConstants {
     static let impressionUnlockThreshold = 72
 }
 
+// MARK: - Soul Mirror
+
+struct SoulFileTension: Codable, Equatable {
+    let left: String
+    let right: String
+
+    enum CodingKeys: String, CodingKey {
+        case left
+        case right
+    }
+}
+
+struct SoulFileEvolution: Codable, Equatable {
+    let session: Int
+    let insight: String
+    let date: String
+
+    enum CodingKeys: String, CodingKey {
+        case session
+        case insight
+        case date
+    }
+}
+
+struct SoulFile: Codable, Equatable {
+    var essence: String?
+    var tensions: [SoulFileTension]
+    var comesAlive: String?
+    var runningFrom: String?
+    var yourWords: [String]
+    var evolution: [SoulFileEvolution]
+    var sessionCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case essence
+        case tensions
+        case comesAlive = "comes_alive"
+        case runningFrom = "running_from"
+        case yourWords = "your_words"
+        case evolution
+        case sessionCount = "session_count"
+    }
+
+    static let empty = SoulFile(
+        essence: nil,
+        tensions: [],
+        comesAlive: nil,
+        runningFrom: nil,
+        yourWords: [],
+        evolution: [],
+        sessionCount: 0
+    )
+}
+
+struct SoulSessionInfo: Codable, Equatable {
+    let id: UUID
+    let sessionNumber: Int
+    let exchangeCount: Int
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case sessionNumber = "session_number"
+        case exchangeCount = "exchange_count"
+        case status
+    }
+}
+
+struct SoulBootstrapResponse: Codable {
+    let userId: UUID
+    let token: String?
+    let soulFile: SoulFile?
+    let activeSession: SoulSessionInfo?
+    let canStartSession: Bool
+    let cooldownRemainingMs: Int
+    let nextSessionNumber: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case token
+        case soulFile = "soul_file"
+        case activeSession = "active_session"
+        case canStartSession = "can_start_session"
+        case cooldownRemainingMs = "cooldown_remaining_ms"
+        case nextSessionNumber = "next_session_number"
+    }
+}
+
+struct SoulFileResponse: Codable {
+    let soulFile: SoulFile
+    let sessionCount: Int
+    let cooldownActive: Bool
+    let cooldownRemainingMs: Int
+    let nextAvailableAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case soulFile = "soul_file"
+        case sessionCount = "session_count"
+        case cooldownActive = "cooldown_active"
+        case cooldownRemainingMs = "cooldown_remaining_ms"
+        case nextAvailableAt = "next_available_at"
+    }
+}
+
+struct SoulInsight: Equatable {
+    let tag: String
+    let text: String
+}
+
+struct SoulSessionResult: Equatable {
+    let sessionNumber: Int
+    let extractionSuccess: Bool
+    let insights: [SoulInsight]
+    let soulFile: SoulFile?
+}
+
+struct SoulMessage: Identifiable, Equatable {
+    let id: UUID
+    let role: String
+    let content: String
+}
+
 struct BaMessage: Identifiable, Equatable {
     let id: UUID
     let senderName: String
@@ -308,4 +430,5 @@ enum OnboardingStep: Equatable {
 enum AppStage: Equatable {
     case onboarding(OnboardingStep)
     case world
+    case soulMirror
 }

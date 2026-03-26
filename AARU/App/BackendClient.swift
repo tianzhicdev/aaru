@@ -230,6 +230,124 @@ final class BackendClient {
         return payload.asConversationDetail()
     }
 
+    // MARK: - Soul Mirror
+
+    func bootstrapSoul(deviceID: String) async throws -> SoulBootstrapResponse {
+        guard endpoint(named: "bootstrap-soul") != nil else {
+            return SoulBootstrapResponse(
+                userId: UUID(),
+                token: nil,
+                soulFile: nil,
+                activeSession: nil,
+                canStartSession: true,
+                cooldownRemainingMs: 0,
+                nextSessionNumber: 1
+            )
+        }
+        return try await post(
+            "bootstrap-soul",
+            body: ["device_id": deviceID],
+            requiresAuth: true,
+            retryOnServerError: true
+        )
+    }
+
+    func getSoulFile() async throws -> SoulFileResponse {
+        guard endpoint(named: "get-soul-file") != nil else {
+            return SoulFileResponse(
+                soulFile: .empty,
+                sessionCount: 0,
+                cooldownActive: false,
+                cooldownRemainingMs: 0,
+                nextAvailableAt: nil
+            )
+        }
+        return try await post(
+            "get-soul-file",
+            body: EmptyBody(),
+            requiresAuth: true,
+            retryOnServerError: true
+        )
+    }
+
+    func soulConverseStream(
+        message: String,
+        sessionID: UUID? = nil,
+        onToken: @escaping (String) -> Void,
+        onSessionClosing: @escaping () -> Void,
+        onSessionComplete: @escaping (SoulSessionResult) -> Void,
+        onError: @escaping (String) -> Void
+    ) async throws {
+        guard let url = endpoint(named: "soul-converse") else {
+            // Fallback: simulate a response
+            let fallback = "I see you. What's something most people don't notice about you?"
+            for char in fallback {
+                onToken(String(char))
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        var body: [String: String] = ["message": message]
+        if let sessionID {
+            body["session_id"] = sessionID.uuidString
+        }
+        request.httpBody = try encoder.encode(body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        if let anonKey = configuration.supabaseAnonKey {
+            request.setValue(anonKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
+        }
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-aaru-session")
+        }
+
+        let (bytes, response) = try await session.bytes(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        guard statusCode == 200 else {
+            throw BackendError.invalidResponse(statusCode: statusCode, message: "SSE stream failed")
+        }
+
+        for try await line in bytes.lines {
+            if line.hasPrefix("event: ") {
+                let eventName = String(line.dropFirst(7))
+                // Read the next data line
+                continue
+            }
+            guard line.hasPrefix("data: ") else { continue }
+            let jsonString = String(line.dropFirst(6))
+            guard let jsonData = jsonString.data(using: .utf8) else { continue }
+
+            // Try parsing different event types
+            if let tokenEvent = try? decoder.decode(SSETokenEvent.self, from: jsonData),
+               tokenEvent.text != nil {
+                onToken(tokenEvent.text!)
+            } else if let completeEvent = try? decoder.decode(SSESessionCompleteEvent.self, from: jsonData),
+                      completeEvent.sessionNumber != nil {
+                let insights = (completeEvent.insights ?? []).map {
+                    SoulInsight(tag: $0.tag, text: $0.text)
+                }
+                let soulFile = completeEvent.soulFile
+                onSessionComplete(SoulSessionResult(
+                    sessionNumber: completeEvent.sessionNumber!,
+                    extractionSuccess: completeEvent.extractionSuccess ?? false,
+                    insights: insights,
+                    soulFile: soulFile
+                ))
+            } else if let errorEvent = try? decoder.decode(SSEErrorEvent.self, from: jsonData),
+                      errorEvent.message != nil {
+                onError(errorEvent.message!)
+            } else if let closingEvent = try? decoder.decode(SSESessionClosingEvent.self, from: jsonData),
+                      closingEvent.exchangeCount != nil {
+                onSessionClosing()
+            }
+            // "done" event is handled by stream ending
+        }
+    }
+
     private func endpoint(named function: String) -> URL? {
         configuration.functionBaseURL?.appendingPathComponent(function)
     }
@@ -425,4 +543,44 @@ private struct TranscribeAudioRequest: Encodable {
 
 private struct TranscribeAudioResponse: Decodable {
     let transcript: String
+}
+
+private struct EmptyBody: Encodable {}
+
+// MARK: - SSE Event Types
+
+private struct SSETokenEvent: Decodable {
+    let text: String?
+}
+
+private struct SSESessionClosingEvent: Decodable {
+    let exchangeCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case exchangeCount = "exchange_count"
+    }
+}
+
+private struct SSEInsightPayload: Decodable {
+    let tag: String
+    let text: String
+}
+
+private struct SSESessionCompleteEvent: Decodable {
+    let sessionNumber: Int?
+    let extractionSuccess: Bool?
+    let insights: [SSEInsightPayload]?
+    let soulFile: SoulFile?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionNumber = "session_number"
+        case extractionSuccess = "extraction_success"
+        case insights
+        case soulFile = "soul_file"
+    }
+}
+
+private struct SSEErrorEvent: Decodable {
+    let type: String?
+    let message: String?
 }

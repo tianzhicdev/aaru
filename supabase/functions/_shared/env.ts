@@ -64,3 +64,7 @@ export function apnsPrivateKey(): string | undefined {
 export function apnsBundleId(): string | undefined {
   return readEnv("APNS_BUNDLE_ID");
 }
+
+export function anthropicApiKey(): string | undefined {
+  return readEnv("ANTHROPIC_API_KEY");
+}

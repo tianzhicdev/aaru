@@ -6,3 +6,9 @@ export const IMPRESSION_EVALUATION_INTERVAL = 5;
 export const KA_MESSAGES_PER_CONVERSATION = 10;
 export const OFFLINE_MAX_CONVERSATIONS_PER_DAY = 10;
 export const OFFLINE_MAX_MESSAGES_PER_CONVERSATION = 20;
+
+// Soul Mirror constants
+export const SESSION_MAX_EXCHANGES = 15;
+export const SESSION_CLOSE_MIN_EXCHANGES = 12;
+export const COOLDOWN_HOURS = 22;
+export const STALE_SESSION_HOURS = 24;

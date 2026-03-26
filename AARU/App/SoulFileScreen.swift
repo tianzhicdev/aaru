@@ -192,7 +192,19 @@ struct SoulFileScreen: View {
 
     private var sessionButton: some View {
         VStack(spacing: 8) {
-            if model.canStartSoulSession {
+            if model.activeSoulSession != nil {
+                Button {
+                    model.startSoulSession()
+                } label: {
+                    Text("Continue Session")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(accentGold)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            } else if model.canStartSoulSession {
                 Button {
                     model.startSoulSession()
                 } label: {

@@ -20,11 +20,11 @@ export const agentPositionSchema = z.object({
   y: z.number().min(0).max(1),
   target_x: z.number().min(0).max(1),
   target_y: z.number().min(0).max(1),
-  cell_x: z.number().int().min(0).max(9).optional(),
-  cell_y: z.number().int().min(0).max(13).optional(),
-  target_cell_x: z.number().int().min(0).max(9).optional(),
-  target_cell_y: z.number().int().min(0).max(13).optional(),
-  state: z.enum(["wandering", "approaching", "chatting", "cooldown"]),
+  cell_x: z.number().int().min(0).max(99).optional(),
+  cell_y: z.number().int().min(0).max(99).optional(),
+  target_cell_x: z.number().int().min(0).max(99).optional(),
+  target_cell_y: z.number().int().min(0).max(99).optional(),
+  state: z.string().min(1),
   active_message: z.string().nullable(),
   conversation_id: z.string().uuid().nullable(),
   cooldown_until: z.string().datetime({ offset: true }).nullable()
@@ -32,10 +32,10 @@ export const agentPositionSchema = z.object({
 
 export const worldMovementEventSchema = z.object({
   user_id: z.string().uuid(),
-  from_cell_x: z.number().int().min(0).max(9),
-  from_cell_y: z.number().int().min(0).max(13),
-  to_cell_x: z.number().int().min(0).max(9),
-  to_cell_y: z.number().int().min(0).max(13)
+  from_cell_x: z.number().int().min(0).max(99),
+  from_cell_y: z.number().int().min(0).max(99),
+  to_cell_x: z.number().int().min(0).max(99),
+  to_cell_y: z.number().int().min(0).max(99)
 });
 
 export const conversationMessageSchema = z.object({

@@ -31,4 +31,4 @@ Date: 2026-03-27
 
 ### Polish
 - [x] Show "last updated" on soul file screen — `lastUpdated` exists in the model but is never displayed; gives users a sense of their soul file evolving over time
-- [ ] Warm up the empty soul file message — "Your soul file is empty" is cold; replace with something inviting like "Your soul file will take shape as we talk"
+- [x] Warm up the empty soul file message — "Your soul file is empty" is cold; replace with something inviting like "Your soul file will take shape as we talk"

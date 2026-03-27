@@ -80,10 +80,10 @@ struct SoulFileScreen: View {
                     .lineSpacing(6)
             } else {
                 VStack(spacing: 12) {
-                    Text("Your soul file is empty")
+                    Text("Your soul file will take shape as we talk")
                         .font(.system(size: 20, weight: .light))
                         .foregroundStyle(textPrimary.opacity(0.6))
-                    Text("Start a conversation to discover who you are")
+                    Text("Each conversation reveals a little more")
                         .font(.system(size: 14))
                         .foregroundStyle(textPrimary.opacity(0.4))
                 }

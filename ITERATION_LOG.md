@@ -249,3 +249,19 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** Warm up the empty soul file message
+
+## Iteration 16 — 2026-03-27 01:00
+
+**Goal:** Warm up the empty soul file message.
+
+**What changed:**
+- Replaced "Your soul file is empty" → "Your soul file will take shape as we talk"
+- Replaced "Start a conversation to discover who you are" → "Each conversation reveals a little more"
+- Warmer, more inviting tone that sets expectations
+
+**Files modified:** 1 file
+- `AARU/App/SoulFileScreen.swift` — updated empty state copy
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** All vision-todo.md items complete! Deploy and test end-to-end.

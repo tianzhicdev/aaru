@@ -84,3 +84,20 @@
 **Tests:** 73 TS all passing, iOS builds
 
 **Next priority:** SoulFileScreen polish — make the 7-section display more visually compelling with portrait, crystallized moments, and open threads
+
+## Iteration 5 — 2026-03-27 00:20
+
+**Goal:** Show a gentle synthesis indicator when ending a session, so the 10-30s wait feels intentional rather than broken.
+
+**What changed:**
+- "Weaving your soul file..." overlay appears during synthesis with ProgressView spinner
+- Input bar is hidden during synthesis (no typing while processing)
+- Overlay uses 95% opacity background so conversation fades behind it
+- Copy: "Our conversation is being synthesized into something that sees you clearly."
+
+**Files modified:** 1 file
+- `AARU/App/SoulConversationScreen.swift` — synthesis overlay, conditional input bar
+
+**Tests:** 73 TS all passing, iOS builds
+
+**Next priority:** New session flow after ending — clear conversation, show welcome view or "Start New Session" prompt

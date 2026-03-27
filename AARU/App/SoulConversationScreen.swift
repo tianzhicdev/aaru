@@ -25,8 +25,14 @@ struct SoulConversationScreen: View {
                     welcomeView
                 } else {
                     messageList
-                    inputBar
+                    if !model.isEndingSession {
+                        inputBar
+                    }
                 }
+            }
+
+            if model.isEndingSession {
+                synthesisOverlay
             }
         }
     }
@@ -245,6 +251,33 @@ struct SoulConversationScreen: View {
 
             Spacer(minLength: 60)
         }
+    }
+
+    // MARK: - Synthesis Overlay
+
+    private var synthesisOverlay: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ProgressView()
+                .tint(accentGold)
+                .scaleEffect(1.2)
+
+            Text("Weaving your soul file...")
+                .font(.system(size: 17, weight: .light))
+                .foregroundStyle(textPrimary.opacity(0.7))
+
+            Text("Our conversation is being synthesized\ninto something that sees you clearly.")
+                .font(.system(size: 14, weight: .light))
+                .foregroundStyle(textPrimary.opacity(0.4))
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(surfaceBg.opacity(0.95))
+        .transition(.opacity)
     }
 
     // MARK: - Input

@@ -17,7 +17,6 @@ final class AppModel: ObservableObject {
     @Published var soulStreamingText = ""
     @Published var isSoulStreaming = false
     @Published var soulFileJustUpdated = false
-    @Published var hasPendingSoulFileUpdate = false
 
     let backend: BackendClient
     let deviceID: String
@@ -164,11 +163,6 @@ final class AppModel: ObservableObject {
         soulStreamingText = ""
     }
 
-    func acknowledgeSoulFileUpdate() {
-        hasPendingSoulFileUpdate = false
-        soulFileJustUpdated = false
-    }
-
     func retrySoulMessage() async {
         guard let lastUserMessage = soulMessages.last(where: { $0.role == "user" }) else { return }
         while let last = soulMessages.last, last.isError || last.role == "system" {
@@ -194,14 +188,6 @@ final class AppModel: ObservableObject {
                     self?.visibleSoulFile = updated
                     self?.cacheVisibleSoulFile(updated)
                     self?.soulFileJustUpdated = true
-                    self?.hasPendingSoulFileUpdate = true
-                    // Insert a notification message into the chat
-                    let notification = SoulMessage(
-                        id: UUID(),
-                        role: "system",
-                        content: "Your soul file has been updated"
-                    )
-                    self?.soulMessages.append(notification)
                     self?.logger.info("Visible soul file updated during conversation")
                 }
             },

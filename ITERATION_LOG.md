@@ -185,3 +185,18 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** Add pull-to-refresh on SoulFileScreen
+
+## Iteration 12 — 2026-03-27 00:52
+
+**Goal:** Add pull-to-refresh on SoulFileScreen.
+
+**What changed:**
+- Added `.refreshable { await model.refreshSoulFile() }` to the ScrollView in SoulFileScreen
+- Users can now pull down on the Soul File tab to fetch the latest soul file from the server
+
+**Files modified:** 1 file
+- `AARU/App/SoulFileScreen.swift` — added .refreshable modifier
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Animate typing indicator dots

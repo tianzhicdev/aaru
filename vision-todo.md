@@ -23,7 +23,7 @@ Date: 2026-03-27
 ### Complete partial features
 - [x] Commit the conversation restore feature — the uncommitted changes (bootstrap-soul returns messages, iOS loads them) are clean and correct; commit them
 - [x] Re-implement session end with synthesis — `end-soul-session` backend is complete but unreachable from iOS (was reverted); without this, the Opus 4-expert synthesis never runs and soul files stay at Haiku-quality light extractions only
-- [ ] Add pull-to-refresh on SoulFileScreen — `refreshSoulFile()` exists in AppModel but no view calls it; users can't see synthesis results without restarting the app
+- [x] Add pull-to-refresh on SoulFileScreen — `refreshSoulFile()` exists in AppModel but no view calls it; users can't see synthesis results without restarting the app
 
 ### Highest-value new features
 - [ ] Animate typing indicator dots — the 3 dots are static circles with no animation; feels frozen during 2-4s LLM response time; add a simple bouncing/pulsing animation

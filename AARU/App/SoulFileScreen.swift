@@ -23,6 +23,9 @@ struct SoulFileScreen: View {
                 .padding(.top, 40)
                 .padding(.bottom, 40)
             }
+            .refreshable {
+                await model.refreshSoulFile()
+            }
         }
     }
 

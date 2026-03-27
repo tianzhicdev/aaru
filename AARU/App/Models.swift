@@ -134,7 +134,7 @@ struct SoulSessionInfo: Codable, Equatable {
     }
 }
 
-struct SoulMessagePayload: Codable {
+struct SoulMessagePayload: Codable, Equatable {
     let role: String
     let content: String
 }
@@ -185,14 +185,12 @@ struct SoulFileResponse: Codable {
     }
 }
 
-struct EndSoulSessionResponse: Codable {
+struct SynthesizeSoulFileResponse: Codable {
     let visibleSoulFile: VisibleSoulFile
-    let sessionCompleted: Bool
     let synthesisSucceeded: Bool
 
     enum CodingKeys: String, CodingKey {
         case visibleSoulFile = "visible_soul_file"
-        case sessionCompleted = "session_completed"
         case synthesisSucceeded = "synthesis_succeeded"
     }
 }

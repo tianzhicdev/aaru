@@ -13,7 +13,9 @@ vi.mock("../../supabase/functions/_shared/soulApp.ts", () => ({
   bootstrapSoulState: vi.fn(),
   createSoulSession: vi.fn(),
   getSoulMessages: vi.fn(),
+  getAllSoulMessages: vi.fn(),
   getActiveSession: vi.fn(),
+  getLatestSession: vi.fn(),
   getVisibleSoulFile: vi.fn(),
   getSoulFile: vi.fn(),
   runSoulSynthesis: vi.fn(),
@@ -30,10 +32,11 @@ vi.mock("../../supabase/functions/_shared/auth.ts", () => ({
 import { handleBootstrapSoul } from "../../supabase/functions/bootstrap-soul/index.ts";
 import { handleGetSoulFile } from "../../supabase/functions/get-soul-file/index.ts";
 import { handleEndSoulSession } from "../../supabase/functions/end-soul-session/index.ts";
+import { handleSynthesizeSoulFile } from "../../supabase/functions/synthesize-soul-file/index.ts";
 
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../supabase/functions/_shared/auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../supabase/functions/_shared/db.ts";
-import { bootstrapSoulState, getSoulMessages, getActiveSession, getVisibleSoulFile, getSoulFile, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
+import { bootstrapSoulState, getSoulMessages, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, getSoulFile, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
 
 function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
   return new Request("https://edge.supabase.co/test", {
@@ -71,7 +74,7 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getSoulMessages).mockResolvedValue([]);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
 
     const request = makeRequest({ "x-aaru-session": "valid-token" });
     const response = await handleBootstrapSoul({ device_id: "device-1" }, request);
@@ -107,7 +110,7 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getSoulMessages).mockResolvedValue([]);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
 
     const request = makeRequest();
     const response = await handleBootstrapSoul({ device_id: "new-device" }, request);
@@ -117,7 +120,7 @@ describe("handleBootstrapSoul", () => {
     expect(response.body).toHaveProperty("token", "new-token");
   });
 
-  it("includes messages when active session has conversation history", async () => {
+  it("includes messages when user has conversation history", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
@@ -142,7 +145,7 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getSoulMessages).mockResolvedValue([
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
       { id: "m1", session_id: "session-1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: new Date().toISOString() },
       { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
     ]);
@@ -318,5 +321,181 @@ describe("handleEndSoulSession", () => {
     expect(body).toHaveProperty("synthesis_succeeded", true);
     const vsf = body.visible_soul_file as Record<string, unknown>;
     expect(vsf.portrait).toBe("A synthesized portrait");
+  });
+});
+
+describe("handleSynthesizeSoulFile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 without bearer token", async () => {
+    vi.mocked(readBearerToken).mockReturnValue(null);
+
+    const request = makeRequest();
+    const response = await handleSynthesizeSoulFile({}, request);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 404 when no session exists", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getActiveSession).mockResolvedValue(null);
+    vi.mocked(getLatestSession).mockResolvedValue(null);
+
+    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const response = await handleSynthesizeSoulFile({}, request);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("message", "No soul session found");
+  });
+
+  it("skips synthesis when no new messages since last update", async () => {
+    const lastUpdated = new Date().toISOString();
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getActiveSession).mockResolvedValue({
+      id: "session-1",
+      user_id: "user-1",
+      session_number: 1,
+      status: "in_session",
+      exchange_count: 10,
+      reflection_notes: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      next_available_at: null,
+      extraction_error: null,
+      created_at: new Date().toISOString()
+    });
+    vi.mocked(getVisibleSoulFile).mockResolvedValue({
+      version: 2,
+      lastUpdated,
+      portrait: "Existing portrait",
+      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+      crystallizedMoments: [],
+      openThreads: []
+    });
+    // All messages are older than last soul file update
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() }
+    ]);
+
+    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const response = await handleSynthesizeSoulFile({}, request);
+
+    expect(response.status).toBe(200);
+    const body = response.body as Record<string, unknown>;
+    expect(body).toHaveProperty("synthesis_succeeded", true);
+    const vsf = body.visible_soul_file as Record<string, unknown>;
+    expect(vsf.portrait).toBe("Existing portrait");
+    // runSoulSynthesis should NOT have been called
+    expect(runSoulSynthesis).not.toHaveBeenCalled();
+  });
+
+  it("runs synthesis on active session and returns result", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getActiveSession).mockResolvedValue({
+      id: "session-1",
+      user_id: "user-1",
+      session_number: 1,
+      status: "in_session",
+      exchange_count: 10,
+      reflection_notes: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      next_available_at: null,
+      extraction_error: null,
+      created_at: new Date().toISOString()
+    });
+    // Has new messages since last soul file update
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello", created_at: new Date().toISOString() }
+    ]);
+    vi.mocked(runSoulSynthesis).mockResolvedValue({
+      visible: {
+        version: 2,
+        lastUpdated: "2026-03-27",
+        portrait: "A synthesized portrait",
+        sections: {
+          howYouMove: "Boldly",
+          howYouThink: "In systems",
+          howYouConnect: "Cautiously",
+          whatYouCarry: "The weight",
+          whatLightsYouUp: "Discovery",
+          yourContradictions: "Many",
+          yourVoice: "Measured"
+        },
+        crystallizedMoments: [],
+        openThreads: []
+      },
+      hidden: null
+    });
+
+    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const response = await handleSynthesizeSoulFile({}, request);
+
+    expect(response.status).toBe(200);
+    const body = response.body as Record<string, unknown>;
+    expect(body).toHaveProperty("synthesis_succeeded", true);
+    const vsf = body.visible_soul_file as Record<string, unknown>;
+    expect(vsf.portrait).toBe("A synthesized portrait");
+  });
+
+  it("falls back to latest completed session when no active session", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getActiveSession).mockResolvedValue(null);
+    vi.mocked(getLatestSession).mockResolvedValue({
+      id: "session-2",
+      user_id: "user-1",
+      session_number: 2,
+      status: "complete",
+      exchange_count: 12,
+      reflection_notes: null,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      next_available_at: null,
+      extraction_error: null,
+      created_at: new Date().toISOString()
+    });
+    // Has new messages since last soul file update
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", session_id: "session-2", user_id: "user-1", role: "user", content: "test", created_at: new Date().toISOString() }
+    ]);
+    vi.mocked(runSoulSynthesis).mockResolvedValue({
+      visible: {
+        version: 3,
+        lastUpdated: "2026-03-27",
+        portrait: "Portrait from completed session",
+        sections: {
+          howYouMove: "", howYouThink: "", howYouConnect: "",
+          whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: ""
+        },
+        crystallizedMoments: [],
+        openThreads: []
+      },
+      hidden: null
+    });
+
+    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const response = await handleSynthesizeSoulFile({}, request);
+
+    expect(response.status).toBe(200);
+    const body = response.body as Record<string, unknown>;
+    expect(body).toHaveProperty("synthesis_succeeded", true);
+    const vsf = body.visible_soul_file as Record<string, unknown>;
+    expect(vsf.portrait).toBe("Portrait from completed session");
   });
 });

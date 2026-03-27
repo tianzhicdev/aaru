@@ -16,7 +16,8 @@ final class AppModel: ObservableObject {
     @Published var soulMessages: [SoulMessage] = []
     @Published var soulStreamingText = ""
     @Published var isSoulStreaming = false
-    @Published var soulFileJustUpdated = false
+    @Published var isSoulFileUpdating = false
+    private var lastSoulFileSynthesisRequest: Date?
 
     let backend: BackendClient
     let deviceID: String
@@ -68,6 +69,17 @@ final class AppModel: ObservableObject {
     func bootstrapSoul() async {
         isLoading = true
         errorMessage = nil
+
+        // Load cached data immediately so UI isn't blank during network call
+        if soulMessages.isEmpty, let cachedMessages = loadCachedSoulMessages() {
+            soulMessages = cachedMessages
+            logger.info("Loaded \(cachedMessages.count) cached messages")
+        }
+        if visibleSoulFile.isEmpty, let cachedFile = loadCachedVisibleSoulFile() {
+            visibleSoulFile = cachedFile
+            logger.info("Loaded cached visible soul file")
+        }
+
         defer { isLoading = false }
 
         do {
@@ -86,16 +98,14 @@ final class AppModel: ObservableObject {
                 soulMessages = payloads.map { msg in
                     SoulMessage(id: UUID(), role: msg.role, content: msg.content)
                 }
+                cacheSoulMessages(soulMessages)
             }
 
             cacheVisibleSoulFile(visibleSoulFile)
 
             logger.info("Soul bootstrap complete: session \(self.nextSessionNumber), canStart=\(self.canStartSoulSession)")
         } catch {
-            if let cached = loadCachedVisibleSoulFile() {
-                visibleSoulFile = cached
-                logger.info("Loaded cached visible soul file")
-            }
+            // Cached data already loaded above — keep it visible
             errorMessage = error.localizedDescription
             logger.error("Soul bootstrap failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -103,34 +113,32 @@ final class AppModel: ObservableObject {
 
     func refreshSoulFile() async {
         do {
-            let response = try await backend.getSoulFile()
-            visibleSoulFile = response.visibleSoulFile
-            legacySoulFile = response.soulFile
-            canStartSoulSession = true
-            cacheVisibleSoulFile(visibleSoulFile)
+            let response = try await backend.synthesizeSoulFile()
+            if response.synthesisSucceeded {
+                visibleSoulFile = response.visibleSoulFile
+                cacheVisibleSoulFile(visibleSoulFile)
+                logger.info("Soul file synthesis succeeded")
+            } else {
+                // Synthesis didn't succeed — fall back to fetching current file
+                let fileResponse = try await backend.getSoulFile()
+                visibleSoulFile = fileResponse.visibleSoulFile
+                legacySoulFile = fileResponse.soulFile
+                cacheVisibleSoulFile(visibleSoulFile)
+            }
         } catch {
             logger.error("Soul file refresh failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
-    /// Fire-and-forget: run synthesis in background, update soul file silently
-    private func endSoulSessionInBackground() async {
-        logger.info("Auto-triggering session synthesis in background")
-        do {
-            let response = try await backend.endSoulSession()
-            if response.synthesisSucceeded {
-                visibleSoulFile = response.visibleSoulFile
-                cacheVisibleSoulFile(response.visibleSoulFile)
-                soulFileJustUpdated = true
-                logger.info("Background synthesis succeeded, soul file updated")
-            } else {
-                logger.warning("Background synthesis completed but synthesis_succeeded=false")
-            }
-            // Clear active session — next message will auto-create a new one
-            activeSoulSession = nil
-        } catch {
-            logger.error("Background synthesis failed: \(error.localizedDescription, privacy: .public)")
-        }
+    func requestSoulFileUpdateIfNeeded() async {
+        // Don't re-request within 60 seconds
+        if let last = lastSoulFileSynthesisRequest,
+           Date().timeIntervalSince(last) < 60 { return }
+
+        lastSoulFileSynthesisRequest = Date()
+        isSoulFileUpdating = true
+        await refreshSoulFile()
+        isSoulFileUpdating = false
     }
 
     func beginSoulSession() async {
@@ -187,16 +195,7 @@ final class AppModel: ObservableObject {
 
         isSoulStreaming = false
         soulStreamingText = ""
-
-        // Auto-trigger synthesis when exchange count hits threshold
-        let userMessageCount = soulMessages.filter { $0.role == "user" }.count
-        if userMessageCount > 0, userMessageCount.isMultiple(of: sessionMaxExchanges) {
-            Task { await endSoulSessionInBackground() }
-        }
     }
-
-    /// Maximum user messages per session before auto-triggering synthesis
-    private let sessionMaxExchanges = 15
 
     func retrySoulMessage() async {
         guard let lastUserMessage = soulMessages.last(where: { $0.role == "user" }) else { return }
@@ -216,20 +215,6 @@ final class AppModel: ObservableObject {
             onToken: { [weak self] token in
                 Task { @MainActor in
                     self?.soulStreamingText += token
-                }
-            },
-            onVisibleSoulFileUpdated: { [weak self] updated in
-                Task { @MainActor in
-                    self?.visibleSoulFile = updated
-                    self?.cacheVisibleSoulFile(updated)
-                    self?.soulFileJustUpdated = true
-                    self?.logger.info("Visible soul file updated during conversation")
-                }
-            },
-            onLegacySoulFileUpdated: { [weak self] updated in
-                Task { @MainActor in
-                    self?.legacySoulFile = updated
-                    self?.logger.info("Legacy soul file updated during conversation")
                 }
             },
             onError: { [weak self] message in
@@ -273,5 +258,18 @@ final class AppModel: ObservableObject {
     private func loadCachedVisibleSoulFile() -> VisibleSoulFile? {
         guard let data = UserDefaults.standard.data(forKey: "cached_visible_soul_file") else { return nil }
         return try? JSONDecoder().decode(VisibleSoulFile.self, from: data)
+    }
+
+    private func cacheSoulMessages(_ messages: [SoulMessage]) {
+        let payloads = messages.map { SoulMessagePayload(role: $0.role, content: $0.content) }
+        if let data = try? JSONEncoder().encode(payloads) {
+            UserDefaults.standard.set(data, forKey: "cached_soul_messages")
+        }
+    }
+
+    private func loadCachedSoulMessages() -> [SoulMessage]? {
+        guard let data = UserDefaults.standard.data(forKey: "cached_soul_messages") else { return nil }
+        guard let payloads = try? JSONDecoder().decode([SoulMessagePayload].self, from: data) else { return nil }
+        return payloads.map { SoulMessage(id: UUID(), role: $0.role, content: $0.content) }
     }
 }

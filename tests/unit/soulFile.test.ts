@@ -1,108 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildExtractionPrompt,
-  parseSoulFileUpdate,
-  mergeSoulFile,
   emptySoulFile,
   emptyVisibleSoulFile,
   emptyHiddenSoulFile,
-  emptyReflectionNote,
-  buildReflectionPrompt,
-  buildLightVisiblePrompt,
   buildSoulSynthesisPrompt,
-  parseReflectionNote,
-  parseLightVisibleUpdate,
   parseSoulSynthesis,
   mergeVisibleSoulFile,
   mergeHiddenSoulFile,
-  migrateToVisibleSoulFile
+  migrateToVisibleSoulFile,
+  mergeSoulFile
 } from "../../src/domain/soulFile.ts";
 import type { SoulFile, VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
-
-// ── Legacy extraction tests (kept) ────────────────────────────
-
-describe("buildExtractionPrompt", () => {
-  it("builds prompt for first session", () => {
-    const messages = [
-      { role: "assistant", content: "What's something most people don't see?" },
-      { role: "user", content: "I build walls to protect my creative space." }
-    ];
-    const prompt = buildExtractionPrompt(messages, null, 1);
-    expect(prompt).toContain("session 1");
-    expect(prompt).toContain("first session");
-    expect(prompt).toContain("I build walls");
-  });
-
-  it("builds prompt for subsequent session with existing soul file", () => {
-    const existing: SoulFile = {
-      essence: "A builder who creates worlds",
-      tensions: [{ left: "Solitude", right: "Connection" }],
-      comes_alive: "Late-night flow states",
-      running_from: "Being truly seen",
-      your_words: ["I built walls"],
-      evolution: [],
-      session_count: 1
-    };
-    const messages = [
-      { role: "assistant", content: "Last time you talked about walls." },
-      { role: "user", content: "I found the door." }
-    ];
-    const prompt = buildExtractionPrompt(messages, existing, 2);
-    expect(prompt).toContain("session 2");
-    expect(prompt).toContain("A builder who creates worlds");
-    expect(prompt).toContain("I found the door");
-  });
-});
-
-describe("parseSoulFileUpdate", () => {
-  it("parses valid JSON extraction", () => {
-    const raw = JSON.stringify({
-      essence: "A builder who creates worlds alone",
-      tensions: [{ left: "Solitude", right: "Connection" }],
-      comes_alive: "Late-night flow states",
-      running_from: "Being truly seen",
-      your_words: ["I built walls to protect my creative space."],
-      evolution_insight: "The Door emerged as a metaphor for selective connection."
-    });
-    const result = parseSoulFileUpdate(raw);
-    expect(result).not.toBeNull();
-    expect(result!.essence).toBe("A builder who creates worlds alone");
-    expect(result!.tensions).toHaveLength(1);
-    expect(result!.your_words).toHaveLength(1);
-  });
-
-  it("handles JSON wrapped in markdown code fences", () => {
-    const raw = '```json\n{"essence": "A dreamer"}\n```';
-    const result = parseSoulFileUpdate(raw);
-    expect(result).not.toBeNull();
-    expect(result!.essence).toBe("A dreamer");
-  });
-
-  it("returns null for invalid JSON", () => {
-    expect(parseSoulFileUpdate("not json at all")).toBeNull();
-    expect(parseSoulFileUpdate("")).toBeNull();
-  });
-
-  it("truncates overly long fields", () => {
-    const raw = JSON.stringify({
-      essence: "A".repeat(600)
-    });
-    const result = parseSoulFileUpdate(raw);
-    expect(result!.essence!.length).toBeLessThanOrEqual(500);
-  });
-
-  it("filters invalid tension objects", () => {
-    const raw = JSON.stringify({
-      tensions: [
-        { left: "Solitude", right: "Connection" },
-        { invalid: true },
-        "not an object"
-      ]
-    });
-    const result = parseSoulFileUpdate(raw);
-    expect(result!.tensions).toHaveLength(1);
-  });
-});
 
 describe("mergeSoulFile", () => {
   it("creates new soul file from first session", () => {
@@ -226,59 +134,6 @@ describe("emptyHiddenSoulFile", () => {
   });
 });
 
-describe("emptyReflectionNote", () => {
-  it("returns a note at given exchange count", () => {
-    const note = emptyReflectionNote(8);
-    expect(note.updatedAtExchange).toBe(8);
-    expect(note.factualAnchors).toEqual({});
-    expect(note.tensions).toEqual([]);
-    expect(note.emotionalArc).toBe("");
-  });
-});
-
-describe("buildReflectionPrompt", () => {
-  it("builds prompt for first reflection", () => {
-    const messages = [
-      { role: "assistant", content: "What's something most people don't see?" },
-      { role: "user", content: "I build walls to protect my creative space." }
-    ];
-    const prompt = buildReflectionPrompt(messages, null, 8);
-    expect(prompt).toContain("exchange count: 8");
-    expect(prompt).toContain("first reflection");
-    expect(prompt).toContain("I build walls");
-    expect(prompt).toContain("factualAnchors");
-  });
-
-  it("includes existing note for subsequent reflections", () => {
-    const existingNote: ReflectionNote = {
-      updatedAtExchange: 8,
-      factualAnchors: { job: "engineer" },
-      tensions: ["solitude vs connection"],
-      recurringThemes: ["building"],
-      notableAbsences: [],
-      emotionalArc: "Opening up slowly"
-    };
-    const messages = [{ role: "user", content: "I changed jobs recently." }];
-    const prompt = buildReflectionPrompt(messages, existingNote, 16);
-    expect(prompt).toContain("exchange count: 16");
-    expect(prompt).toContain("engineer");
-    expect(prompt).toContain("EVOLVE");
-  });
-});
-
-describe("buildLightVisiblePrompt", () => {
-  it("builds prompt for first extraction", () => {
-    const messages = [
-      { role: "user", content: "I love getting lost in foreign cities." }
-    ];
-    const prompt = buildLightVisiblePrompt(messages, null, null, 1);
-    expect(prompt).toContain("session 1");
-    expect(prompt).toContain("first session");
-    expect(prompt).toContain("foreign cities");
-    expect(prompt).toContain("portrait");
-  });
-});
-
 describe("buildSoulSynthesisPrompt", () => {
   it("builds multi-expert synthesis prompt", () => {
     const messages = [
@@ -300,80 +155,9 @@ describe("buildSoulSynthesisPrompt", () => {
     expect(prompt).toContain("Narrative Analyst");
     expect(prompt).toContain("<<<SPLIT>>>");
     expect(prompt).toContain("wanderer");
-  });
-});
-
-describe("parseReflectionNote", () => {
-  it("parses valid reflection note JSON", () => {
-    const raw = JSON.stringify({
-      updatedAtExchange: 8,
-      factualAnchors: { job: "I'm an engineer", location: "I live in SF" },
-      tensions: ["Says they love solitude but craves connection"],
-      recurringThemes: ["building", "walls", "doors"],
-      notableAbsences: ["family", "childhood"],
-      emotionalArc: "Started guarded, gradually opening"
-    });
-    const result = parseReflectionNote(raw);
-    expect(result).not.toBeNull();
-    expect(result!.updatedAtExchange).toBe(8);
-    expect(result!.factualAnchors["job"]).toBe("I'm an engineer");
-    expect(result!.tensions).toHaveLength(1);
-    expect(result!.recurringThemes).toHaveLength(3);
-  });
-
-  it("handles markdown code fences", () => {
-    const raw = '```json\n{"updatedAtExchange": 8, "emotionalArc": "Opening up"}\n```';
-    const result = parseReflectionNote(raw);
-    expect(result).not.toBeNull();
-    expect(result!.emotionalArc).toBe("Opening up");
-  });
-
-  it("returns null for invalid JSON", () => {
-    expect(parseReflectionNote("not json")).toBeNull();
-    expect(parseReflectionNote("")).toBeNull();
-  });
-
-  it("truncates long fields", () => {
-    const raw = JSON.stringify({
-      updatedAtExchange: 8,
-      emotionalArc: "A".repeat(600)
-    });
-    const result = parseReflectionNote(raw);
-    expect(result!.emotionalArc.length).toBeLessThanOrEqual(500);
-  });
-
-  it("limits array sizes", () => {
-    const raw = JSON.stringify({
-      updatedAtExchange: 8,
-      tensions: Array(10).fill("tension"),
-      recurringThemes: Array(10).fill("theme"),
-      notableAbsences: Array(10).fill("absence")
-    });
-    const result = parseReflectionNote(raw);
-    expect(result!.tensions.length).toBeLessThanOrEqual(5);
-    expect(result!.recurringThemes.length).toBeLessThanOrEqual(5);
-    expect(result!.notableAbsences.length).toBeLessThanOrEqual(3);
-  });
-});
-
-describe("parseLightVisibleUpdate", () => {
-  it("parses valid light update", () => {
-    const raw = JSON.stringify({
-      portrait: "A wanderer who builds bridges between worlds",
-      crystallizedMoments: [
-        { quote: "I built walls to protect my creative space", reflection: "Protection as architecture" }
-      ],
-      openThreads: ["The door metaphor — where it leads"]
-    });
-    const result = parseLightVisibleUpdate(raw);
-    expect(result).not.toBeNull();
-    expect(result!.portrait).toContain("wanderer");
-    expect(result!.crystallizedMoments).toHaveLength(1);
-    expect(result!.openThreads).toHaveLength(1);
-  });
-
-  it("returns null for invalid JSON", () => {
-    expect(parseLightVisibleUpdate("garbage")).toBeNull();
+    // Visible soul file sections should use second person
+    expect(prompt).toContain("How you move through the world");
+    expect(prompt).toContain("Second person (you/your)");
   });
 });
 

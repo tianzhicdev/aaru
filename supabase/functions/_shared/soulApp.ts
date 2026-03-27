@@ -1,20 +1,14 @@
-import type { SoulFile, VisibleSoulFile, HiddenSoulFile, ReflectionNote, SoulSession, SoulMessage } from "../../../src/domain/schemas.ts";
+import type { SoulFile, VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../../src/domain/schemas.ts";
 import { STALE_SESSION_HOURS } from "../../../src/domain/constants.ts";
 import {
-  buildExtractionPrompt,
-  parseSoulFileUpdate,
-  mergeSoulFile,
   emptySoulFile,
   emptyVisibleSoulFile,
   emptyHiddenSoulFile,
-  buildReflectionPrompt,
-  buildLightVisiblePrompt,
   buildSoulSynthesisPrompt,
-  parseReflectionNote,
-  parseLightVisibleUpdate,
   parseSoulSynthesis,
   mergeVisibleSoulFile,
-  mergeHiddenSoulFile
+  mergeHiddenSoulFile,
+  mergeSoulFile
 } from "../../../src/domain/soulFile.ts";
 import { callClaude } from "./claude.ts";
 import { supabaseUrl, supabaseServiceRoleKey } from "./env.ts";
@@ -284,6 +278,12 @@ export async function getSoulMessages(sessionId: string): Promise<SoulMessageRow
   );
 }
 
+export async function getAllSoulMessages(userId: string): Promise<SoulMessageRow[]> {
+  return rest<SoulMessageRow[]>(
+    `soul_messages?user_id=eq.${userId}&order=created_at.asc&select=*`
+  );
+}
+
 export async function insertSoulMessage(
   sessionId: string,
   userId: string,
@@ -318,86 +318,7 @@ export async function autoCompleteStaleSession(session: SoulSessionRow): Promise
   });
 }
 
-// ── Reflection Update (runs every 8 exchanges) ────────────────
-
-export async function runReflectionUpdate(
-  session: SoulSessionRow,
-  userId: string
-): Promise<{ reflectionNote: ReflectionNote | null; visibleSoulFile: VisibleSoulFile | null }> {
-  const messages = await getSoulMessages(session.id);
-  const existingVisible = await getVisibleSoulFile(userId);
-
-  const extractionMessages = messages.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content
-  }));
-
-  // Get existing reflection notes from session
-  const existingNotes = (session.reflection_notes as ReflectionNote[]) ?? [];
-  const lastNote = existingNotes.length > 0 ? existingNotes[existingNotes.length - 1] : null;
-
-  try {
-    // Run reflection prompt (lightweight, Haiku)
-    const reflectionPromptText = buildReflectionPrompt(
-      extractionMessages,
-      lastNote,
-      session.exchange_count
-    );
-
-    const reflectionRaw = await callClaude(
-      "You are a conversation analyst. Output valid JSON only.",
-      [{ role: "user", content: reflectionPromptText }],
-      { model: "claude-haiku-4-5-20251001", maxTokens: 1024, temperature: 0.3 }
-    );
-
-    const reflectionNote = parseReflectionNote(reflectionRaw);
-
-    // Store reflection note in session
-    if (reflectionNote) {
-      const updatedNotes = [...existingNotes, reflectionNote];
-      await updateSoulSession(session.id, {
-        reflection_notes: updatedNotes as unknown as Json
-      });
-    }
-
-    // Run light visible extraction (Haiku)
-    const lightPromptText = buildLightVisiblePrompt(
-      extractionMessages,
-      existingVisible,
-      reflectionNote ?? lastNote,
-      session.session_number
-    );
-
-    const lightRaw = await callClaude(
-      "You are a soul file writer. Output valid JSON only.",
-      [{ role: "user", content: lightPromptText }],
-      { model: "claude-haiku-4-5-20251001", maxTokens: 1024, temperature: 0.5 }
-    );
-
-    const lightUpdate = parseLightVisibleUpdate(lightRaw);
-    if (lightUpdate) {
-      const merged = mergeVisibleSoulFile(existingVisible, lightUpdate);
-      await upsertVisibleSoulFile(userId, merged);
-
-      // Also update legacy soul file for backward compatibility
-      const legacySoulFile = await getSoulFile(userId);
-      if (lightUpdate.portrait) {
-        const legacyUpdate = { essence: lightUpdate.portrait };
-        const mergedLegacy = mergeSoulFile(legacySoulFile, legacyUpdate, session.session_number);
-        await upsertSoulFile(userId, mergedLegacy);
-      }
-
-      return { reflectionNote, visibleSoulFile: merged };
-    }
-
-    return { reflectionNote, visibleSoulFile: existingVisible };
-  } catch (error) {
-    console.error("Reflection update failed:", error);
-    return { reflectionNote: null, visibleSoulFile: existingVisible };
-  }
-}
-
-// ── Full Soul Synthesis (runs at session end) ──────────────────
+// ── Full Soul Synthesis ──────────────────────────────────────
 
 export async function runSoulSynthesis(
   session: SoulSessionRow,
@@ -482,52 +403,6 @@ export async function runSoulSynthesis(
       extraction_error: `synthesis failed: ${error instanceof Error ? error.message : String(error)}`
     });
     return { visible: existingVisible, hidden: existingHidden };
-  }
-}
-
-// ── Legacy periodic extraction (kept for backward compat) ──────
-
-export async function runPeriodicExtraction(
-  session: SoulSessionRow,
-  userId: string
-): Promise<{ success: boolean; soulFile: SoulFile | null; visibleSoulFile: VisibleSoulFile | null }> {
-  // Run the new reflection update system
-  const { reflectionNote, visibleSoulFile } = await runReflectionUpdate(session, userId);
-
-  // Also run legacy extraction for backward compat
-  const messages = await getSoulMessages(session.id);
-  const existingSoulFile = await getSoulFile(userId);
-
-  const extractionMessages = messages.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content
-  }));
-
-  const prompt = buildExtractionPrompt(
-    extractionMessages,
-    existingSoulFile,
-    session.session_number
-  );
-
-  try {
-    const raw = await callClaude(
-      "You are a soul file extractor. Output valid JSON only.",
-      [{ role: "user", content: prompt }],
-      { model: "claude-haiku-4-5-20251001", maxTokens: 2048, temperature: 0.3 }
-    );
-
-    const update = parseSoulFileUpdate(raw);
-    if (!update) {
-      return { success: reflectionNote !== null, soulFile: existingSoulFile, visibleSoulFile };
-    }
-
-    const merged = mergeSoulFile(existingSoulFile, update, session.session_number);
-    await upsertSoulFile(userId, merged);
-
-    return { success: true, soulFile: merged, visibleSoulFile };
-  } catch (error) {
-    console.error("Legacy extraction failed:", error);
-    return { success: reflectionNote !== null, soulFile: existingSoulFile, visibleSoulFile };
   }
 }
 

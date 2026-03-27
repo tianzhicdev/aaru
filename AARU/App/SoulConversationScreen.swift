@@ -80,6 +80,9 @@ struct SoulConversationScreen: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
             }
+            .onTapGesture {
+                isInputFocused = false
+            }
             .onChange(of: model.soulMessages.count) {
                 withAnimation {
                     if let last = model.soulMessages.last {
@@ -266,6 +269,7 @@ struct SoulConversationScreen: View {
         HStack(spacing: 12) {
             TextField("Say something...", text: $inputText, axis: .vertical)
                 .font(.system(size: 16))
+                .foregroundStyle(textPrimary)
                 .lineLimit(1...4)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

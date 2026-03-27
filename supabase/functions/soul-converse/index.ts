@@ -5,15 +5,14 @@ import {
   getLatestSession,
   createSoulSession,
   updateSoulSession,
-  getSoulMessages,
+  getAllSoulMessages,
   insertSoulMessage,
   getSoulFile,
   getVisibleSoulFile,
   isSessionStale,
-  autoCompleteStaleSession,
-  runPeriodicExtraction
+  autoCompleteStaleSession
 } from "../_shared/soulApp.ts";
-import { buildSoulSystemPrompt, shouldExtract, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
+import { buildSoulSystemPrompt, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../../src/domain/soul.ts";
 import type { ReflectionNote } from "../../../src/domain/schemas.ts";
 import { streamClaude } from "../_shared/claude.ts";
@@ -101,12 +100,14 @@ async function handleSoulConverse(request: Request): Promise<Response> {
     await insertSoulMessage(activeSession.id, userId, "user", body.message);
   }
 
-  // Load conversation history
-  const messages = await getSoulMessages(activeSession.id);
-  const claudeMessages = messages.map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content
-  }));
+  // Load full conversation history across all sessions
+  const messages = await getAllSoulMessages(userId);
+  const claudeMessages = messages
+    .filter((m) => m.content !== "[begin]")
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content
+    }));
 
   const soulFile = await getSoulFile(userId);
   const visibleSoulFile = await getVisibleSoulFile(userId);
@@ -212,28 +213,6 @@ async function handleSoulConverse(request: Request): Promise<Response> {
           }
         }
 
-        // Periodic reflection + light extraction
-        if (shouldExtract(exchangeCount)) {
-          try {
-            const extractionResult = await runPeriodicExtraction(activeSession!, userId);
-            if (extractionResult.success) {
-              // Send the visible soul file if available, fall back to legacy
-              const soulFilePayload = extractionResult.visibleSoulFile ?? extractionResult.soulFile;
-              if (soulFilePayload) {
-                controller.enqueue(
-                  new TextEncoder().encode(sseEvent("soul_file_updated", {
-                    soul_file: extractionResult.soulFile,
-                    visible_soul_file: extractionResult.visibleSoulFile,
-                    exchange_count: exchangeCount
-                  }))
-                );
-              }
-            }
-          } catch (extractionError) {
-            console.error("Periodic extraction failed:", extractionError);
-            // Non-fatal — conversation continues even if extraction fails
-          }
-        }
       }
 
       controller.enqueue(

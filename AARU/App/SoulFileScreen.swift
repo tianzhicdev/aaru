@@ -38,9 +38,6 @@ struct SoulFileScreen: View {
                 .padding(.top, 40)
                 .padding(.bottom, 40)
             }
-            .refreshable {
-                await model.refreshSoulFile()
-            }
         }
     }
 
@@ -60,7 +57,16 @@ struct SoulFileScreen: View {
                     .foregroundStyle(textPrimary.opacity(0.4))
             }
 
-            if let lastUpdated = formattedLastUpdated {
+            if model.isSoulFileUpdating {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(accentGold)
+                    Text("Updating...")
+                        .font(.system(size: 11))
+                        .foregroundStyle(textPrimary.opacity(0.4))
+                }
+            } else if let lastUpdated = formattedLastUpdated {
                 Text("Updated \(lastUpdated)")
                     .font(.system(size: 11))
                     .foregroundStyle(textPrimary.opacity(0.3))

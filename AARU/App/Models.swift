@@ -134,12 +134,18 @@ struct SoulSessionInfo: Codable, Equatable {
     }
 }
 
+struct SoulMessagePayload: Codable {
+    let role: String
+    let content: String
+}
+
 struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
     let soulFile: LegacySoulFile?
     let visibleSoulFile: VisibleSoulFile?
     let activeSession: SoulSessionInfo?
+    let messages: [SoulMessagePayload]?
     let canStartSession: Bool
     let cooldownRemainingMs: Int
     let nextSessionNumber: Int
@@ -150,6 +156,7 @@ struct SoulBootstrapResponse: Codable {
         case soulFile = "soul_file"
         case visibleSoulFile = "visible_soul_file"
         case activeSession = "active_session"
+        case messages
         case canStartSession = "can_start_session"
         case cooldownRemainingMs = "cooldown_remaining_ms"
         case nextSessionNumber = "next_session_number"

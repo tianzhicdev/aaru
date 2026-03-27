@@ -82,6 +82,12 @@ final class AppModel: ObservableObject {
             canStartSoulSession = response.canStartSession
             nextSessionNumber = response.nextSessionNumber
 
+            if let payloads = response.messages, !payloads.isEmpty {
+                soulMessages = payloads.map { msg in
+                    SoulMessage(id: UUID(), role: msg.role, content: msg.content)
+                }
+            }
+
             cacheVisibleSoulFile(visibleSoulFile)
 
             logger.info("Soul bootstrap complete: session \(self.nextSessionNumber), canStart=\(self.canStartSoulSession)")

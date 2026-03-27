@@ -6,7 +6,8 @@ import { issueSessionToken } from "../_shared/auth.ts";
 import { createDeviceSession, revokeSessionsForDevice } from "../_shared/db.ts";
 import {
   bootstrapSoulState,
-  createSoulSession
+  createSoulSession,
+  getSoulMessages
 } from "../_shared/soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { z } from "zod";
@@ -45,6 +46,13 @@ export async function handleBootstrapSoul(payload: unknown, request: Request) {
 
   const state = await bootstrapSoulState(userId);
 
+  // Load messages for active session so client can restore conversation
+  let messages: { role: string; content: string }[] | undefined;
+  if (state.activeSession) {
+    const rows = await getSoulMessages(state.activeSession.id);
+    messages = rows.map((m) => ({ role: m.role, content: m.content }));
+  }
+
   return jsonResponse(200, {
     user_id: userId,
     ...(token ? { token } : {}),
@@ -56,6 +64,7 @@ export async function handleBootstrapSoul(payload: unknown, request: Request) {
       exchange_count: state.activeSession.exchange_count,
       status: state.activeSession.status
     } : null,
+    ...(messages ? { messages } : {}),
     can_start_session: state.canStartSession,
     cooldown_remaining_ms: state.cooldownRemainingMs,
     next_session_number: state.nextSessionNumber

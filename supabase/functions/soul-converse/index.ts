@@ -94,8 +94,12 @@ async function handleSoulConverse(request: Request): Promise<Response> {
     activeSession = await createSoulSession(userId, sessionNumber);
   }
 
-  // Save user message
-  await insertSoulMessage(activeSession.id, userId, "user", body.message);
+  // Session start trigger — don't save the protocol marker as a user message
+  const isSessionStart = body.message === "[begin]";
+
+  if (!isSessionStart) {
+    await insertSoulMessage(activeSession.id, userId, "user", body.message);
+  }
 
   // Load conversation history
   const messages = await getSoulMessages(activeSession.id);
@@ -106,7 +110,9 @@ async function handleSoulConverse(request: Request): Promise<Response> {
 
   const soulFile = await getSoulFile(userId);
   const visibleSoulFile = await getVisibleSoulFile(userId);
-  const exchangeCount = activeSession.exchange_count + 1;
+  const exchangeCount = isSessionStart
+    ? activeSession.exchange_count
+    : activeSession.exchange_count + 1;
 
   // Get latest reflection note from session
   const reflectionNotes = (activeSession.reflection_notes as ReflectionNote[] | null) ?? [];
@@ -182,15 +188,19 @@ async function handleSoulConverse(request: Request): Promise<Response> {
         const cleanedResponse = cleanSessionCompleteMarker(fullResponse);
         try {
           await insertSoulMessage(activeSession!.id, userId, "assistant", cleanedResponse);
-          await updateSoulSession(activeSession!.id, {
-            exchange_count: exchangeCount
-          });
+          if (!isSessionStart) {
+            await updateSoulSession(activeSession!.id, {
+              exchange_count: exchangeCount
+            });
+          }
         } catch (dbError) {
           console.error("DB write failed for soul message:", dbError);
           // Retry once
           try {
             await insertSoulMessage(activeSession!.id, userId, "assistant", cleanedResponse);
-            await updateSoulSession(activeSession!.id, { exchange_count: exchangeCount });
+            if (!isSessionStart) {
+              await updateSoulSession(activeSession!.id, { exchange_count: exchangeCount });
+            }
           } catch (retryDbError) {
             console.error("DB write retry failed:", retryDbError);
             controller.enqueue(

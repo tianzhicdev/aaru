@@ -162,6 +162,17 @@ Other tables: device_sessions, soul_profiles, avatars,
 
 ---
 
+## Design Principle: Sessions Are Invisible
+
+Sessions are an **implementation detail**, not a user-facing concept. The user should never see "Start Session", "End Session", session numbers, or cooldown timers. The conversation feels continuous and unbounded — like journaling, not a therapy appointment.
+
+- **No explicit session boundaries in the UI.** The backend creates/closes sessions silently.
+- **AI suggests breaks.** When the conversation reaches a natural resting point, the AI gently suggests the user take a break ("That's a lot to sit with. Take your time — I'll be here."). The user can ignore this and keep going.
+- **Synthesis happens in the background.** Soul file updates happen periodically during conversation, not at a dramatic "session end" moment.
+- **Cooldowns are invisible.** If the backend needs a cooldown, the AI weaves it into the conversation naturally rather than showing a timer or error.
+
+---
+
 ## Data Flow: Soul Mirror Session
 
 ```

@@ -6,13 +6,13 @@ Run all steps below. Every step must pass before committing.
 ```bash
 npx vitest run
 ```
-Expected: All 73 tests pass. No failures.
+Expected: All 60 tests pass. No failures.
 
 ## 2. TypeScript Type Check (required)
 ```bash
 npx tsc -p tsconfig.json --noEmit
 ```
-Expected: No new errors. (2 pre-existing errors in Phase 2 world-tick code are known.)
+Expected: Zero errors.
 
 ## 3. iOS Build (required when iOS code changed)
 ```bash
@@ -37,6 +37,3 @@ Expected: All tests pass. Currently 6 tests.
 supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
 ```
 Verify: curl the endpoint and confirm 200 response.
-
-## Known Issues
-- 2 pre-existing TypeScript type errors in `end-conversation/index.ts` and `world-tick/index.ts` (AgentState string vs enum). These are Phase 2 code and do not affect Soul Mirror.

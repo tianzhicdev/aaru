@@ -265,3 +265,31 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** All vision-todo.md items complete! Deploy and test end-to-end.
+
+## Iteration 17 — 2026-03-27 13:15
+
+**Goal:** Delete all Phase 2 dead code, legacy V1 soul file system, and unused shared modules.
+
+**What changed:**
+- Deleted 7 Phase 2 domain files: world.ts, ka.ts, impression.ts, compatibility.ts, soulProfile.ts, avatar.ts, types.ts
+- Deleted 5 Phase 2 test files: avatar.test.ts, compatibility.test.ts, world.test.ts, soulProfile.test.ts, backendHandlers.test.ts
+- Deleted 19 Phase 2 edge function directories (advance-worlds, ka-converse, etc.)
+- Deleted 5 Phase 2 shared modules: app.ts, contracts.ts, groq.ts, xai.ts, apns.ts
+- Removed legacy V1 soul file (LegacySoulFile, soul_files table references) from all TS + Swift code
+- Gutted db.ts from 784→100 lines (removed all Phase 2 database operations)
+- Cleaned constants.ts: removed 20+ Phase 2 constants and deprecated EXTRACTION_INTERVAL
+- Cleaned schemas.ts: removed 6 Phase 2 Zod schemas and legacy soulFileSchema
+- Cleaned soulFile.ts: removed emptySoulFile(), mergeSoulFile(), migrateToVisibleSoulFile()
+- Cleaned soul.ts: removed soulFile from SoulConversationContext
+- Cleaned soulApp.ts: removed getSoulFile(), upsertSoulFile(), legacy update in runSoulSynthesis()
+- Cleaned Models.swift: removed SoulFileTension, SoulFileEvolution, LegacySoulFile, SoulFile typealias
+- Cleaned AppModel.swift: removed legacySoulFile property
+- Cleaned BackendClient.swift: removed legacy soul file from SSE events
+- Restored runReflectionUpdate + helper functions (buildReflectionPrompt, parseReflectionNote, buildLightVisiblePrompt, parseLightVisibleUpdate)
+- Updated ARCHITECTURE.md, VERIFICATION.md, CLAUDE.md to reflect cleanup
+
+**Files modified:** ~30 files (7 domain deleted, 5 tests deleted, 19 edge functions deleted, 5 shared deleted, rest edited)
+
+**Tests:** 60 passing (was 100; removed 40 Phase 2 + legacy tests), 0 type errors, iOS BUILD SUCCEEDED
+
+**Next priority:** Real-device polish items (text input visibility, message caching, keyboard dismiss, soul file generation)

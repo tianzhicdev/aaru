@@ -11,7 +11,6 @@ function makeContext(overrides: Partial<SoulConversationContext> = {}): SoulConv
   return {
     sessionNumber: 1,
     exchangeCount: 0,
-    soulFile: null,
     visibleSoulFile: null,
     reflectionNote: null,
     previousSummaries: [],
@@ -26,24 +25,6 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("conversation 1");
     expect(prompt).toContain("No soul file yet");
     expect(prompt).toContain("first conversation");
-  });
-
-  it("includes returning conversation context with legacy soul file", () => {
-    const prompt = buildSoulSystemPrompt(makeContext({
-      sessionNumber: 3,
-      soulFile: {
-        essence: "A builder who creates worlds",
-        tensions: [{ left: "Solitude", right: "Connection" }],
-        comes_alive: "Late-night flow states",
-        running_from: "Being truly seen",
-        your_words: ["I built walls"],
-        evolution: [],
-        session_count: 2
-      }
-    }));
-    expect(prompt).toContain("conversation 3");
-    expect(prompt).toContain("A builder who creates worlds");
-    expect(prompt).toContain("Solitude");
   });
 
   it("includes visible soul file context when available", () => {
@@ -153,23 +134,6 @@ describe("buildSoulFallbackResponse", () => {
         sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
         crystallizedMoments: [],
         openThreads: []
-      }
-    }));
-    expect(response).toContain("A dreamer");
-  });
-
-  it("returns returning session opener with legacy soul file", () => {
-    const response = buildSoulFallbackResponse(makeContext({
-      sessionNumber: 2,
-      exchangeCount: 0,
-      soulFile: {
-        essence: "A dreamer who builds alone",
-        tensions: [],
-        comes_alive: null,
-        running_from: null,
-        your_words: [],
-        evolution: [],
-        session_count: 1
       }
     }));
     expect(response).toContain("A dreamer");

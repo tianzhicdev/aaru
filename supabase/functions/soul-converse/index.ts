@@ -7,7 +7,6 @@ import {
   updateSoulSession,
   getAllSoulMessages,
   insertSoulMessage,
-  getSoulFile,
   getVisibleSoulFile,
   isSessionStale,
   autoCompleteStaleSession
@@ -109,7 +108,6 @@ async function handleSoulConverse(request: Request): Promise<Response> {
       content: m.content
     }));
 
-  const soulFile = await getSoulFile(userId);
   const visibleSoulFile = await getVisibleSoulFile(userId);
   const exchangeCount = isSessionStart
     ? activeSession.exchange_count
@@ -122,7 +120,6 @@ async function handleSoulConverse(request: Request): Promise<Response> {
   const context: SoulConversationContext = {
     sessionNumber: activeSession.session_number,
     exchangeCount,
-    soulFile,
     visibleSoulFile,
     reflectionNote: latestReflection,
     previousSummaries: [],

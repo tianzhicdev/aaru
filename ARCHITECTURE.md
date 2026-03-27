@@ -2,7 +2,7 @@
 
 ## Overview
 
-AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** — reflective AI conversations that build a living "soul file" portrait of the user. Phase 2 (future) will add social features where AI agents use soul files to find matching souls.
+AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** — reflective AI conversations that build a living "soul file" portrait of the user.
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -30,11 +30,11 @@ AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** �
 │  │   Edge Functions     │  │   Postgres          │ │
 │  │   (Deno runtime)     │  │                     │ │
 │  │                      │  │  users              │ │
-│  │  bootstrap-soul      │  │  soul_sessions      │ │
-│  │  soul-converse (SSE) │  │  soul_messages      │ │
-│  │  get-soul-file       │  │  soul_files         │ │
+│  │  bootstrap-soul      │  │  device_sessions    │ │
+│  │  soul-converse (SSE) │  │  soul_sessions      │ │
+│  │  get-soul-file       │  │  soul_messages      │ │
 │  │  end-soul-session    │  │  visible_soul_files │ │
-│  │  bootstrap-user      │  │  hidden_soul_files  │ │
+│  │  synthesize-soul-file│  │  hidden_soul_files  │ │
 │  └──────────┬───────────┘  └────────────────────┘ │
 └─────────────┼────────────────────────────────────────┘
               │
@@ -57,7 +57,7 @@ AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** �
 | Domain Logic | TypeScript (`src/domain/`), Zod validation |
 | Soul Mirror LLM | Claude Opus 4 (conversation + synthesis) |
 | Extraction LLM | Claude Haiku 4.5 (periodic reflection + light extraction) |
-| Tests | Vitest (73 TS tests), XCTest (Swift) |
+| Tests | Vitest (60 TS tests), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
 ---
@@ -67,35 +67,27 @@ AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** �
 ```
 aaru/
 ├── src/domain/              # Pure TypeScript domain logic
-│   ├── constants.ts         # Magic numbers (reflection interval, cooldown)
-│   ├── types.ts             # Core type definitions
+│   ├── constants.ts         # Magic numbers (reflection interval, session max)
 │   ├── schemas.ts           # Zod validation schemas
 │   ├── soul.ts              # Soul Mirror prompts + session logic
-│   ├── soulFile.ts          # Soul file extraction, 4-expert synthesis, merging
-│   ├── world.ts             # Grid simulation (Phase 2)
-│   ├── ka.ts                # Ka prompts + LLM replies (Phase 2)
-│   ├── impression.ts        # Heuristic + LLM scoring (Phase 2)
-│   ├── compatibility.ts     # Thin wrapper over impression (Phase 2)
-│   ├── soulProfile.ts       # Profile generation + merging (Phase 2)
-│   └── avatar.ts            # Deterministic avatar from seed (Phase 2)
+│   └── soulFile.ts          # Soul file extraction, 4-expert synthesis, merging
 ├── src/lib/                 # Utilities (env, http)
 ├── supabase/
 │   ├── functions/
 │   │   ├── _shared/         # Shared modules
 │   │   │   ├── auth.ts      # HMAC session tokens
-│   │   │   ├── db.ts        # Supabase REST client
+│   │   │   ├── db.ts        # Supabase REST client (auth/user CRUD)
 │   │   │   ├── soulApp.ts   # Soul Mirror session management + extraction
 │   │   │   ├── claude.ts    # Claude streaming client
 │   │   │   ├── edge.ts      # Edge Function boilerplate
-│   │   │   ├── env.ts       # Environment variable accessors
-│   │   │   └── contracts.ts # Zod request/response schemas
+│   │   │   └── env.ts       # Environment variable accessors
 │   │   ├── bootstrap-soul/  # Soul file + session state init
 │   │   ├── soul-converse/   # SSE streaming Claude conversation
-│   │   ├── get-soul-file/   # Fetch visible + legacy soul files
+│   │   ├── get-soul-file/   # Fetch visible soul file
 │   │   ├── end-soul-session/# Full 4-expert synthesis
-│   │   ├── bootstrap-user/  # User creation
-│   │   └── ...              # Phase 2 functions (ka, world, etc.)
-│   └── migrations/          # Postgres schema (11 migration files)
+│   │   ├── synthesize-soul-file/ # On-demand synthesis
+│   │   └── ping/            # Health check
+│   └── migrations/          # Postgres schema
 ├── AARU/                    # iOS client
 │   └── App/
 │       ├── AARUApp.swift              # Entry point
@@ -109,7 +101,7 @@ aaru/
 │       └── SecureStore.swift          # Keychain wrapper
 ├── AARUTests/               # XCTest unit tests
 ├── tests/
-│   ├── unit/                # Domain logic tests (73 tests)
+│   ├── unit/                # Domain logic tests (60 tests)
 │   └── integration/         # Handler tests
 ├── VISION.md                # Product vision (human-only, immutable)
 ├── CLAUDE.md                # Claude Code operating rules
@@ -120,15 +112,18 @@ aaru/
 
 ## Database Schema
 
-### Soul Mirror (V2 — Active)
+### Soul Mirror
 
 ```
 users
   │ id, device_id, display_name
   │
+  ├──▶ device_sessions
+  │      id, user_id, device_id, token_hash, expires_at
+  │
   ├──▶ soul_sessions
   │      id, user_id, session_number, status, exchange_count
-  │      reflection_notes (JSONB), next_available_at
+  │      reflection_notes (JSONB)
   │      status: in_session → extracting → synthesizing → complete | failed
   │      │
   │      └──▶ soul_messages
@@ -142,22 +137,12 @@ users
   │      crystallized_moments: [{quote, reflection}]
   │      open_threads: [string]
   │
-  ├──▶ hidden_soul_files (agent-facing, clinical — Phase 2)
-  │      user_id (PK), version, last_updated
-  │      confidence (low|medium|high)
-  │      expert_reflections: {psychologist, sociologist, linguist, narrativeAnalyst}
-  │      coreDrivers: [{name, strength 0-1, inferred, evidence}]
-  │      coreValues, voice, depthMap, analystNotes
-  │
-  └──▶ soul_files (legacy V1, kept for backward compat)
-         essence, tensions[], comes_alive, running_from
-         your_words[], evolution[], session_count
-
-Other tables: device_sessions, soul_profiles, avatars,
-             agent_positions, conversations, messages,
-             impression_edges, ba_conversations, ba_messages,
-             world_instances, news_items, job_leases
-             (Phase 2 — exist but not active in current app)
+  └──▶ hidden_soul_files (agent-facing, clinical)
+         user_id (PK), version, last_updated
+         confidence (low|medium|high)
+         expert_reflections: {psychologist, sociologist, linguist, narrativeAnalyst}
+         coreDrivers: [{name, strength 0-1, inferred, evidence}]
+         coreValues, voice, depthMap, analystNotes
 ```
 
 ---
@@ -169,7 +154,6 @@ Sessions are an **implementation detail**, not a user-facing concept. The user s
 - **No explicit session boundaries in the UI.** The backend creates/closes sessions silently.
 - **AI suggests breaks.** When the conversation reaches a natural resting point, the AI gently suggests the user take a break ("That's a lot to sit with. Take your time — I'll be here."). The user can ignore this and keep going.
 - **Synthesis happens in the background.** Soul file updates happen periodically during conversation, not at a dramatic "session end" moment.
-- **Cooldowns are invisible.** If the backend needs a cooldown, the AI weaves it into the conversation naturally rather than showing a timer or error.
 
 ---
 
@@ -220,10 +204,7 @@ POST /soul-converse (SSE streaming)
        ├─ buildLightVisiblePrompt() → Haiku 4.5 (1024 tokens)
        │   → Light update: portrait, crystallized moments, open threads
        │
-       ├─ mergeVisibleSoulFile(existing, update)
-       │
-       └─ SSE event: soul_file_updated {visible_soul_file, soul_file}
-            → iOS: visibleSoulFile = updated (soul file tab refreshes)
+       └─ mergeVisibleSoulFile(existing, update)
 ```
 
 ### Session End: Full Synthesis
@@ -243,7 +224,7 @@ end-soul-session (called when session closes)
   ├─ Output: VisibleSoulFile + HiddenSoulFile separated by <<<SPLIT>>>
   │
   ├─ mergeVisibleSoulFile() — user-facing, "accurate and loving"
-  ├─ mergeHiddenSoulFile() — agent-facing, clinical (Phase 2 use)
+  ├─ mergeHiddenSoulFile() — agent-facing, clinical
   │
   └─ Upsert both to database
 ```
@@ -269,7 +250,6 @@ AARUApp
 ```
 AppModel
   ├─ @Published visibleSoulFile: VisibleSoulFile
-  ├─ @Published legacySoulFile: LegacySoulFile
   ├─ @Published soulMessages: [SoulMessage]
   ├─ @Published soulStreamingText: String
   ├─ @Published isSoulStreaming: Bool
@@ -302,7 +282,7 @@ URLSession.shared.bytes(for: request)
 Device-based anonymous auth:
 
 1. App generates persistent device UUID (Keychain)
-2. POST /bootstrap-user {device_id}
+2. POST /bootstrap-soul {device_id}
 3. Server issues session token:
    token = userId.deviceId.issuedAt.nonce.HMAC-SHA256(secret)
    TTL = 30 days
@@ -319,8 +299,6 @@ Device-based anonymous auth:
 | Soul conversation | Claude | Opus 4 | SSE | 512 | Deterministic reflection prompts |
 | Periodic extraction | Claude | Haiku 4.5 | No | 1024 | Skip extraction |
 | Session synthesis | Claude | Opus 4 | No | 8192 | Skip synthesis |
-| Ka chat (Phase 2) | Groq | Llama 3.3 70B | No | - | Cycling prompts |
-| Impression scoring (Phase 2) | Groq | Llama 3.3 70B | No | - | Heuristic overlap |
 
 All LLM calls have deterministic fallbacks. Tests pass without API keys.
 
@@ -332,15 +310,14 @@ All LLM calls have deterministic fallbacks. Tests pass without API keys.
 |----------|-------|---------|
 | REFLECTION_INTERVAL | 8 | Extract every N exchanges |
 | STALE_SESSION_HOURS | 72 | Auto-complete stale sessions |
-| COOLDOWN_HOURS | 22 | Between soul sessions |
-| SESSION_MAX_EXCHANGES | 15 | Hard close for sessions |
+| SESSION_MAX_EXCHANGES | 15 | Synthesis trigger threshold |
 
 ---
 
 ## Testing
 
 ```bash
-# TypeScript (73 tests, no API keys needed)
+# TypeScript (60 tests, no API keys needed)
 npx vitest run
 
 # Type checking
@@ -365,6 +342,8 @@ xcodebuild test -scheme AARU \
 supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
 ```
 
+Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, ping
+
 ### Required Secrets
 
 | Secret | Used By |
@@ -372,7 +351,6 @@ supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
 | ANTHROPIC_API_KEY | claude.ts (Soul Mirror) |
 | AARU_SESSION_SECRET | auth.ts (HMAC signing) |
 | SUPABASE_SERVICE_ROLE_KEY | db.ts (admin access) |
-| GROQ_API_KEY | groq.ts (Phase 2: Ka chat) |
 
 ### iOS → XcodeGen
 

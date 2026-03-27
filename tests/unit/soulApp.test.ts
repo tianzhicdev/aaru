@@ -56,16 +56,14 @@ describe("bootstrapSoulState", () => {
   });
 
   it("returns empty state for new user with no data", async () => {
-    // getSoulFile → null, getVisibleSoulFile → null, getActiveSession → null, getLatestSession → null
+    // getVisibleSoulFile → null, getActiveSession → null, getLatestSession → null
     mockFetch
-      .mockResolvedValueOnce(makeFetchResponse([])) // soul_files
       .mockResolvedValueOnce(makeFetchResponse([])) // visible_soul_files
       .mockResolvedValueOnce(makeFetchResponse([])) // active soul_sessions
       .mockResolvedValueOnce(makeFetchResponse([])); // latest soul_sessions
 
     const state = await bootstrapSoulState("new-user");
 
-    expect(state.soulFile).toBeNull();
     expect(state.visibleSoulFile).toBeNull();
     expect(state.activeSession).toBeNull();
     expect(state.canStartSession).toBe(true);
@@ -77,18 +75,6 @@ describe("bootstrapSoulState", () => {
     const session = makeSession({ session_number: 2, exchange_count: 5 });
 
     mockFetch
-      .mockResolvedValueOnce(makeFetchResponse([{
-        user_id: "user-1",
-        essence: "A builder",
-        tensions: [],
-        comes_alive: null,
-        running_from: null,
-        your_words: [],
-        evolution: [],
-        session_count: 1,
-        created_at: "2026-03-26",
-        updated_at: "2026-03-26"
-      }])) // soul_files
       .mockResolvedValueOnce(makeFetchResponse([{
         user_id: "user-1",
         version: 2,
@@ -110,8 +96,6 @@ describe("bootstrapSoulState", () => {
 
     const state = await bootstrapSoulState("user-1");
 
-    expect(state.soulFile).not.toBeNull();
-    expect(state.soulFile!.essence).toBe("A builder");
     expect(state.visibleSoulFile).not.toBeNull();
     expect(state.visibleSoulFile!.portrait).toBe("A builder of worlds");
     expect(state.activeSession).not.toBeNull();
@@ -129,7 +113,6 @@ describe("bootstrapSoulState", () => {
     });
 
     mockFetch
-      .mockResolvedValueOnce(makeFetchResponse([])) // soul_files
       .mockResolvedValueOnce(makeFetchResponse([])) // visible_soul_files
       .mockResolvedValueOnce(makeFetchResponse([staleSession])) // active session (stale)
       .mockResolvedValueOnce(makeFetchResponse(new Response(null, { status: 204 }))) // PATCH to complete stale session
@@ -201,10 +184,6 @@ describe("runReflectionUpdate", () => {
     }));
 
     // upsertVisibleSoulFile
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    // getSoulFile (for legacy update)
-    mockFetch.mockResolvedValueOnce(makeFetchResponse([]));
-    // upsertSoulFile (legacy)
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const result = await runReflectionUpdate(session, "user-1");
@@ -284,10 +263,6 @@ describe("runSoulSynthesis", () => {
     // upsertVisibleSoulFile
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     // upsertHiddenSoulFile
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    // getSoulFile (legacy)
-    mockFetch.mockResolvedValueOnce(makeFetchResponse([]));
-    // upsertSoulFile (legacy)
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     // updateSoulSession (status → complete)
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));

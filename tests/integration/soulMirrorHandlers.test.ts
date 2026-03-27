@@ -17,7 +17,6 @@ vi.mock("../../supabase/functions/_shared/soulApp.ts", () => ({
   getActiveSession: vi.fn(),
   getLatestSession: vi.fn(),
   getVisibleSoulFile: vi.fn(),
-  getSoulFile: vi.fn(),
   runSoulSynthesis: vi.fn(),
   isSessionStale: vi.fn(),
   autoCompleteStaleSession: vi.fn()
@@ -36,7 +35,7 @@ import { handleSynthesizeSoulFile } from "../../supabase/functions/synthesize-so
 
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../supabase/functions/_shared/auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../supabase/functions/_shared/db.ts";
-import { bootstrapSoulState, getSoulMessages, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, getSoulFile, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
+import { bootstrapSoulState, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
 
 function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
   return new Request("https://edge.supabase.co/test", {
@@ -67,7 +66,6 @@ describe("handleBootstrapSoul", () => {
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(bootstrapSoulState).mockResolvedValue({
-      soulFile: null,
       visibleSoulFile: null,
       activeSession: null,
       canStartSession: true,
@@ -103,7 +101,6 @@ describe("handleBootstrapSoul", () => {
     });
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
     vi.mocked(bootstrapSoulState).mockResolvedValue({
-      soulFile: null,
       visibleSoulFile: null,
       activeSession: null,
       canStartSession: true,
@@ -126,7 +123,6 @@ describe("handleBootstrapSoul", () => {
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(bootstrapSoulState).mockResolvedValue({
-      soulFile: null,
       visibleSoulFile: null,
       activeSession: {
         id: "session-1",
@@ -200,7 +196,7 @@ describe("handleGetSoulFile", () => {
     expect(response.body).toHaveProperty("message", "Invalid device session");
   });
 
-  it("returns soul files for authenticated user", async () => {
+  it("returns visible soul file for authenticated user", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
@@ -221,7 +217,6 @@ describe("handleGetSoulFile", () => {
       crystallizedMoments: [],
       openThreads: []
     });
-    vi.mocked(getSoulFile).mockResolvedValue(null);
 
     const request = makeRequest({ "x-aaru-session": "valid-token" });
     const response = await handleGetSoulFile({}, request);
@@ -229,7 +224,6 @@ describe("handleGetSoulFile", () => {
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;
     expect(body).toHaveProperty("visible_soul_file");
-    expect(body).toHaveProperty("soul_file");
     expect(body).toHaveProperty("version", 2);
     const vsf = body.visible_soul_file as Record<string, unknown>;
     expect(vsf.portrait).toBe("A builder of worlds");

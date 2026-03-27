@@ -1,14 +1,16 @@
-import type { SoulFile, VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../../src/domain/schemas.ts";
+import type { VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../../src/domain/schemas.ts";
 import { STALE_SESSION_HOURS } from "../../../src/domain/constants.ts";
 import {
-  emptySoulFile,
   emptyVisibleSoulFile,
   emptyHiddenSoulFile,
+  buildReflectionPrompt,
+  buildLightVisiblePrompt,
   buildSoulSynthesisPrompt,
+  parseReflectionNote,
+  parseLightVisibleUpdate,
   parseSoulSynthesis,
   mergeVisibleSoulFile,
-  mergeHiddenSoulFile,
-  mergeSoulFile
+  mergeHiddenSoulFile
 } from "../../../src/domain/soulFile.ts";
 import { callClaude } from "./claude.ts";
 import { supabaseUrl, supabaseServiceRoleKey } from "./env.ts";
@@ -35,56 +37,6 @@ async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const text = await response.text();
   if (text.trim().length === 0) return [] as T;
   return JSON.parse(text) as T;
-}
-
-// ── Legacy Soul File CRUD (kept for migration period) ──────────
-
-interface SoulFileRow {
-  user_id: string;
-  essence: string | null;
-  tensions: Json;
-  comes_alive: string | null;
-  running_from: string | null;
-  your_words: Json;
-  evolution: Json;
-  session_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export async function getSoulFile(userId: string): Promise<SoulFile | null> {
-  const rows = await rest<SoulFileRow[]>(
-    `soul_files?user_id=eq.${userId}&select=*`
-  );
-  if (!rows[0]) return null;
-  const row = rows[0];
-  return {
-    essence: row.essence,
-    tensions: (row.tensions as SoulFile["tensions"]) ?? [],
-    comes_alive: row.comes_alive,
-    running_from: row.running_from,
-    your_words: (row.your_words as string[]) ?? [],
-    evolution: (row.evolution as SoulFile["evolution"]) ?? [],
-    session_count: row.session_count
-  };
-}
-
-export async function upsertSoulFile(userId: string, file: SoulFile): Promise<void> {
-  await rest<Json>("soul_files?on_conflict=user_id", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{
-      user_id: userId,
-      essence: file.essence,
-      tensions: file.tensions,
-      comes_alive: file.comes_alive,
-      running_from: file.running_from,
-      your_words: file.your_words,
-      evolution: file.evolution,
-      session_count: file.session_count,
-      updated_at: new Date().toISOString()
-    }])
-  });
 }
 
 // ── Visible Soul File CRUD ─────────────────────────────────────
@@ -318,6 +270,75 @@ export async function autoCompleteStaleSession(session: SoulSessionRow): Promise
   });
 }
 
+// ── Mid-Conversation Reflection Update ───────────────────────
+
+export async function runReflectionUpdate(
+  session: SoulSessionRow,
+  userId: string
+): Promise<{ reflectionNote: ReflectionNote | null; visibleSoulFile: VisibleSoulFile | null }> {
+  const messages = await getSoulMessages(session.id);
+  const existingVisible = await getVisibleSoulFile(userId);
+
+  const extractionMessages = messages.map((m) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content
+  }));
+
+  const existingNotes = (session.reflection_notes as ReflectionNote[]) ?? [];
+  const lastNote = existingNotes.length > 0 ? existingNotes[existingNotes.length - 1] : null;
+
+  try {
+    // Run reflection prompt (lightweight, Haiku)
+    const reflectionPromptText = buildReflectionPrompt(
+      extractionMessages,
+      lastNote,
+      session.exchange_count
+    );
+
+    const reflectionRaw = await callClaude(
+      "You are a conversation analyst. Output valid JSON only.",
+      [{ role: "user", content: reflectionPromptText }],
+      { model: "claude-haiku-4-5-20251001", maxTokens: 1024, temperature: 0.3 }
+    );
+
+    const reflectionNote = parseReflectionNote(reflectionRaw);
+
+    // Store reflection note in session
+    if (reflectionNote) {
+      const updatedNotes = [...existingNotes, reflectionNote];
+      await updateSoulSession(session.id, {
+        reflection_notes: updatedNotes as unknown as Json
+      });
+    }
+
+    // Run light visible extraction (Haiku)
+    const lightPromptText = buildLightVisiblePrompt(
+      extractionMessages,
+      existingVisible,
+      reflectionNote ?? lastNote,
+      session.session_number
+    );
+
+    const lightRaw = await callClaude(
+      "You are a soul file writer. Output valid JSON only.",
+      [{ role: "user", content: lightPromptText }],
+      { model: "claude-haiku-4-5-20251001", maxTokens: 1024, temperature: 0.5 }
+    );
+
+    const lightUpdate = parseLightVisibleUpdate(lightRaw);
+    if (lightUpdate) {
+      const merged = mergeVisibleSoulFile(existingVisible, lightUpdate);
+      await upsertVisibleSoulFile(userId, merged);
+      return { reflectionNote, visibleSoulFile: merged };
+    }
+
+    return { reflectionNote, visibleSoulFile: existingVisible };
+  } catch (error) {
+    console.error("Reflection update failed:", error);
+    return { reflectionNote: null, visibleSoulFile: existingVisible };
+  }
+}
+
 // ── Full Soul Synthesis ──────────────────────────────────────
 
 export async function runSoulSynthesis(
@@ -376,19 +397,6 @@ export async function runSoulSynthesis(
     await upsertVisibleSoulFile(userId, mergedVisible);
     await upsertHiddenSoulFile(userId, mergedHidden);
 
-    // Also update legacy soul file
-    const legacySoulFile = await getSoulFile(userId);
-    if (mergedVisible.portrait) {
-      const legacyUpdate = {
-        essence: mergedVisible.portrait,
-        comes_alive: mergedVisible.sections.whatLightsYouUp || undefined,
-        running_from: mergedVisible.sections.whatYouCarry || undefined,
-        evolution_insight: `Session ${session.session_number}: Full synthesis complete.`
-      };
-      const mergedLegacy = mergeSoulFile(legacySoulFile, legacyUpdate, session.session_number);
-      await upsertSoulFile(userId, mergedLegacy);
-    }
-
     await updateSoulSession(session.id, {
       status: "complete",
       completed_at: new Date().toISOString()
@@ -410,14 +418,12 @@ export async function runSoulSynthesis(
  * Bootstrap a user's soul mirror state. Returns current state for the client.
  */
 export async function bootstrapSoulState(userId: string): Promise<{
-  soulFile: SoulFile | null;
   visibleSoulFile: VisibleSoulFile | null;
   activeSession: SoulSessionRow | null;
   canStartSession: boolean;
   cooldownRemainingMs: number;
   nextSessionNumber: number;
 }> {
-  const soulFile = await getSoulFile(userId);
   const visibleSoulFile = await getVisibleSoulFile(userId);
   let activeSession = await getActiveSession(userId);
 
@@ -431,7 +437,6 @@ export async function bootstrapSoulState(userId: string): Promise<{
   const nextSessionNumber = (latestSession?.session_number ?? 0) + (activeSession ? 0 : 1);
 
   return {
-    soulFile,
     visibleSoulFile,
     activeSession,
     canStartSession: !activeSession,

@@ -1,9 +1,7 @@
 import type {
-  SoulFile,
   VisibleSoulFile,
   HiddenSoulFile,
-  ReflectionNote,
-  SoulMessage
+  ReflectionNote
 } from "./schemas.ts";
 
 // ── Visible Soul File Update ──
@@ -16,18 +14,6 @@ export interface VisibleSoulFileUpdate {
 }
 
 // ── Empty constructors ─────────────────────────────────────────
-
-export function emptySoulFile(): SoulFile {
-  return {
-    essence: null,
-    tensions: [],
-    comes_alive: null,
-    running_from: null,
-    your_words: [],
-    evolution: [],
-    session_count: 0
-  };
-}
 
 export function emptyVisibleSoulFile(): VisibleSoulFile {
   return {
@@ -80,6 +66,85 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
   };
 }
 
+
+// ── Reflection Prompt (runs mid-conversation at REFLECTION_INTERVAL) ──
+
+export function buildReflectionPrompt(
+  messages: Array<{ role: string; content: string }>,
+  existingNote: ReflectionNote | null,
+  exchangeCount: number
+): string {
+  const transcript = messages
+    .map((m) => `${m.role === "assistant" ? "AARU" : "User"}: ${m.content}`)
+    .join("\n");
+
+  const existingContext = existingNote
+    ? `\nPrevious reflection note:\n${JSON.stringify(existingNote, null, 2)}`
+    : "\nNo previous reflection note — this is the first reflection.";
+
+  return `You are analyzing a soul mirror conversation in progress. Create a running synthesis of what you've observed so far.
+
+Current exchange count: ${exchangeCount}
+${existingContext}
+
+Transcript:
+${transcript}
+
+Output a JSON object with these fields:
+- "updatedAtExchange": ${exchangeCount}
+- "factualAnchors": object of key→verbatim quote pairs. Things they stated as facts about themselves (job, location, relationships, experiences). Use their exact words as values.
+- "tensions": array of strings. Observed contradictions or pulls in different directions. E.g. "Says they love solitude but their happiest memory involves a crowd."
+- "recurringThemes": array of strings. Topics or patterns that keep resurfacing.
+- "notableAbsences": array of strings. Things a person like this would usually mention but hasn't. Significant silences.
+- "emotionalArc": string. How their emotional state has shifted across the conversation so far. One or two sentences.
+
+Rules:
+- If updating an existing note, EVOLVE it — don't start over. Add new anchors, note new tensions, track theme evolution.
+- Keep factualAnchors to verbatim quotes, not paraphrases.
+- Maximum 5 tensions, 5 themes, 3 absences.
+- Respond with ONLY valid JSON, no markdown, no explanation.`;
+}
+
+// ── Light Visible Extraction (runs alongside reflection, updates portrait + moments) ──
+
+export function buildLightVisiblePrompt(
+  messages: Array<{ role: string; content: string }>,
+  existingVisible: VisibleSoulFile | null,
+  reflectionNote: ReflectionNote | null,
+  sessionNumber: number
+): string {
+  const transcript = messages
+    .map((m) => `${m.role === "assistant" ? "AARU" : "User"}: ${m.content}`)
+    .join("\n");
+
+  const existingContext = existingVisible
+    ? `\nExisting portrait: ${existingVisible.portrait ?? "(none)"}
+Existing crystallized moments: ${JSON.stringify(existingVisible.crystallizedMoments)}`
+    : "\nNo existing soul file — this is the first session.";
+
+  const reflectionContext = reflectionNote
+    ? `\nCurrent reflection note: ${JSON.stringify(reflectionNote)}`
+    : "";
+
+  return `You are updating a soul file during an active conversation (session ${sessionNumber}).
+${existingContext}
+${reflectionContext}
+
+Transcript:
+${transcript}
+
+Output a JSON object with these fields (include only fields with new information):
+- "portrait": A 2-4 sentence novel-like portrait of who this person is. Written in second person (you/your), using their own metaphors and language. Not a diagnosis — a mirror. Evocative, not clinical.
+- "crystallizedMoments": Array of {quote, reflection} pairs. Quote is their exact words (verbatim). Reflection is a 1-sentence observation about what that quote reveals. Max 2 new moments.
+- "openThreads": Array of strings. Curiosity threads — things left unexplored, questions left hanging, topics they circled but didn't enter. Max 3.
+
+Rules:
+- Use their EXACT words for quotes.
+- Portrait should be lyrical but grounded. Think novel character description, not personality test.
+- If updating an existing portrait, evolve it — integrate new understanding without losing what was already captured.
+- Keep portrait under 400 characters.
+- Respond with ONLY valid JSON, no markdown, no explanation.`;
+}
 
 // ── Soul Synthesis Prompt (Prompt 3 — full synthesis at session end) ──
 
@@ -274,6 +339,100 @@ export function parseSoulSynthesis(raw: string): { visible: VisibleSoulFile; hid
   }
 }
 
+// ── Reflection Parsers ───────────────────────────────────────
+
+export function parseReflectionNote(raw: string): ReflectionNote | null {
+  try {
+    const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    const note: ReflectionNote = {
+      updatedAtExchange: typeof parsed.updatedAtExchange === "number" ? parsed.updatedAtExchange : 0,
+      factualAnchors: {},
+      tensions: [],
+      recurringThemes: [],
+      notableAbsences: [],
+      emotionalArc: ""
+    };
+
+    if (typeof parsed.factualAnchors === "object" && parsed.factualAnchors !== null && !Array.isArray(parsed.factualAnchors)) {
+      for (const [key, val] of Object.entries(parsed.factualAnchors)) {
+        if (typeof val === "string") {
+          note.factualAnchors[key] = val.slice(0, 300);
+        }
+      }
+    }
+
+    if (Array.isArray(parsed.tensions)) {
+      note.tensions = parsed.tensions
+        .filter((t: unknown) => typeof t === "string")
+        .slice(0, 5)
+        .map((t: string) => t.slice(0, 300));
+    }
+
+    if (Array.isArray(parsed.recurringThemes)) {
+      note.recurringThemes = parsed.recurringThemes
+        .filter((t: unknown) => typeof t === "string")
+        .slice(0, 5)
+        .map((t: string) => t.slice(0, 200));
+    }
+
+    if (Array.isArray(parsed.notableAbsences)) {
+      note.notableAbsences = parsed.notableAbsences
+        .filter((t: unknown) => typeof t === "string")
+        .slice(0, 3)
+        .map((t: string) => t.slice(0, 200));
+    }
+
+    if (typeof parsed.emotionalArc === "string") {
+      note.emotionalArc = parsed.emotionalArc.slice(0, 500);
+    }
+
+    return note;
+  } catch {
+    return null;
+  }
+}
+
+export function parseLightVisibleUpdate(raw: string): VisibleSoulFileUpdate | null {
+  try {
+    const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    const update: VisibleSoulFileUpdate = {};
+
+    if (typeof parsed.portrait === "string" && parsed.portrait.length > 0) {
+      update.portrait = parsed.portrait.slice(0, 500);
+    }
+
+    if (Array.isArray(parsed.crystallizedMoments)) {
+      update.crystallizedMoments = parsed.crystallizedMoments
+        .filter((m: unknown) =>
+          typeof m === "object" && m !== null &&
+          "quote" in m && "reflection" in m &&
+          typeof (m as { quote: unknown }).quote === "string" &&
+          typeof (m as { reflection: unknown }).reflection === "string"
+        )
+        .slice(0, 2)
+        .map((m: { quote: string; reflection: string }) => ({
+          quote: m.quote.slice(0, 200),
+          reflection: m.reflection.slice(0, 200)
+        }));
+    }
+
+    if (Array.isArray(parsed.openThreads)) {
+      update.openThreads = parsed.openThreads
+        .filter((t: unknown) => typeof t === "string")
+        .slice(0, 3)
+        .map((t: string) => t.slice(0, 200));
+    }
+
+    return update;
+  } catch {
+    return null;
+  }
+}
+
 // ── Merge Functions ────────────────────────────────────────────
 
 export function mergeVisibleSoulFile(
@@ -336,106 +495,6 @@ export function mergeHiddenSoulFile(
     coreValues: mergeStringArrays(base.coreValues, update.coreValues, 10),
     analystNotes: [...base.analystNotes, ...update.analystNotes].slice(-10)
   };
-}
-
-/** Convert a legacy SoulFile to a VisibleSoulFile */
-export function migrateToVisibleSoulFile(legacy: SoulFile): VisibleSoulFile {
-  return {
-    version: 1,
-    lastUpdated: new Date().toISOString(),
-    portrait: legacy.essence,
-    sections: {
-      howYouMove: "",
-      howYouThink: "",
-      howYouConnect: "",
-      whatYouCarry: legacy.running_from ?? "",
-      whatLightsYouUp: legacy.comes_alive ?? "",
-      yourContradictions: legacy.tensions
-        .map((t) => `${t.left} — ${t.right}`)
-        .join(". "),
-      yourVoice: ""
-    },
-    crystallizedMoments: legacy.your_words.map((w) => ({
-      quote: w,
-      reflection: ""
-    })),
-    openThreads: []
-  };
-}
-
-// ── Legacy merge (kept for compatibility) ──────────────────────
-
-export interface SoulFileUpdate {
-  essence?: string;
-  tensions?: Array<{ left: string; right: string; position?: number }>;
-  comes_alive?: string;
-  running_from?: string;
-  your_words?: string[];
-  evolution_insight?: string;
-}
-
-export function mergeSoulFile(
-  existing: SoulFile | null,
-  update: SoulFileUpdate,
-  sessionNumber: number
-): SoulFile {
-  const base: SoulFile = existing ?? {
-    essence: null,
-    tensions: [],
-    comes_alive: null,
-    running_from: null,
-    your_words: [],
-    evolution: [],
-    session_count: 0
-  };
-
-  const merged: SoulFile = {
-    ...base,
-    session_count: sessionNumber
-  };
-
-  if (update.essence) {
-    merged.essence = update.essence;
-  }
-
-  if (update.tensions && update.tensions.length > 0) {
-    const tensionMap = new Map(
-      base.tensions.map((t) => [`${t.left}:${t.right}`, t])
-    );
-    for (const t of update.tensions) {
-      tensionMap.set(`${t.left}:${t.right}`, t);
-    }
-    merged.tensions = [...tensionMap.values()].slice(0, 7);
-  }
-
-  if (update.comes_alive) {
-    merged.comes_alive = update.comes_alive;
-  }
-
-  if (update.running_from) {
-    merged.running_from = update.running_from;
-  }
-
-  if (update.your_words && update.your_words.length > 0) {
-    const existingSet = new Set(base.your_words.map((w) => w.toLowerCase().trim()));
-    const newWords = update.your_words.filter(
-      (w) => !existingSet.has(w.toLowerCase().trim())
-    );
-    merged.your_words = [...base.your_words, ...newWords].slice(-6);
-  }
-
-  if (update.evolution_insight) {
-    merged.evolution = [
-      ...base.evolution,
-      {
-        session: sessionNumber,
-        insight: update.evolution_insight,
-        date: new Date().toISOString()
-      }
-    ].slice(-10);
-  }
-
-  return merged;
 }
 
 // ── Helpers ────────────────────────────────────────────────────

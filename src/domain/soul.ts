@@ -1,10 +1,9 @@
-import type { SoulFile, SoulMessage, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
+import type { ReflectionNote, VisibleSoulFile } from "./schemas.ts";
 import { REFLECTION_INTERVAL } from "./constants.ts";
 
 export interface SoulConversationContext {
   sessionNumber: number;
   exchangeCount: number;
-  soulFile: SoulFile | null;
   visibleSoulFile: VisibleSoulFile | null;
   reflectionNote: ReflectionNote | null;
   previousSummaries: string[];
@@ -12,18 +11,9 @@ export interface SoulConversationContext {
 }
 
 export function buildSoulSystemPrompt(context: SoulConversationContext): string {
-  // Use visible soul file if available, fall back to legacy
   const soulFileSection = context.visibleSoulFile
     ? buildVisibleSoulFileContext(context.visibleSoulFile)
-    : context.soulFile
-      ? JSON.stringify({
-          essence: context.soulFile.essence,
-          tensions: context.soulFile.tensions,
-          comes_alive: context.soulFile.comes_alive,
-          running_from: context.soulFile.running_from,
-          your_words: context.soulFile.your_words
-        })
-      : "No soul file yet — this is their first conversation.";
+    : "No soul file yet — this is their first conversation.";
 
   const summariesSection = context.previousSummaries.length > 0
     ? context.previousSummaries.join("\n")
@@ -124,7 +114,7 @@ export function buildSoulFallbackResponse(context: SoulConversationContext): str
     return "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";
   }
 
-  const portrait = context.visibleSoulFile?.portrait ?? context.soulFile?.essence;
+  const portrait = context.visibleSoulFile?.portrait;
   if (context.exchangeCount === 0 && portrait) {
     return `Last time, something about you stayed with me: "${portrait.slice(0, 100)}..." I've been thinking about that. What feels different today?`;
   }

@@ -9,7 +9,6 @@ final class AppModel: ObservableObject {
 
     // Soul Mirror state
     @Published var visibleSoulFile: VisibleSoulFile = .empty
-    @Published var legacySoulFile: LegacySoulFile = .empty
     @Published var canStartSoulSession = false
     @Published var nextSessionNumber = 1
     @Published var activeSoulSession: SoulSessionInfo?
@@ -60,12 +59,6 @@ final class AppModel: ObservableObject {
 
     // MARK: - Soul Mirror
 
-    // Backward compat: expose legacy soulFile for any remaining references
-    var soulFile: LegacySoulFile {
-        get { legacySoulFile }
-        set { legacySoulFile = newValue }
-    }
-
     func bootstrapSoul() async {
         isLoading = true
         errorMessage = nil
@@ -88,7 +81,6 @@ final class AppModel: ObservableObject {
                 backend.sessionToken = token
                 SessionIdentity.save(token)
             }
-            legacySoulFile = response.soulFile ?? .empty
             visibleSoulFile = response.visibleSoulFile ?? .empty
             activeSoulSession = response.activeSession
             canStartSoulSession = response.canStartSession
@@ -122,7 +114,6 @@ final class AppModel: ObservableObject {
                 // Synthesis didn't succeed — fall back to fetching current file
                 let fileResponse = try await backend.getSoulFile()
                 visibleSoulFile = fileResponse.visibleSoulFile
-                legacySoulFile = fileResponse.soulFile
                 cacheVisibleSoulFile(visibleSoulFile)
             }
         } catch {

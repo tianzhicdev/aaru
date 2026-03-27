@@ -1,115 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
-  emptySoulFile,
   emptyVisibleSoulFile,
   emptyHiddenSoulFile,
   buildSoulSynthesisPrompt,
   parseSoulSynthesis,
   mergeVisibleSoulFile,
-  mergeHiddenSoulFile,
-  migrateToVisibleSoulFile,
-  mergeSoulFile
+  mergeHiddenSoulFile
 } from "../../src/domain/soulFile.ts";
-import type { SoulFile, VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
-
-describe("mergeSoulFile", () => {
-  it("creates new soul file from first session", () => {
-    const update = {
-      essence: "A builder who creates worlds",
-      tensions: [{ left: "Solitude", right: "Connection" }],
-      comes_alive: "Late-night flow states",
-      your_words: ["I built walls"]
-    };
-    const merged = mergeSoulFile(null, update, 1);
-    expect(merged.essence).toBe("A builder who creates worlds");
-    expect(merged.tensions).toHaveLength(1);
-    expect(merged.session_count).toBe(1);
-  });
-
-  it("updates essence on subsequent session", () => {
-    const existing: SoulFile = {
-      essence: "A builder",
-      tensions: [],
-      comes_alive: null,
-      running_from: null,
-      your_words: [],
-      evolution: [],
-      session_count: 1
-    };
-    const update = { essence: "A builder who found the door" };
-    const merged = mergeSoulFile(existing, update, 2);
-    expect(merged.essence).toBe("A builder who found the door");
-    expect(merged.session_count).toBe(2);
-  });
-
-  it("merges tensions without duplicates", () => {
-    const existing: SoulFile = {
-      essence: null,
-      tensions: [{ left: "Solitude", right: "Connection" }],
-      comes_alive: null,
-      running_from: null,
-      your_words: [],
-      evolution: [],
-      session_count: 1
-    };
-    const update = {
-      tensions: [
-        { left: "Solitude", right: "Connection" }, // duplicate
-        { left: "Control", right: "Surrender" } // new
-      ]
-    };
-    const merged = mergeSoulFile(existing, update, 2);
-    expect(merged.tensions).toHaveLength(2);
-  });
-
-  it("deduplicates quotes", () => {
-    const existing: SoulFile = {
-      essence: null,
-      tensions: [],
-      comes_alive: null,
-      running_from: null,
-      your_words: ["I built walls"],
-      evolution: [],
-      session_count: 1
-    };
-    const update = {
-      your_words: ["I built walls", "I found the door"] // first is duplicate
-    };
-    const merged = mergeSoulFile(existing, update, 2);
-    expect(merged.your_words).toHaveLength(2);
-    expect(merged.your_words).toContain("I found the door");
-  });
-
-  it("appends evolution insight", () => {
-    const existing: SoulFile = {
-      essence: null,
-      tensions: [],
-      comes_alive: null,
-      running_from: null,
-      your_words: [],
-      evolution: [{ session: 1, insight: "First insight", date: "2026-01-01" }],
-      session_count: 1
-    };
-    const update = {
-      evolution_insight: "The Door emerged as a metaphor"
-    };
-    const merged = mergeSoulFile(existing, update, 2);
-    expect(merged.evolution).toHaveLength(2);
-    expect(merged.evolution[1].session).toBe(2);
-  });
-});
-
-describe("emptySoulFile", () => {
-  it("returns a valid empty structure", () => {
-    const empty = emptySoulFile();
-    expect(empty.essence).toBeNull();
-    expect(empty.tensions).toEqual([]);
-    expect(empty.your_words).toEqual([]);
-    expect(empty.session_count).toBe(0);
-  });
-});
-
-// ── New V2 tests ──────────────────────────────────────────────
+import type { VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
 
 describe("emptyVisibleSoulFile", () => {
   it("returns a valid empty structure", () => {
@@ -342,26 +240,5 @@ describe("mergeHiddenSoulFile", () => {
     expect(merged.coreValues).toContain("independence");
     expect(merged.coreValues).toContain("creativity");
     expect(merged.version).toBe(3);
-  });
-});
-
-describe("migrateToVisibleSoulFile", () => {
-  it("migrates legacy soul file to visible format", () => {
-    const legacy: SoulFile = {
-      essence: "A builder who creates worlds",
-      tensions: [{ left: "Solitude", right: "Connection" }],
-      comes_alive: "Late-night flow states",
-      running_from: "Being truly seen",
-      your_words: ["I built walls"],
-      evolution: [{ session: 1, insight: "First insight", date: "2026-01-01" }],
-      session_count: 1
-    };
-    const visible = migrateToVisibleSoulFile(legacy);
-    expect(visible.portrait).toBe("A builder who creates worlds");
-    expect(visible.sections.whatLightsYouUp).toBe("Late-night flow states");
-    expect(visible.sections.whatYouCarry).toBe("Being truly seen");
-    expect(visible.sections.yourContradictions).toContain("Solitude");
-    expect(visible.crystallizedMoments).toHaveLength(1);
-    expect(visible.crystallizedMoments[0].quote).toBe("I built walls");
   });
 });

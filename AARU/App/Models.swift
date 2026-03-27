@@ -64,61 +64,7 @@ struct VisibleSoulFile: Codable, Equatable {
     }
 }
 
-// MARK: - Soul Mirror — Legacy Soul File (V1, kept for backward compat)
-
-struct SoulFileTension: Codable, Equatable {
-    let left: String
-    let right: String
-
-    enum CodingKeys: String, CodingKey {
-        case left
-        case right
-    }
-}
-
-struct SoulFileEvolution: Codable, Equatable {
-    let session: Int
-    let insight: String
-    let date: String
-
-    enum CodingKeys: String, CodingKey {
-        case session
-        case insight
-        case date
-    }
-}
-
-struct LegacySoulFile: Codable, Equatable {
-    var essence: String?
-    var tensions: [SoulFileTension]
-    var comesAlive: String?
-    var runningFrom: String?
-    var yourWords: [String]
-    var evolution: [SoulFileEvolution]
-    var sessionCount: Int
-
-    enum CodingKeys: String, CodingKey {
-        case essence
-        case tensions
-        case comesAlive = "comes_alive"
-        case runningFrom = "running_from"
-        case yourWords = "your_words"
-        case evolution
-        case sessionCount = "session_count"
-    }
-
-    static let empty = LegacySoulFile(
-        essence: nil,
-        tensions: [],
-        comesAlive: nil,
-        runningFrom: nil,
-        yourWords: [],
-        evolution: [],
-        sessionCount: 0
-    )
-}
-
-typealias SoulFile = LegacySoulFile
+// MARK: - Soul Session
 
 struct SoulSessionInfo: Codable, Equatable {
     let id: UUID
@@ -142,7 +88,6 @@ struct SoulMessagePayload: Codable, Equatable {
 struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
-    let soulFile: LegacySoulFile?
     let visibleSoulFile: VisibleSoulFile?
     let activeSession: SoulSessionInfo?
     let messages: [SoulMessagePayload]?
@@ -153,7 +98,6 @@ struct SoulBootstrapResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case token
-        case soulFile = "soul_file"
         case visibleSoulFile = "visible_soul_file"
         case activeSession = "active_session"
         case messages
@@ -165,23 +109,25 @@ struct SoulBootstrapResponse: Codable {
 
 struct SoulFileResponse: Codable {
     let visibleSoulFile: VisibleSoulFile
-    let soulFile: LegacySoulFile
     let version: Int
     let lastUpdated: String?
-    let sessionCount: Int
-    let cooldownActive: Bool
-    let cooldownRemainingMs: Int
-    let nextAvailableAt: String?
 
     enum CodingKeys: String, CodingKey {
         case visibleSoulFile = "visible_soul_file"
-        case soulFile = "soul_file"
         case version
         case lastUpdated = "last_updated"
-        case sessionCount = "session_count"
-        case cooldownActive = "cooldown_active"
-        case cooldownRemainingMs = "cooldown_remaining_ms"
-        case nextAvailableAt = "next_available_at"
+    }
+}
+
+struct EndSoulSessionResponse: Codable {
+    let visibleSoulFile: VisibleSoulFile
+    let sessionCompleted: Bool
+    let synthesisSucceeded: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case visibleSoulFile = "visible_soul_file"
+        case sessionCompleted = "session_completed"
+        case synthesisSucceeded = "synthesis_succeeded"
     }
 }
 

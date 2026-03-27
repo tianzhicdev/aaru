@@ -1,7 +1,7 @@
 # AARU — Claude Operating Rules
 
 ## Project Overview
-AARU is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file. Phase 2 (future): AI agents use soul files to find matching souls for social connection.
+AARU is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file.
 
 **Two codebases in one repo:**
 - **TypeScript backend** — domain logic, Supabase Edge Functions
@@ -23,7 +23,7 @@ AARU is a soul-based social app. Phase 1 (current): Soul Mirror — reflective A
 ```bash
 npx vitest run
 ```
-All 73 tests must pass. Tests work without API keys (fallback paths are exercised).
+All 60 tests must pass. Tests work without API keys (fallback paths are exercised).
 
 ### TypeScript lint
 ```bash
@@ -49,11 +49,11 @@ xcodebuild build -scheme AARU \
 ## Architecture
 
 ### TypeScript (src/)
-- `src/domain/` — Pure domain logic (soul mirror, world simulation, Ka chat)
+- `src/domain/` — Pure domain logic (soul mirror only)
 - `src/domain/soul.ts` — Soul Mirror system prompts, conversation context, fallbacks
-- `src/domain/soulFile.ts` — Soul file extraction, 4-expert synthesis, merging
-- `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, etc.
-- `src/domain/constants.ts` — Magic numbers (REFLECTION_INTERVAL=8, etc.)
+- `src/domain/soulFile.ts` — Soul file extraction, 4-expert synthesis, reflection, merging
+- `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
+- `src/domain/constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, SESSION_MAX_EXCHANGES=15
 - `supabase/functions/` — Edge Function handlers
 - `supabase/functions/_shared/soulApp.ts` — Soul session management + extraction logic
 - `tests/unit/` — Unit tests for domain functions
@@ -73,9 +73,9 @@ xcodebuild build -scheme AARU \
 
 ### Key domain files
 - `soul.ts` — Soul Mirror prompts, session context builder, fallback responses
-- `soulFile.ts` — 4-expert synthesis (psych, socio, linguist, narrative), visible/hidden merging
-- `constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, COOLDOWN_HOURS=22
-- `schemas.ts` — Zod schemas for all soul file types crossing boundaries
+- `soulFile.ts` — 4-expert synthesis (psych, socio, linguist, narrative), reflection prompts, visible/hidden merging
+- `constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, SESSION_MAX_EXCHANGES=15
+- `schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote, SoulSession, SoulMessage
 
 ## Code Style Conventions
 
@@ -97,8 +97,8 @@ xcodebuild build -scheme AARU \
 
 ## Definition of Done
 A task is complete when ALL of the following are true:
-1. `npx vitest run` — all tests pass (73 currently)
-2. `npx tsc -p tsconfig.json --noEmit` — no type errors
+1. `npx vitest run` — all tests pass (60 currently)
+2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
 5. If iOS code was changed: `xcodebuild build` succeeds (when available)
@@ -109,8 +109,7 @@ A task is complete when ALL of the following are true:
 - **Periodic extraction every 8 exchanges** — Haiku 4.5 runs reflection + light visible update
 - **Session lifecycle** — in_session → extracting → synthesizing → complete | failed
 - **72h stale session threshold** — auto-complete sessions older than 72 hours
-- **22h cooldown between sessions** — enforced server-side
-- **iOS client is a display layer** — all game state is server-authoritative
+- **iOS client is a display layer** — all state is server-authoritative
 - **XcodeGen** — project.yml generates AARU.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
 
@@ -127,7 +126,7 @@ When given a task:
 supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
 ```
 
-Active Soul Mirror functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session
+Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, ping
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: AARU

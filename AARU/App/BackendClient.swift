@@ -83,7 +83,6 @@ final class BackendClient {
             return SoulBootstrapResponse(
                 userId: UUID(),
                 token: nil,
-                soulFile: nil,
                 visibleSoulFile: nil,
                 activeSession: nil,
                 messages: nil,
@@ -104,13 +103,8 @@ final class BackendClient {
         guard endpoint(named: "get-soul-file") != nil else {
             return SoulFileResponse(
                 visibleSoulFile: .empty,
-                soulFile: .empty,
                 version: 0,
-                lastUpdated: nil,
-                sessionCount: 0,
-                cooldownActive: false,
-                cooldownRemainingMs: 0,
-                nextAvailableAt: nil
+                lastUpdated: nil
             )
         }
         return try await post(
@@ -141,8 +135,7 @@ final class BackendClient {
         message: String,
         sessionID: UUID? = nil,
         onToken: @escaping (String) -> Void,
-        onVisibleSoulFileUpdated: @escaping (VisibleSoulFile) -> Void,
-        onLegacySoulFileUpdated: @escaping (LegacySoulFile) -> Void,
+        onVisibleSoulFileUpdated: @escaping (VisibleSoulFile) -> Void = { _ in },
         onError: @escaping (String) -> Void
     ) async throws {
         guard let url = endpoint(named: "soul-converse") else {
@@ -199,14 +192,26 @@ final class BackendClient {
                 if let visible = soulFileEvent.visibleSoulFile {
                     onVisibleSoulFileUpdated(visible)
                 }
-                if let legacy = soulFileEvent.soulFile {
-                    onLegacySoulFileUpdated(legacy)
-                }
             } else if let errorEvent = try? decoder.decode(SSEErrorEvent.self, from: jsonData),
                       errorEvent.message != nil {
                 onError(errorEvent.message!)
             }
         }
+    }
+
+    func synthesizeSoulFile() async throws -> SynthesizeSoulFileResponse {
+        guard endpoint(named: "synthesize-soul-file") != nil else {
+            return SynthesizeSoulFileResponse(
+                visibleSoulFile: .empty,
+                synthesisSucceeded: false
+            )
+        }
+        return try await post(
+            "synthesize-soul-file",
+            body: EmptyBody(),
+            requiresAuth: true,
+            retryOnServerError: true
+        )
     }
 
     private func endpoint(named function: String) -> URL? {
@@ -270,12 +275,10 @@ private struct SSETokenEvent: Decodable {
 }
 
 private struct SSESoulFileUpdatedEvent: Decodable {
-    let soulFile: LegacySoulFile?
     let visibleSoulFile: VisibleSoulFile?
     let exchangeCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case soulFile = "soul_file"
         case visibleSoulFile = "visible_soul_file"
         case exchangeCount = "exchange_count"
     }

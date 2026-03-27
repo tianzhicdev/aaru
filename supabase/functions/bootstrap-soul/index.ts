@@ -55,7 +55,6 @@ export async function handleBootstrapSoul(payload: unknown, request: Request) {
   return jsonResponse(200, {
     user_id: userId,
     ...(token ? { token } : {}),
-    soul_file: state.soulFile,
     visible_soul_file: state.visibleSoulFile ?? emptyVisibleSoulFile(),
     active_session: state.activeSession ? {
       id: state.activeSession.id,

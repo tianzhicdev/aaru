@@ -110,23 +110,52 @@ struct SoulConversationScreen: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 32)
+
+                if let error = model.errorMessage {
+                    Text(error)
+                        .font(.system(size: 14))
+                        .foregroundStyle(errorText)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(errorBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 32)
+                }
             }
 
             Spacer()
 
-            Button {
-                Task { await model.beginSoulSession() }
-            } label: {
-                Text("Begin")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(accentGold)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            if model.errorMessage != nil {
+                Button {
+                    Task { await model.bootstrap() }
+                } label: {
+                    Text("Try Again")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(accentGold)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 48)
+            } else {
+                Button {
+                    Task { await model.beginSoulSession() }
+                } label: {
+                    Text("Begin")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(accentGold)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 48)
             }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 48)
         }
     }
 

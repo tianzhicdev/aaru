@@ -18,6 +18,8 @@ final class AppModel: ObservableObject {
     @Published var isSoulStreaming = false
     @Published var soulFileJustUpdated = false
     @Published var hasPendingSoulFileUpdate = false
+    @Published var sessionJustEnded = false
+    @Published var isEndingSession = false
 
     let backend: BackendClient
     let deviceID: String
@@ -162,6 +164,38 @@ final class AppModel: ObservableObject {
 
         isSoulStreaming = false
         soulStreamingText = ""
+    }
+
+    func endSoulSession() async {
+        guard !isEndingSession else { return }
+        isEndingSession = true
+        logger.info("Ending soul session")
+
+        do {
+            let response = try await backend.endSoulSession()
+            visibleSoulFile = response.visibleSoulFile
+            cacheVisibleSoulFile(response.visibleSoulFile)
+            activeSoulSession = nil
+            sessionJustEnded = true
+            hasPendingSoulFileUpdate = true
+            logger.info("Session ended: completed=\(response.sessionCompleted), synthesis=\(response.synthesisSucceeded)")
+        } catch let error as BackendError where error.isAuthFailure {
+            await bootstrapSoul()
+            do {
+                let response = try await backend.endSoulSession()
+                visibleSoulFile = response.visibleSoulFile
+                cacheVisibleSoulFile(response.visibleSoulFile)
+                activeSoulSession = nil
+                sessionJustEnded = true
+                hasPendingSoulFileUpdate = true
+            } catch {
+                appendErrorMessage(for: error)
+            }
+        } catch {
+            appendErrorMessage(for: error)
+        }
+
+        isEndingSession = false
     }
 
     func acknowledgeSoulFileUpdate() {

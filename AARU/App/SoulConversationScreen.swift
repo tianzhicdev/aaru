@@ -33,8 +33,17 @@ struct SoulConversationScreen: View {
 
     // MARK: - Header
 
+    private var userMessageCount: Int {
+        model.soulMessages.filter { $0.role == "user" }.count
+    }
+
     private var header: some View {
         HStack {
+            // Balance spacer for centering
+            if userMessageCount >= 4 && !model.isEndingSession {
+                Color.clear.frame(width: 80, height: 1)
+            }
+
             Spacer()
 
             Text("Soul Mirror")
@@ -44,6 +53,17 @@ struct SoulConversationScreen: View {
                 .tracking(2)
 
             Spacer()
+
+            if userMessageCount >= 4 && !model.isEndingSession {
+                Button {
+                    Task { await model.endSoulSession() }
+                } label: {
+                    Text("End Session")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(accentGold.opacity(0.7))
+                }
+                .disabled(model.isSoulStreaming)
+            }
         }
         .frame(height: 44)
         .padding(.horizontal, 8)

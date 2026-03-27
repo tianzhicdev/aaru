@@ -216,3 +216,19 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** Show loading state during bootstrap
+
+## Iteration 14 — 2026-03-27 00:56
+
+**Goal:** Show loading spinner during bootstrap instead of blank screen.
+
+**What changed:**
+- Added `loadingView` with a gold-tinted `ProgressView` spinner
+- Shows when `isLoading` is true and no messages exist yet (first launch)
+- Replaces the blank grey screen users saw during the 2 network calls
+
+**Files modified:** 1 file
+- `AARU/App/SoulConversationScreen.swift` — loadingView + conditional in body
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Show "last updated" on soul file screen

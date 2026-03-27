@@ -21,7 +21,9 @@ struct SoulConversationScreen: View {
 
             VStack(spacing: 0) {
                 header
-                if isWelcomeState {
+                if model.isLoading && model.soulMessages.isEmpty {
+                    loadingView
+                } else if isWelcomeState {
                     welcomeView
                 } else {
                     messageList
@@ -91,6 +93,18 @@ struct SoulConversationScreen: View {
                 }
             }
         }
+    }
+
+    // MARK: - Loading
+
+    private var loadingView: some View {
+        VStack {
+            Spacer()
+            ProgressView()
+                .tint(accentGold)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Welcome

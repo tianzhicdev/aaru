@@ -27,7 +27,7 @@ Date: 2026-03-27
 
 ### Highest-value new features
 - [x] Animate typing indicator dots — the 3 dots are static circles with no animation; feels frozen during 2-4s LLM response time; add a simple bouncing/pulsing animation
-- [ ] Show loading state during bootstrap — first app impression is a blank grey screen during the 2 network calls; add a minimal loading indicator
+- [x] Show loading state during bootstrap — first app impression is a blank grey screen during the 2 network calls; add a minimal loading indicator
 
 ### Polish
 - [ ] Show "last updated" on soul file screen — `lastUpdated` exists in the model but is never displayed; gives users a sense of their soul file evolving over time

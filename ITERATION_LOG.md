@@ -232,3 +232,20 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** Show "last updated" on soul file screen
+
+## Iteration 15 — 2026-03-27 00:58
+
+**Goal:** Show relative "last updated" timestamp on soul file screen.
+
+**What changed:**
+- Parses `lastUpdated` ISO8601 string from VisibleSoulFile
+- Displays relative time (e.g. "Updated 2h ago") below the version number in the header
+- Uses `RelativeDateTimeFormatter` with abbreviated style
+- Handles both fractional-seconds and standard ISO8601 formats
+
+**Files modified:** 1 file
+- `AARU/App/SoulFileScreen.swift` — formattedLastUpdated computed property + display in header
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Warm up the empty soul file message

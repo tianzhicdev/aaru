@@ -7,6 +7,21 @@ struct SoulFileScreen: View {
     private let textPrimary = Color(red: 0.10, green: 0.10, blue: 0.10)
     private let surfaceBg = Color(red: 0.98, green: 0.98, blue: 0.98)
 
+    private static let iso8601: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private var formattedLastUpdated: String? {
+        let raw = model.visibleSoulFile.lastUpdated
+        guard !raw.isEmpty else { return nil }
+        guard let date = Self.iso8601.date(from: raw) ?? ISO8601DateFormatter().date(from: raw) else { return nil }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
     var body: some View {
         ZStack {
             surfaceBg.ignoresSafeArea()
@@ -43,6 +58,12 @@ struct SoulFileScreen: View {
                 Text("v\(model.visibleSoulFile.version)")
                     .font(.system(size: 12))
                     .foregroundStyle(textPrimary.opacity(0.4))
+            }
+
+            if let lastUpdated = formattedLastUpdated {
+                Text("Updated \(lastUpdated)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(textPrimary.opacity(0.3))
             }
         }
     }

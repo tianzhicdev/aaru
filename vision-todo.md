@@ -30,5 +30,5 @@ Date: 2026-03-27
 - [x] Show loading state during bootstrap — first app impression is a blank grey screen during the 2 network calls; add a minimal loading indicator
 
 ### Polish
-- [ ] Show "last updated" on soul file screen — `lastUpdated` exists in the model but is never displayed; gives users a sense of their soul file evolving over time
+- [x] Show "last updated" on soul file screen — `lastUpdated` exists in the model but is never displayed; gives users a sense of their soul file evolving over time
 - [ ] Warm up the empty soul file message — "Your soul file is empty" is cold; replace with something inviting like "Your soul file will take shape as we talk"

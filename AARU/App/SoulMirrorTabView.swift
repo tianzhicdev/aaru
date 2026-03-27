@@ -21,15 +21,15 @@ struct SoulMirrorTabView: View {
                     Text("Soul File")
                 }
                 .tag(1)
+                .badge(model.hasPendingSoulFileUpdate ? "!" : nil)
         }
         .tint(accentGold)
         .task {
             await model.bootstrapSoul()
         }
-        .onChange(of: model.soulFileJustUpdated) {
-            if model.soulFileJustUpdated {
-                // Brief flash on soul file tab when it updates during conversation
-                model.soulFileJustUpdated = false
+        .onChange(of: selectedTab) {
+            if selectedTab == 1 {
+                model.acknowledgeSoulFileUpdate()
             }
         }
     }

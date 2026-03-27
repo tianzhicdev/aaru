@@ -60,6 +60,9 @@ struct SoulConversationScreen: View {
                         if message.isError {
                             errorBubble(message)
                                 .id(message.id)
+                        } else if message.role == "system" {
+                            soulFileUpdateBubble(message)
+                                .id(message.id)
                         } else {
                             messageBubble(message)
                                 .id(message.id)
@@ -149,6 +152,23 @@ struct SoulConversationScreen: View {
 
             if message.role == "assistant" { Spacer(minLength: 60) }
         }
+    }
+
+    private func soulFileUpdateBubble(_ message: SoulMessage) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 14))
+                .foregroundStyle(accentGold)
+
+            Text(message.content)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(accentGold)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(accentGold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity)
     }
 
     private func errorBubble(_ message: SoulMessage) -> some View {

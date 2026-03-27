@@ -13,7 +13,7 @@ import {
   autoCompleteStaleSession,
   runPeriodicExtraction
 } from "../_shared/soulApp.ts";
-import { buildSoulSystemPrompt, shouldExtract, cleanSessionCompleteMarker, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
+import { buildSoulSystemPrompt, shouldExtract, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../../src/domain/soul.ts";
 import type { ReflectionNote } from "../../../src/domain/schemas.ts";
 import { streamClaude } from "../_shared/claude.ts";
@@ -185,7 +185,7 @@ async function handleSoulConverse(request: Request): Promise<Response> {
 
       if (streamSucceeded && fullResponse.length > 0) {
         // Save assistant message (cleaned of any markers)
-        const cleanedResponse = cleanSessionCompleteMarker(fullResponse);
+        const cleanedResponse = fullResponse.trim();
         try {
           await insertSoulMessage(activeSession!.id, userId, "assistant", cleanedResponse);
           if (!isSessionStart) {

@@ -2,8 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   buildSoulSystemPrompt,
   shouldExtract,
-  cleanSessionCompleteMarker,
-  parseSessionInsights,
   buildSoulFallbackResponse
 } from "../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../src/domain/soul.ts";
@@ -135,32 +133,6 @@ describe("shouldExtract", () => {
     expect(shouldExtract(8)).toBe(true);
     expect(shouldExtract(16)).toBe(true);
     expect(shouldExtract(7)).toBe(false);
-  });
-});
-
-describe("cleanSessionCompleteMarker", () => {
-  it("removes marker from response", () => {
-    expect(cleanSessionCompleteMarker("Great session. [SESSION_COMPLETE]")).toBe("Great session.");
-  });
-
-  it("handles response without marker", () => {
-    expect(cleanSessionCompleteMarker("Normal response")).toBe("Normal response");
-  });
-});
-
-describe("parseSessionInsights", () => {
-  it("extracts insights from closing response", () => {
-    const response = "You don't fear loneliness — you fear that connection requires giving up solitude. The Door emerged as your central metaphor. [SESSION_COMPLETE]";
-    const insights = parseSessionInsights(response, 3);
-    expect(insights.length).toBeGreaterThan(0);
-    expect(insights[0].tag).toBe("New Insight");
-    expect(insights[0].text.length).toBeGreaterThan(0);
-  });
-
-  it("provides default insight for empty response", () => {
-    const insights = parseSessionInsights("ok", 1);
-    expect(insights.length).toBe(1);
-    expect(insights[0].tag).toBe("Session Reflection");
   });
 });
 

@@ -119,45 +119,6 @@ export function shouldExtract(exchangeCount: number): boolean {
   return exchangeCount > 0 && exchangeCount % REFLECTION_INTERVAL === 0;
 }
 
-export function cleanSessionCompleteMarker(text: string): string {
-  return text.replace(/\[SESSION_COMPLETE\]/g, "").trim();
-}
-
-export interface SessionInsight {
-  tag: string;
-  text: string;
-}
-
-export function parseSessionInsights(aiResponse: string, sessionNumber: number): SessionInsight[] {
-  const cleaned = cleanSessionCompleteMarker(aiResponse);
-  const sentences = cleaned.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 20);
-
-  const insights: SessionInsight[] = [];
-
-  if (sentences.length > 0) {
-    insights.push({
-      tag: "New Insight",
-      text: sentences[0] + "."
-    });
-  }
-
-  if (sentences.length > 1) {
-    insights.push({
-      tag: "Soul Evolution",
-      text: sentences.slice(1).join(". ") + "."
-    });
-  }
-
-  if (insights.length === 0) {
-    insights.push({
-      tag: "Session Reflection",
-      text: `Conversation ${sessionNumber} deepened your soul file.`
-    });
-  }
-
-  return insights;
-}
-
 export function buildSoulFallbackResponse(context: SoulConversationContext): string {
   if (context.sessionNumber === 1 && context.exchangeCount === 0) {
     return "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";

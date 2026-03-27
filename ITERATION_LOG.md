@@ -200,3 +200,19 @@
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
 **Next priority:** Animate typing indicator dots
+
+## Iteration 13 — 2026-03-27 00:54
+
+**Goal:** Animate typing indicator dots with a pulsing effect.
+
+**What changed:**
+- Replaced static dots with a cycling animation: one dot at a time scales up and brightens
+- Uses `.task` with `Task.sleep` for clean lifecycle management (auto-cancels on disappear)
+- Cycle: 400ms per dot, smooth `easeInOut` transitions
+
+**Files modified:** 1 file
+- `AARU/App/SoulConversationScreen.swift` — animated typingIndicator
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Show loading state during bootstrap

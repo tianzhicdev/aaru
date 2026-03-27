@@ -218,19 +218,29 @@ struct SoulConversationScreen: View {
         }
     }
 
+    @State private var typingDotPhase = 0
+
     private var typingIndicator: some View {
         HStack {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(textPrimary.opacity(0.3))
+                        .fill(textPrimary.opacity(typingDotPhase == i ? 0.6 : 0.2))
                         .frame(width: 6, height: 6)
+                        .scaleEffect(typingDotPhase == i ? 1.3 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: typingDotPhase)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(400))
+                    typingDotPhase = (typingDotPhase + 1) % 3
+                }
+            }
 
             Spacer(minLength: 60)
         }

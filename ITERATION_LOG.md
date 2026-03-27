@@ -24,3 +24,23 @@
 **Tests:** 73 TS + 6 iOS all passing
 
 **Next priority:** Session end flow — when conversation reaches extraction threshold, show the user their updated soul file with a transition animation
+
+## Iteration 2 — 2026-03-26 23:45
+
+**Goal:** Make soul file updates visible during conversation — the "it sees me" moment.
+
+**What changed:**
+- Golden sparkle notification appears inline in chat when soul file updates (every 8 exchanges)
+- Badge ("!") appears on Soul File tab when an update is pending
+- Switching to Soul File tab clears the badge
+- Added `hasPendingSoulFileUpdate` flag and `acknowledgeSoulFileUpdate()` to AppModel
+- System messages (non-error) now render as golden notification cards instead of chat bubbles
+
+**Files modified:** 3 files
+- `AARU/App/AppModel.swift` — pending update flag, notification message insertion, acknowledge method
+- `AARU/App/SoulConversationScreen.swift` — golden notification bubble for system messages
+- `AARU/App/SoulMirrorTabView.swift` — tab badge + clear on switch
+
+**Tests:** 73 TS + 6 iOS all passing
+
+**Next priority:** Session end ceremony — detect session completion, call end-soul-session, show the user their synthesized soul file with a reveal transition

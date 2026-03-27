@@ -23,9 +23,6 @@ struct SoulMirrorTabView: View {
                 .tag(1)
         }
         .tint(accentGold)
-        .task {
-            await model.bootstrapSoul()
-        }
         .onChange(of: model.soulFileJustUpdated) {
             if model.soulFileJustUpdated {
                 // Brief flash on soul file tab when it updates during conversation

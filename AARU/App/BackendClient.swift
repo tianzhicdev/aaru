@@ -86,6 +86,7 @@ final class BackendClient {
                 soulFile: nil,
                 visibleSoulFile: nil,
                 activeSession: nil,
+                messages: nil,
                 canStartSession: true,
                 cooldownRemainingMs: 0,
                 nextSessionNumber: 1
@@ -139,6 +140,7 @@ final class BackendClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30
         var body: [String: String] = ["message": message]
         if let sessionID {
             body["session_id"] = sessionID.uuidString

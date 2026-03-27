@@ -2,8 +2,8 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import { installEdgeHandler } from "../_shared/edge.ts";
 import { readBearerToken, hashSessionToken } from "../_shared/auth.ts";
 import { getActiveSessionByTokenHash } from "../_shared/db.ts";
-import { getSoulFile, getLatestSession, isCooldownActive, getCooldownRemaining } from "../_shared/soulApp.ts";
-import { emptySoulFile } from "../../../src/domain/soulFile.ts";
+import { getVisibleSoulFile, getSoulFile } from "../_shared/soulApp.ts";
+import { emptyVisibleSoulFile, emptySoulFile } from "../../../src/domain/soulFile.ts";
 
 export async function handleGetSoulFile(_payload: unknown, request: Request) {
   const bearerToken = readBearerToken(request);
@@ -18,17 +18,19 @@ export async function handleGetSoulFile(_payload: unknown, request: Request) {
   }
 
   const userId = session.user_id;
-  const soulFile = await getSoulFile(userId);
-  const latestSession = await getLatestSession(userId);
-  const cooldownActive = isCooldownActive(latestSession);
-  const cooldownRemaining = getCooldownRemaining(latestSession);
+  const visibleSoulFile = await getVisibleSoulFile(userId);
+  const legacySoulFile = await getSoulFile(userId);
 
   return jsonResponse(200, {
-    soul_file: soulFile ?? emptySoulFile(),
-    session_count: soulFile?.session_count ?? 0,
-    cooldown_active: cooldownActive,
-    cooldown_remaining_ms: cooldownRemaining,
-    next_available_at: latestSession?.next_available_at ?? null
+    visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
+    // Keep legacy soul_file for backward compatibility
+    soul_file: legacySoulFile ?? emptySoulFile(),
+    version: visibleSoulFile?.version ?? 0,
+    last_updated: visibleSoulFile?.lastUpdated ?? null,
+    session_count: legacySoulFile?.session_count ?? 0,
+    cooldown_active: false,
+    cooldown_remaining_ms: 0,
+    next_available_at: null
   });
 }
 

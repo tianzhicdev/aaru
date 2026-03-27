@@ -1,193 +1,70 @@
 import Foundation
 
-struct SoulProfile: Codable, Equatable {
-    var personality: String
-    var interests: [String]
-    var values: [String]
-    var avoidTopics: [String]
-    var rawInput: String
-    var guessedFields: [String]
+// MARK: - Soul Mirror — Visible Soul File (V2)
 
-    enum CodingKeys: String, CodingKey {
-        case personality
-        case interests
-        case values
-        case avoidTopics = "avoid_topics"
-        case rawInput = "raw_input"
-        case guessedFields = "guessed_fields"
-    }
+struct CrystallizedMoment: Codable, Equatable {
+    let quote: String
+    let reflection: String
 }
 
-struct AvatarConfig: Codable, Equatable {
-    var spriteId: String
-    var bodyShape: String
-    var skinTone: String
-    var hairStyle: String
-    var hairColor: String
-    var eyes: String
-    var outfitTop: String
-    var outfitBottom: String
-    var accessory: String?
-    var auraColor: String
+struct VisibleSoulFileSections: Codable, Equatable {
+    var howYouMove: String
+    var howYouThink: String
+    var howYouConnect: String
+    var whatYouCarry: String
+    var whatLightsYouUp: String
+    var yourContradictions: String
+    var yourVoice: String
 
     enum CodingKeys: String, CodingKey {
-        case spriteId = "sprite_id"
-        case bodyShape = "body_shape"
-        case skinTone = "skin_tone"
-        case hairStyle = "hair_style"
-        case hairColor = "hair_color"
-        case eyes
-        case outfitTop = "outfit_top"
-        case outfitBottom = "outfit_bottom"
-        case accessory
-        case auraColor = "aura_color"
+        case howYouMove = "howYouMove"
+        case howYouThink = "howYouThink"
+        case howYouConnect = "howYouConnect"
+        case whatYouCarry = "whatYouCarry"
+        case whatLightsYouUp = "whatLightsYouUp"
+        case yourContradictions = "yourContradictions"
+        case yourVoice = "yourVoice"
     }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        spriteId = (try? container.decode(String.self, forKey: .spriteId)) ?? AvatarSprites.all.randomElement()!
-        bodyShape = try container.decode(String.self, forKey: .bodyShape)
-        skinTone = try container.decode(String.self, forKey: .skinTone)
-        hairStyle = try container.decode(String.self, forKey: .hairStyle)
-        hairColor = try container.decode(String.self, forKey: .hairColor)
-        eyes = try container.decode(String.self, forKey: .eyes)
-        outfitTop = try container.decode(String.self, forKey: .outfitTop)
-        outfitBottom = try container.decode(String.self, forKey: .outfitBottom)
-        accessory = try container.decodeIfPresent(String.self, forKey: .accessory)
-        auraColor = try container.decode(String.self, forKey: .auraColor)
-    }
-
-    init(
-        spriteId: String = "m01_explorer",
-        bodyShape: String = "slender",
-        skinTone: String = "amber",
-        hairStyle: String = "wave",
-        hairColor: String = "black",
-        eyes: String = "focused",
-        outfitTop: String = "linen",
-        outfitBottom: String = "sand",
-        accessory: String? = nil,
-        auraColor: String = "#d4af37"
-    ) {
-        self.spriteId = spriteId
-        self.bodyShape = bodyShape
-        self.skinTone = skinTone
-        self.hairStyle = hairStyle
-        self.hairColor = hairColor
-        self.eyes = eyes
-        self.outfitTop = outfitTop
-        self.outfitBottom = outfitBottom
-        self.accessory = accessory
-        self.auraColor = auraColor
-    }
-
-    static let `default` = AvatarConfig(
-        spriteId: "m01_explorer",
-        bodyShape: "slender",
-        skinTone: "amber",
-        hairStyle: "wave",
-        hairColor: "black",
-        eyes: "focused",
-        outfitTop: "linen",
-        outfitBottom: "sand",
-        accessory: nil,
-        auraColor: "#d4af37"
+    static let empty = VisibleSoulFileSections(
+        howYouMove: "", howYouThink: "", howYouConnect: "",
+        whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: ""
     )
 }
 
-enum AvatarSprites {
-    static let all: [String] = [
-        "m01_explorer", "m02_artisan", "m03_sage", "m04_rebel",
-        "m05_gentleman", "m06_farmer", "m07_nomad", "m08_scholar",
-        "m09_athlete", "m10_hipster", "m11_dapper", "m12_surfer",
-        "m13_dreads", "m14_cowlick",
-        "f01_wanderer", "f02_mystic", "f03_scholar", "f04_punk",
-        "f05_botanist", "f06_dancer", "f07_royal", "f08_mechanic",
-        "f09_artist", "f10_adventurer", "f11_studious", "f12_natural",
-        "f13_sporty", "f14_cozy",
-        "t01_student", "t02_skater",
-    ]
-}
-
-struct WorldAgent: Codable, Equatable, Identifiable {
-    let id: UUID
-    var x: Double
-    var y: Double
-    var targetX: Double
-    var targetY: Double
-    var cellX: Int?
-    var cellY: Int?
-    var state: String
-    var activeMessage: String?
-    var conversationID: UUID?
-    var displayName: String
-    var avatar: AvatarConfig
-    var isSelf: Bool
+struct VisibleSoulFile: Codable, Equatable {
+    var version: Int
+    var lastUpdated: String
+    var portrait: String?
+    var sections: VisibleSoulFileSections
+    var crystallizedMoments: [CrystallizedMoment]
+    var openThreads: [String]
 
     enum CodingKeys: String, CodingKey {
-        case id = "user_id"
-        case x
-        case y
-        case targetX = "target_x"
-        case targetY = "target_y"
-        case cellX = "cell_x"
-        case cellY = "cell_y"
-        case state
-        case activeMessage = "active_message"
-        case conversationID = "conversation_id"
-        case displayName = "display_name"
-        case avatar
-        case isSelf = "is_self"
+        case version
+        case lastUpdated
+        case portrait
+        case sections
+        case crystallizedMoments
+        case openThreads
+    }
+
+    static let empty = VisibleSoulFile(
+        version: 0,
+        lastUpdated: "",
+        portrait: nil,
+        sections: .empty,
+        crystallizedMoments: [],
+        openThreads: []
+    )
+
+    var isEmpty: Bool {
+        portrait == nil && crystallizedMoments.isEmpty &&
+        sections.howYouMove.isEmpty && sections.howYouThink.isEmpty
     }
 }
 
-struct WorldMovementEvent: Codable, Equatable {
-    let userID: UUID
-    let fromCellX: Int
-    let fromCellY: Int
-    let toCellX: Int
-    let toCellY: Int
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case fromCellX = "from_cell_x"
-        case fromCellY = "from_cell_y"
-        case toCellX = "to_cell_x"
-        case toCellY = "to_cell_y"
-    }
-}
-
-struct RealtimeAgentPosition: Decodable, Equatable {
-    let userID: UUID
-    let x: Double
-    let y: Double
-    let targetX: Double
-    let targetY: Double
-    let cellX: Int?
-    let cellY: Int?
-    let state: String
-    let activeMessage: String?
-    let conversationID: UUID?
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case x
-        case y
-        case targetX = "target_x"
-        case targetY = "target_y"
-        case cellX = "cell_x"
-        case cellY = "cell_y"
-        case state
-        case activeMessage = "active_message"
-        case conversationID = "conversation_id"
-    }
-}
-
-enum AARUConstants {
-    static let impressionUnlockThreshold = 72
-}
-
-// MARK: - Soul Mirror
+// MARK: - Soul Mirror — Legacy Soul File (V1, kept for backward compat)
 
 struct SoulFileTension: Codable, Equatable {
     let left: String
@@ -211,7 +88,7 @@ struct SoulFileEvolution: Codable, Equatable {
     }
 }
 
-struct SoulFile: Codable, Equatable {
+struct LegacySoulFile: Codable, Equatable {
     var essence: String?
     var tensions: [SoulFileTension]
     var comesAlive: String?
@@ -230,7 +107,7 @@ struct SoulFile: Codable, Equatable {
         case sessionCount = "session_count"
     }
 
-    static let empty = SoulFile(
+    static let empty = LegacySoulFile(
         essence: nil,
         tensions: [],
         comesAlive: nil,
@@ -240,6 +117,8 @@ struct SoulFile: Codable, Equatable {
         sessionCount: 0
     )
 }
+
+typealias SoulFile = LegacySoulFile
 
 struct SoulSessionInfo: Codable, Equatable {
     let id: UUID
@@ -258,7 +137,8 @@ struct SoulSessionInfo: Codable, Equatable {
 struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
-    let soulFile: SoulFile?
+    let soulFile: LegacySoulFile?
+    let visibleSoulFile: VisibleSoulFile?
     let activeSession: SoulSessionInfo?
     let canStartSession: Bool
     let cooldownRemainingMs: Int
@@ -268,6 +148,7 @@ struct SoulBootstrapResponse: Codable {
         case userId = "user_id"
         case token
         case soulFile = "soul_file"
+        case visibleSoulFile = "visible_soul_file"
         case activeSession = "active_session"
         case canStartSession = "can_start_session"
         case cooldownRemainingMs = "cooldown_remaining_ms"
@@ -276,14 +157,20 @@ struct SoulBootstrapResponse: Codable {
 }
 
 struct SoulFileResponse: Codable {
-    let soulFile: SoulFile
+    let visibleSoulFile: VisibleSoulFile
+    let soulFile: LegacySoulFile
+    let version: Int
+    let lastUpdated: String?
     let sessionCount: Int
     let cooldownActive: Bool
     let cooldownRemainingMs: Int
     let nextAvailableAt: String?
 
     enum CodingKeys: String, CodingKey {
+        case visibleSoulFile = "visible_soul_file"
         case soulFile = "soul_file"
+        case version
+        case lastUpdated = "last_updated"
         case sessionCount = "session_count"
         case cooldownActive = "cooldown_active"
         case cooldownRemainingMs = "cooldown_remaining_ms"
@@ -291,128 +178,26 @@ struct SoulFileResponse: Codable {
     }
 }
 
-struct SoulInsight: Equatable {
-    let tag: String
-    let text: String
-}
-
-struct SoulSessionResult: Equatable {
-    let sessionNumber: Int
-    let extractionSuccess: Bool
-    let insights: [SoulInsight]
-    let soulFile: SoulFile?
-}
-
 struct SoulMessage: Identifiable, Equatable {
     let id: UUID
-    let role: String
+    let role: String  // "user", "assistant", "system"
     let content: String
+    var isError: Bool = false
 }
 
-struct BaMessage: Identifiable, Equatable {
-    let id: UUID
-    let senderName: String
-    let content: String
-}
-
-struct ConversationPreview: Identifiable, Equatable {
-    let id: UUID
-    let title: String
-    var impressionScore: Int
-    var impressionSummary: String
-    var theirImpressionScore: Int
-    var theirImpressionSummary: String
-    var status: String
-    var baUnlocked: Bool
-    var baConversationID: UUID?
-    var baMessageCount: Int
-}
-
-struct ChatMessage: Identifiable, Equatable {
-    let id: UUID
-    let senderName: String
-    let type: String
-    let content: String
-}
-
-struct ConversationDetail: Equatable {
-    let id: UUID
-    let title: String
-    let impressionScore: Int
-    let impressionSummary: String
-    let theirImpressionScore: Int
-    let theirImpressionSummary: String
-    let status: String
-    let baUnlocked: Bool
-    let otherSoul: SoulProfile?
-    let messages: [ChatMessage]
-    let baConversationID: UUID?
-    let baMessages: [BaMessage]
-}
-
-struct BootstrapPayload: Codable, Equatable {
+struct BootstrapPayload: Codable {
     let userID: UUID
     let deviceID: String
-    let displayName: String
-    let instanceID: UUID
-    let soulProfile: SoulProfile?
-    let avatar: AvatarConfig
-    let conversations: [ConversationPreviewPayload]
-    let world: WorldSnapshot
     let session: DeviceSession
 
     enum CodingKeys: String, CodingKey {
         case userID = "user_id"
         case deviceID = "device_id"
-        case displayName = "display_name"
-        case instanceID = "instance_id"
-        case soulProfile = "soul_profile"
-        case avatar
-        case conversations
-        case world
         case session
     }
 }
 
-struct ConversationPreviewPayload: Codable, Equatable {
-    let id: UUID
-    let title: String
-    let impressionScore: Int
-    let impressionSummary: String
-    let theirImpressionScore: Int
-    let theirImpressionSummary: String
-    let status: String
-    let baUnlocked: Bool
-    let baConversationID: UUID?
-    let baMessageCount: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case impressionScore = "impression_score"
-        case impressionSummary = "impression_summary"
-        case theirImpressionScore = "their_impression_score"
-        case theirImpressionSummary = "their_impression_summary"
-        case status
-        case baUnlocked = "ba_unlocked"
-        case baConversationID = "ba_conversation_id"
-        case baMessageCount = "ba_message_count"
-    }
-}
-
-struct WorldSnapshot: Codable, Equatable {
-    let count: Int
-    let movementEvents: [WorldMovementEvent]
-    let agents: [WorldAgent]
-
-    enum CodingKeys: String, CodingKey {
-        case count
-        case movementEvents = "movement_events"
-        case agents
-    }
-}
-
-struct DeviceSession: Codable, Equatable {
+struct DeviceSession: Codable {
     let token: String
     let expiresAt: Date
 
@@ -420,15 +205,4 @@ struct DeviceSession: Codable, Equatable {
         case token
         case expiresAt = "expires_at"
     }
-}
-
-enum OnboardingStep: Equatable {
-    case soul
-    case avatar
-}
-
-enum AppStage: Equatable {
-    case onboarding(OnboardingStep)
-    case world
-    case soulMirror
 }

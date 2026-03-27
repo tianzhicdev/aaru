@@ -8,15 +8,15 @@ import {
   getSoulMessages,
   insertSoulMessage,
   getSoulFile,
-  isCooldownActive,
+  getVisibleSoulFile,
   isSessionStale,
   autoCompleteStaleSession,
-  completeSessionWithExtraction
+  runPeriodicExtraction
 } from "../_shared/soulApp.ts";
-import { buildSoulSystemPrompt, shouldCloseSession, cleanSessionCompleteMarker, parseSessionInsights, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
+import { buildSoulSystemPrompt, shouldExtract, cleanSessionCompleteMarker, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../../src/domain/soul.ts";
+import type { ReflectionNote } from "../../../src/domain/schemas.ts";
 import { streamClaude } from "../_shared/claude.ts";
-import { SESSION_MAX_EXCHANGES } from "../../../src/domain/constants.ts";
 import { z } from "zod";
 
 declare const Deno: {
@@ -79,16 +79,7 @@ async function handleSoulConverse(request: Request): Promise<Response> {
     );
   }
 
-  // Check cooldown
-  const latestSession = await getLatestSession(userId);
-  if (isCooldownActive(latestSession)) {
-    return new Response(
-      JSON.stringify({ code: 403, message: "Session cooldown active" }),
-      { status: 403, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
-    );
-  }
-
-  // Get or create active session
+  // Get or create active session (no cooldown check — continuous conversation)
   let activeSession = await getActiveSession(userId);
 
   // Handle stale sessions
@@ -98,16 +89,9 @@ async function handleSoulConverse(request: Request): Promise<Response> {
   }
 
   if (!activeSession) {
+    const latestSession = await getLatestSession(userId);
     const sessionNumber = (latestSession?.session_number ?? 0) + 1;
     activeSession = await createSoulSession(userId, sessionNumber);
-  }
-
-  // Check if session is already at max exchanges
-  if (activeSession.exchange_count >= SESSION_MAX_EXCHANGES) {
-    return new Response(
-      JSON.stringify({ code: 400, message: "Session exchange limit reached" }),
-      { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
-    );
   }
 
   // Save user message
@@ -121,12 +105,19 @@ async function handleSoulConverse(request: Request): Promise<Response> {
   }));
 
   const soulFile = await getSoulFile(userId);
+  const visibleSoulFile = await getVisibleSoulFile(userId);
   const exchangeCount = activeSession.exchange_count + 1;
+
+  // Get latest reflection note from session
+  const reflectionNotes = (activeSession.reflection_notes as ReflectionNote[] | null) ?? [];
+  const latestReflection = reflectionNotes.length > 0 ? reflectionNotes[reflectionNotes.length - 1] : null;
 
   const context: SoulConversationContext = {
     sessionNumber: activeSession.session_number,
     exchangeCount,
     soulFile,
+    visibleSoulFile,
+    reflectionNote: latestReflection,
     previousSummaries: [],
     messages: claudeMessages
   };
@@ -187,7 +178,7 @@ async function handleSoulConverse(request: Request): Promise<Response> {
       }
 
       if (streamSucceeded && fullResponse.length > 0) {
-        // Save assistant message (cleaned of markers)
+        // Save assistant message (cleaned of any markers)
         const cleanedResponse = cleanSessionCompleteMarker(fullResponse);
         try {
           await insertSoulMessage(activeSession!.id, userId, "assistant", cleanedResponse);
@@ -211,38 +202,26 @@ async function handleSoulConverse(request: Request): Promise<Response> {
           }
         }
 
-        // Check if session should close
-        const sessionShouldClose = shouldCloseSession(exchangeCount, fullResponse);
-
-        if (sessionShouldClose) {
-          controller.enqueue(
-            new TextEncoder().encode(sseEvent("session_closing", { exchange_count: exchangeCount }))
-          );
-
-          // Run extraction inline
+        // Periodic reflection + light extraction
+        if (shouldExtract(exchangeCount)) {
           try {
-            const extractionResult = await completeSessionWithExtraction(activeSession!, userId);
-
-            const insights = parseSessionInsights(fullResponse, activeSession!.session_number);
-
-            controller.enqueue(
-              new TextEncoder().encode(sseEvent("session_complete", {
-                session_number: activeSession!.session_number,
-                extraction_success: extractionResult.success,
-                insights,
-                soul_file: extractionResult.soulFile
-              }))
-            );
+            const extractionResult = await runPeriodicExtraction(activeSession!, userId);
+            if (extractionResult.success) {
+              // Send the visible soul file if available, fall back to legacy
+              const soulFilePayload = extractionResult.visibleSoulFile ?? extractionResult.soulFile;
+              if (soulFilePayload) {
+                controller.enqueue(
+                  new TextEncoder().encode(sseEvent("soul_file_updated", {
+                    soul_file: extractionResult.soulFile,
+                    visible_soul_file: extractionResult.visibleSoulFile,
+                    exchange_count: exchangeCount
+                  }))
+                );
+              }
+            }
           } catch (extractionError) {
-            console.error("Extraction failed:", extractionError);
-            controller.enqueue(
-              new TextEncoder().encode(sseEvent("session_complete", {
-                session_number: activeSession!.session_number,
-                extraction_success: false,
-                insights: [{ tag: "Session Complete", text: "Your soul file will update next session." }],
-                soul_file: null
-              }))
-            );
+            console.error("Periodic extraction failed:", extractionError);
+            // Non-fatal — conversation continues even if extraction fails
           }
         }
       }

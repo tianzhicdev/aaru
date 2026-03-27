@@ -13,10 +13,6 @@ settings:
     GENERATE_INFOPLIST_FILE: YES
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: 0.1.0
-packages:
-  Supabase:
-    url: https://github.com/supabase/supabase-swift.git
-    from: 2.23.1
 targets:
   AARU:
     type: application
@@ -30,11 +26,7 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "AARU uses your microphone to capture your voice so it can shape your Ka."
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
-    dependencies:
-      - package: Supabase
-        product: Supabase
     scheme:
       testTargets:
         - AARUTests

@@ -1,20 +1,20 @@
 # AARU — Claude Operating Rules
 
 ## Project Overview
-AARU is a soul-based social app where AI agents (Ka) wander a 2D world, have conversations, and build impression signals. When impressions cross a threshold, human (Ba) conversations unlock.
+AARU is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file. Phase 2 (future): AI agents use soul files to find matching souls for social connection.
 
 **Two codebases in one repo:**
-- **TypeScript backend** — domain logic, Supabase Edge Functions, world simulation
-- **Swift iOS client** — SwiftUI + SpriteKit renderer, pure display layer
+- **TypeScript backend** — domain logic, Supabase Edge Functions
+- **Swift iOS client** — SwiftUI display layer
 
 ## Stack
 | Layer | Technology |
 |-------|-----------|
-| iOS Client | SwiftUI + SpriteKit + Combine, iOS 17+, Swift 5.10 |
-| Backend | Supabase Edge Functions (Deno), Postgres, Realtime |
+| iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
+| Backend | Supabase Edge Functions (Deno), Postgres |
 | Domain Logic | TypeScript (src/domain/), Zod validation |
-| LLM | Groq (Llama 3.1 8B for Ka chat, 3.3 70B for evaluation) |
-| Tests | Vitest (TS), XCTest (Swift), Maestro (UI) |
+| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (extraction) |
+| Tests | Vitest (TS), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
 ## Run Tests
@@ -23,7 +23,7 @@ AARU is a soul-based social app where AI agents (Ka) wander a 2D world, have con
 ```bash
 npx vitest run
 ```
-All 18 tests must pass. Tests work without API keys (fallback paths are exercised).
+All 73 tests must pass. Tests work without API keys (fallback paths are exercised).
 
 ### TypeScript lint
 ```bash
@@ -46,40 +46,36 @@ xcodebuild build -scheme AARU \
   | xcpretty
 ```
 
-### Maestro UI tests
-```bash
-maestro test maestro/          # all flows
-maestro test maestro/<flow>.yaml  # single flow
-```
-
 ## Architecture
 
 ### TypeScript (src/)
-- `src/domain/` — Pure domain logic (world tick, Ka chat, impression scoring, soul profiles, avatars)
-- `src/lib/` — Utilities (env, http helpers)
-- `supabase/functions/` — Edge Function handlers that call domain logic
+- `src/domain/` — Pure domain logic (soul mirror, world simulation, Ka chat)
+- `src/domain/soul.ts` — Soul Mirror system prompts, conversation context, fallbacks
+- `src/domain/soulFile.ts` — Soul file extraction, 4-expert synthesis, merging
+- `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, etc.
+- `src/domain/constants.ts` — Magic numbers (REFLECTION_INTERVAL=8, etc.)
+- `supabase/functions/` — Edge Function handlers
+- `supabase/functions/_shared/soulApp.ts` — Soul session management + extraction logic
 - `tests/unit/` — Unit tests for domain functions
 - `tests/integration/` — Handler integration tests
 
 ### Swift (AARU/)
 - `AARU/App/AARUApp.swift` — Entry point
 - `AARU/App/AppModel.swift` — Main @MainActor ObservableObject (state management)
-- `AARU/App/BackendClient.swift` — HTTP client with fallback mode
-- `AARU/App/Models.swift` — Codable data models (snake_case CodingKeys)
-- `AARU/App/RootView.swift` — Root navigation (onboarding vs main)
-- `AARU/App/WorldScreen.swift` — SpriteKit world renderer
-- `AARU/App/RealtimeBridge.swift` — Supabase realtime subscriptions
+- `AARU/App/BackendClient.swift` — HTTP + SSE streaming client with fallback mode
+- `AARU/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
+- `AARU/App/RootView.swift` — Root view (→ SoulMirrorTabView)
+- `AARU/App/SoulMirrorTabView.swift` — Tab container (Conversation + Soul File)
+- `AARU/App/SoulConversationScreen.swift` — Streaming chat UI
+- `AARU/App/SoulFileScreen.swift` — 7-section soul file display
 - `AARU/App/SecureStore.swift` — Keychain wrapper (device/session identity)
 - `AARUTests/` — XCTest unit tests
 
 ### Key domain files
-- `world.ts` — 10x14 grid simulation, agent movement, conversation initiation
-- `ka.ts` — Ka system prompt building, LLM reply with fallback
-- `impression.ts` — Heuristic + LLM impression scoring, accumulation
-- `compatibility.ts` — Thin wrapper over impression for API surface
-- `soulProfile.ts` — Profile generation and merging
-- `constants.ts` — Magic numbers (grid size, thresholds, limits)
-- `schemas.ts` — Zod schemas for runtime validation
+- `soul.ts` — Soul Mirror prompts, session context builder, fallback responses
+- `soulFile.ts` — 4-expert synthesis (psych, socio, linguist, narrative), visible/hidden merging
+- `constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, COOLDOWN_HOURS=22
+- `schemas.ts` — Zod schemas for all soul file types crossing boundaries
 
 ## Code Style Conventions
 
@@ -101,20 +97,22 @@ maestro test maestro/<flow>.yaml  # single flow
 
 ## Definition of Done
 A task is complete when ALL of the following are true:
-1. `npx vitest run` — all tests pass (18/18 currently)
+1. `npx vitest run` — all tests pass (73 currently)
 2. `npx tsc -p tsconfig.json --noEmit` — no type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
 5. If iOS code was changed: `xcodebuild build` succeeds (when available)
 
 ## Known Constraints & Gotchas
-- **No Groq API key in CI/test** — all LLM-dependent code must have fallback paths. Tests exercise fallbacks.
-- **evaluateCompatibility is async** — always `await` it (was a bug, now fixed)
-- **Grid is 10 columns x 14 rows** — cell coordinates are 0-indexed integers
-- **Impression threshold for Ba unlock is 72** — defined in constants.ts
-- **Accumulation uses 55/45 weighted blend** — previous score weighted more heavily
-- **iOS client is a pure renderer** — all game state is server-authoritative
+- **No API keys in CI/test** — all LLM-dependent code must have fallback paths. Tests exercise fallbacks.
+- **Dual soul file architecture** — VisibleSoulFile (user-facing, "accurate and loving") + HiddenSoulFile (agent-facing, clinical). Both generated by 4-expert synthesis.
+- **Periodic extraction every 8 exchanges** — Haiku 4.5 runs reflection + light visible update
+- **Session lifecycle** — in_session → extracting → synthesizing → complete | failed
+- **72h stale session threshold** — auto-complete sessions older than 72 hours
+- **22h cooldown between sessions** — enforced server-side
+- **iOS client is a display layer** — all game state is server-authoritative
 - **XcodeGen** — project.yml generates AARU.xcodeproj; don't edit .xcodeproj directly
+- **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
 
 ## Autonomous Operating Loop
 When given a task:
@@ -123,6 +121,13 @@ When given a task:
 3. If tests fail: read the error, fix, rerun — repeat up to 3 times
 4. If still failing after 3 attempts: write BLOCKED.md explaining why
 5. Only mark done when: tests pass + no regressions + code is committed
+
+## Edge Function Deployment
+```bash
+supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
+```
+
+Active Soul Mirror functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: AARU

@@ -8,6 +8,7 @@ import {
   bootstrapSoulState,
   createSoulSession
 } from "../_shared/soulApp.ts";
+import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { z } from "zod";
 
 const bootstrapSoulRequestSchema = z.object({
@@ -48,6 +49,7 @@ export async function handleBootstrapSoul(payload: unknown, request: Request) {
     user_id: userId,
     ...(token ? { token } : {}),
     soul_file: state.soulFile,
+    visible_soul_file: state.visibleSoulFile ?? emptyVisibleSoulFile(),
     active_session: state.activeSession ? {
       id: state.activeSession.id,
       session_number: state.activeSession.session_number,

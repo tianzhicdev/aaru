@@ -16,6 +16,7 @@ struct BackendConfiguration {
 enum BackendError: Error, LocalizedError {
     case missingBaseURL
     case invalidResponse(statusCode: Int, message: String)
+    case authenticationFailed
 
     var errorDescription: String? {
         switch self {
@@ -25,6 +26,19 @@ enum BackendError: Error, LocalizedError {
             return message.isEmpty
                 ? "The backend failed with status \(statusCode)."
                 : "The backend failed with status \(statusCode): \(message)"
+        case .authenticationFailed:
+            return "Session expired. Reconnecting..."
+        }
+    }
+
+    var isAuthFailure: Bool {
+        switch self {
+        case .authenticationFailed:
+            return true
+        case let .invalidResponse(statusCode, _):
+            return statusCode == 401 || statusCode == 403
+        default:
+            return false
         }
     }
 }
@@ -51,12 +65,6 @@ final class BackendClient {
             return BootstrapPayload(
                 userID: UUID(),
                 deviceID: deviceID,
-                displayName: "Soul \(deviceID.suffix(4))",
-                instanceID: UUID(),
-                soulProfile: nil,
-                avatar: .default,
-                conversations: [],
-                world: WorldSnapshot(count: 0, movementEvents: [], agents: []),
                 session: DeviceSession(token: "local-dev-token", expiresAt: .distantFuture)
             )
         }
@@ -68,168 +76,6 @@ final class BackendClient {
         return response
     }
 
-    func generateSoulProfile(rawInput: String) async throws -> SoulProfile {
-        guard endpoint(named: "generate-soul-profile") != nil else {
-            return SoulProfile(
-                personality: "Warm, curious, and open to meaningful conversation.",
-                interests: ["cinema", "travel", "art"],
-                values: ["honesty", "growth", "kindness"],
-                avoidTopics: ["cruelty", "bad-faith arguments"],
-                rawInput: rawInput,
-                guessedFields: ["personality", "interests", "values"]
-            )
-        }
-
-        return try await post("generate-soul-profile", body: ["raw_input": rawInput])
-    }
-
-    func saveSoulProfile(deviceID: String, profile: SoulProfile) async throws {
-        guard endpoint(named: "save-soul-profile") != nil else { return }
-        let _: SaveSoulProfileResponse = try await post(
-            "save-soul-profile",
-            body: SaveSoulProfileRequest(deviceID: deviceID, profile: profile),
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-    }
-
-    func saveAvatar(deviceID: String, avatar: AvatarConfig) async throws {
-        guard endpoint(named: "save-avatar") != nil else { return }
-        let _: SaveAvatarResponse = try await post(
-            "save-avatar",
-            body: SaveAvatarRequest(deviceID: deviceID, avatar: avatar),
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-    }
-
-    func syncWorld(deviceID: String) async throws -> WorldSnapshot {
-        guard endpoint(named: "sync-world") != nil else {
-            return WorldSnapshot(count: 0, movementEvents: [], agents: [])
-        }
-        return try await post(
-            "sync-world",
-            body: ["device_id": deviceID],
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-    }
-
-    func listConversations(deviceID: String) async throws -> [ConversationPreviewPayload] {
-        guard endpoint(named: "list-conversations") != nil else {
-            return []
-        }
-        return try await post(
-            "list-conversations",
-            body: ["device_id": deviceID],
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-    }
-
-    func getConversation(deviceID: String, conversationID: UUID) async throws -> ConversationDetail {
-        guard endpoint(named: "get-conversation") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: false,
-                otherSoul: nil,
-                messages: [],
-                baConversationID: nil,
-                baMessages: []
-            )
-        }
-        let payload: ConversationDetailPayload = try await post(
-            "get-conversation",
-            body: [
-                "device_id": deviceID,
-                "conversation_id": conversationID.uuidString
-            ],
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-        return payload.asConversationDetail()
-    }
-
-    func transcribeAudio(audioData: Data) async throws -> String {
-        guard endpoint(named: "transcribe-audio") != nil else {
-            return "(transcription unavailable offline)"
-        }
-        let response: TranscribeAudioResponse = try await post(
-            "transcribe-audio",
-            body: TranscribeAudioRequest(
-                audioBase64: audioData.base64EncodedString(),
-                mimeType: "audio/m4a"
-            )
-        )
-        return response.transcript
-    }
-
-    func sendBaMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
-        guard endpoint(named: "send-ba-message") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: true,
-                otherSoul: nil,
-                messages: [],
-                baConversationID: nil,
-                baMessages: [BaMessage(id: UUID(), senderName: "You", content: content)]
-            )
-        }
-        let payload: ConversationDetailPayload = try await post(
-            "send-ba-message",
-            body: [
-                "device_id": deviceID,
-                "conversation_id": conversationID.uuidString,
-                "content": content
-            ],
-            requiresAuth: true
-        )
-        return payload.asConversationDetail()
-    }
-
-    func sendHumanMessage(deviceID: String, conversationID: UUID, content: String) async throws -> ConversationDetail {
-        guard endpoint(named: "send-human-message") != nil else {
-            return ConversationDetail(
-                id: conversationID,
-                title: "Local Soul",
-                impressionScore: 0,
-                impressionSummary: "",
-                theirImpressionScore: 0,
-                theirImpressionSummary: "",
-                status: "active",
-                baUnlocked: false,
-                otherSoul: nil,
-                messages: [
-                    ChatMessage(id: UUID(), senderName: "You", type: "human_typed", content: content)
-                ],
-                baConversationID: nil,
-                baMessages: []
-            )
-        }
-        let payload: ConversationDetailPayload = try await post(
-            "send-human-message",
-            body: [
-                "device_id": deviceID,
-                "conversation_id": conversationID.uuidString,
-                "content": content
-            ],
-            requiresAuth: true
-        )
-        return payload.asConversationDetail()
-    }
-
     // MARK: - Soul Mirror
 
     func bootstrapSoul(deviceID: String) async throws -> SoulBootstrapResponse {
@@ -238,6 +84,7 @@ final class BackendClient {
                 userId: UUID(),
                 token: nil,
                 soulFile: nil,
+                visibleSoulFile: nil,
                 activeSession: nil,
                 canStartSession: true,
                 cooldownRemainingMs: 0,
@@ -255,7 +102,10 @@ final class BackendClient {
     func getSoulFile() async throws -> SoulFileResponse {
         guard endpoint(named: "get-soul-file") != nil else {
             return SoulFileResponse(
+                visibleSoulFile: .empty,
                 soulFile: .empty,
+                version: 0,
+                lastUpdated: nil,
                 sessionCount: 0,
                 cooldownActive: false,
                 cooldownRemainingMs: 0,
@@ -274,12 +124,11 @@ final class BackendClient {
         message: String,
         sessionID: UUID? = nil,
         onToken: @escaping (String) -> Void,
-        onSessionClosing: @escaping () -> Void,
-        onSessionComplete: @escaping (SoulSessionResult) -> Void,
+        onVisibleSoulFileUpdated: @escaping (VisibleSoulFile) -> Void,
+        onLegacySoulFileUpdated: @escaping (LegacySoulFile) -> Void,
         onError: @escaping (String) -> Void
     ) async throws {
         guard let url = endpoint(named: "soul-converse") else {
-            // Fallback: simulate a response
             let fallback = "I see you. What's something most people don't notice about you?"
             for char in fallback {
                 onToken(String(char))
@@ -307,44 +156,38 @@ final class BackendClient {
 
         let (bytes, response) = try await session.bytes(for: request)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        if statusCode == 401 || statusCode == 403 {
+            logger.error("Auth failure in SSE stream: \(statusCode)")
+            throw BackendError.authenticationFailed
+        }
+
         guard statusCode == 200 else {
             throw BackendError.invalidResponse(statusCode: statusCode, message: "SSE stream failed")
         }
 
         for try await line in bytes.lines {
             if line.hasPrefix("event: ") {
-                let eventName = String(line.dropFirst(7))
-                // Read the next data line
                 continue
             }
             guard line.hasPrefix("data: ") else { continue }
             let jsonString = String(line.dropFirst(6))
             guard let jsonData = jsonString.data(using: .utf8) else { continue }
 
-            // Try parsing different event types
             if let tokenEvent = try? decoder.decode(SSETokenEvent.self, from: jsonData),
                tokenEvent.text != nil {
                 onToken(tokenEvent.text!)
-            } else if let completeEvent = try? decoder.decode(SSESessionCompleteEvent.self, from: jsonData),
-                      completeEvent.sessionNumber != nil {
-                let insights = (completeEvent.insights ?? []).map {
-                    SoulInsight(tag: $0.tag, text: $0.text)
+            } else if let soulFileEvent = try? decoder.decode(SSESoulFileUpdatedEvent.self, from: jsonData) {
+                if let visible = soulFileEvent.visibleSoulFile {
+                    onVisibleSoulFileUpdated(visible)
                 }
-                let soulFile = completeEvent.soulFile
-                onSessionComplete(SoulSessionResult(
-                    sessionNumber: completeEvent.sessionNumber!,
-                    extractionSuccess: completeEvent.extractionSuccess ?? false,
-                    insights: insights,
-                    soulFile: soulFile
-                ))
+                if let legacy = soulFileEvent.soulFile {
+                    onLegacySoulFileUpdated(legacy)
+                }
             } else if let errorEvent = try? decoder.decode(SSEErrorEvent.self, from: jsonData),
                       errorEvent.message != nil {
                 onError(errorEvent.message!)
-            } else if let closingEvent = try? decoder.decode(SSESessionClosingEvent.self, from: jsonData),
-                      closingEvent.exchangeCount != nil {
-                onSessionClosing()
             }
-            // "done" event is handled by stream ending
         }
     }
 
@@ -400,151 +243,6 @@ final class BackendClient {
     }
 }
 
-private struct SaveSoulProfileRequest: Encodable {
-    let deviceID: String
-    let profile: SoulProfile
-
-    enum CodingKeys: String, CodingKey {
-        case deviceID = "device_id"
-        case profile
-    }
-}
-
-private struct SaveAvatarRequest: Encodable {
-    let deviceID: String
-    let avatar: AvatarConfig
-
-    enum CodingKeys: String, CodingKey {
-        case deviceID = "device_id"
-        case avatar
-    }
-}
-
-private struct SaveSoulProfileResponse: Decodable {
-    let userID: UUID
-    let soulProfile: SoulProfile
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case soulProfile = "soul_profile"
-    }
-}
-
-extension BackendClient {
-    var realtimeURL: URL? { configuration.supabaseURL }
-    var realtimeAnonKey: String? { configuration.supabaseAnonKey }
-}
-
-private struct SaveAvatarResponse: Decodable {
-    let userID: UUID
-    let avatar: AvatarConfig
-
-    enum CodingKeys: String, CodingKey {
-        case userID = "user_id"
-        case avatar
-    }
-}
-
-private struct ConversationDetailPayload: Decodable {
-    let id: UUID
-    let title: String
-    let impressionScore: Int
-    let impressionSummary: String
-    let theirImpressionScore: Int
-    let theirImpressionSummary: String
-    let status: String
-    let baUnlocked: Bool
-    let otherSoul: SoulProfile?
-    let messages: [ConversationMessagePayload]
-    let baConversationID: UUID?
-    let baMessages: [BaMessagePayload]?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case title
-        case impressionScore = "impression_score"
-        case impressionSummary = "impression_summary"
-        case theirImpressionScore = "their_impression_score"
-        case theirImpressionSummary = "their_impression_summary"
-        case status
-        case baUnlocked = "ba_unlocked"
-        case otherSoul = "other_soul"
-        case messages
-        case baConversationID = "ba_conversation_id"
-        case baMessages = "ba_messages"
-    }
-
-    func asConversationDetail() -> ConversationDetail {
-        ConversationDetail(
-            id: id,
-            title: title,
-            impressionScore: impressionScore,
-            impressionSummary: impressionSummary,
-            theirImpressionScore: theirImpressionScore,
-            theirImpressionSummary: theirImpressionSummary,
-            status: status,
-            baUnlocked: baUnlocked,
-            otherSoul: otherSoul,
-            messages: messages.map {
-                ChatMessage(
-                    id: $0.id,
-                    senderName: $0.senderName,
-                    type: $0.type,
-                    content: $0.content
-                )
-            },
-            baConversationID: baConversationID,
-            baMessages: (baMessages ?? []).map {
-                BaMessage(
-                    id: $0.id,
-                    senderName: $0.senderName,
-                    content: $0.content
-                )
-            }
-        )
-    }
-}
-
-private struct BaMessagePayload: Decodable {
-    let id: UUID
-    let senderName: String
-    let content: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case senderName = "sender_name"
-        case content
-    }
-}
-
-private struct ConversationMessagePayload: Decodable {
-    let id: UUID
-    let senderName: String
-    let type: String
-    let content: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case senderName = "sender_name"
-        case type
-        case content
-    }
-}
-
-private struct TranscribeAudioRequest: Encodable {
-    let audioBase64: String
-    let mimeType: String
-
-    enum CodingKeys: String, CodingKey {
-        case audioBase64 = "audio_base64"
-        case mimeType = "mime_type"
-    }
-}
-
-private struct TranscribeAudioResponse: Decodable {
-    let transcript: String
-}
-
 private struct EmptyBody: Encodable {}
 
 // MARK: - SSE Event Types
@@ -553,30 +251,15 @@ private struct SSETokenEvent: Decodable {
     let text: String?
 }
 
-private struct SSESessionClosingEvent: Decodable {
+private struct SSESoulFileUpdatedEvent: Decodable {
+    let soulFile: LegacySoulFile?
+    let visibleSoulFile: VisibleSoulFile?
     let exchangeCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case exchangeCount = "exchange_count"
-    }
-}
-
-private struct SSEInsightPayload: Decodable {
-    let tag: String
-    let text: String
-}
-
-private struct SSESessionCompleteEvent: Decodable {
-    let sessionNumber: Int?
-    let extractionSuccess: Bool?
-    let insights: [SSEInsightPayload]?
-    let soulFile: SoulFile?
-
-    enum CodingKeys: String, CodingKey {
-        case sessionNumber = "session_number"
-        case extractionSuccess = "extraction_success"
-        case insights
         case soulFile = "soul_file"
+        case visibleSoulFile = "visible_soul_file"
+        case exchangeCount = "exchange_count"
     }
 }
 

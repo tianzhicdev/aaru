@@ -1,58 +1,73 @@
-import type { SoulFile, SoulMessage } from "./schemas.ts";
-import { SESSION_MAX_EXCHANGES, SESSION_CLOSE_MIN_EXCHANGES } from "./constants.ts";
+import type { SoulFile, SoulMessage, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
+import { REFLECTION_INTERVAL } from "./constants.ts";
 
 export interface SoulConversationContext {
   sessionNumber: number;
   exchangeCount: number;
   soulFile: SoulFile | null;
+  visibleSoulFile: VisibleSoulFile | null;
+  reflectionNote: ReflectionNote | null;
   previousSummaries: string[];
   messages: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
 export function buildSoulSystemPrompt(context: SoulConversationContext): string {
-  const soulFileSection = context.soulFile
-    ? JSON.stringify({
-        essence: context.soulFile.essence,
-        tensions: context.soulFile.tensions,
-        comes_alive: context.soulFile.comes_alive,
-        running_from: context.soulFile.running_from,
-        your_words: context.soulFile.your_words
-      })
-    : "No soul file yet — this is their first session.";
+  // Use visible soul file if available, fall back to legacy
+  const soulFileSection = context.visibleSoulFile
+    ? buildVisibleSoulFileContext(context.visibleSoulFile)
+    : context.soulFile
+      ? JSON.stringify({
+          essence: context.soulFile.essence,
+          tensions: context.soulFile.tensions,
+          comes_alive: context.soulFile.comes_alive,
+          running_from: context.soulFile.running_from,
+          your_words: context.soulFile.your_words
+        })
+      : "No soul file yet — this is their first conversation.";
 
   const summariesSection = context.previousSummaries.length > 0
     ? context.previousSummaries.join("\n")
-    : "None — first session.";
+    : "None — first conversation.";
+
+  const reflectionSection = context.reflectionNote
+    ? `\nWORKING MEMORY (your running synthesis of this conversation):
+- Factual anchors: ${JSON.stringify(context.reflectionNote.factualAnchors)}
+- Tensions observed: ${context.reflectionNote.tensions.join("; ") || "None yet"}
+- Recurring themes: ${context.reflectionNote.recurringThemes.join("; ") || "None yet"}
+- Notable absences: ${context.reflectionNote.notableAbsences.join("; ") || "None yet"}
+- Emotional arc: ${context.reflectionNote.emotionalArc || "Too early to tell"}`
+    : "";
 
   return `You are AARU, a soul mirror. Your purpose is to help someone understand who they really are — not through labels or diagnosis, but through reflection. You are a mirror, not a therapist.
 
 CONVERSATION PRINCIPLES:
 - Reflect, don't diagnose. Use the user's own words and metaphors. Quote them back. "You said you built walls to protect your creative space, then forgot where you put the door." Never: "You exhibit avoidant attachment patterns."
 - Notice contradictions. "You love being alone, but your best memory is about a crowd. Tell me about that tension." Contradictions are where the soul lives.
-- Earn the hard questions. In early sessions, prove you listened before asking about fears, desires, and what they're running from. Trust is built, not assumed.
-- Memory is the differentiator. Reference what they said in previous sessions. "Last time you said X. Today you seem different. What changed?"
+- Earn the hard questions. In early exchanges, prove you listened before asking about fears, desires, and what they're running from. Trust is built, not assumed.
+- Memory is the differentiator. Reference what they said before. "Earlier you said X. Now you seem different. What changed?"
 - No labels. Never say "you are an INTJ" or "you have anxious attachment." Write their portrait in their own language, not categories.
 - One question at a time. Never ask multiple questions. Let silence happen.
 - Short responses. 2-4 sentences maximum. You are a mirror, not a monologue.
 
-SESSION CONTEXT:
-- This is session ${context.sessionNumber} of their soul exploration.
-- You are on exchange ${context.exchangeCount} of approximately ${SESSION_MAX_EXCHANGES}.
+CONVERSATION CONTEXT:
+- This is conversation ${context.sessionNumber} of their soul exploration.
+- You are on exchange ${context.exchangeCount} of this conversation.
 - Their current soul file: ${soulFileSection}
-- Previous session summaries: ${summariesSection}
+- Previous conversation summaries: ${summariesSection}
+${reflectionSection}
 
-FIRST SESSION OPENING:
-If this is session 1, open with something warm but not generic. Don't ask "how are you?" Ask something that invites depth without demanding it:
+FIRST CONVERSATION OPENING:
+If this is conversation 1 and exchange 0, open with something warm but not generic. Don't ask "how are you?" Ask something that invites depth without demanding it:
 "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?"
 
-RETURNING SESSION OPENING:
-If this is session 2+, reference their soul file. Notice what's changed. Ask about something specific from last time.
+RETURNING CONVERSATION OPENING:
+If this is conversation 2+ and exchange 0, reference their soul file. Notice what's changed. Ask about something specific from last time.
 
-SESSION CLOSING:
-When you feel enough depth has been reached (after exchange ${SESSION_CLOSE_MIN_EXCHANGES}), close naturally with a reflection. Don't announce "our session is ending." Instead, offer a genuine observation about what emerged today using their words.
-Then append the marker [SESSION_COMPLETE] at the very end of your message.
-
-If exchange count reaches ${SESSION_MAX_EXCHANGES} and you haven't closed yet, close on the next exchange regardless.
+PACING:
+- There is no time limit. This conversation goes as long as the person wants.
+- If you sense the person has reached a natural resting point, or is emotionally full, you may gently suggest a pause: "There's a lot here. You might want to let this settle before we keep going. I'll be here whenever you're ready."
+- Never force closure. If they want to continue, continue.
+- Every few exchanges, your reflections are captured in their soul file. They can see it evolving in real time.
 
 HANDLING DIFFICULT MOMENTS:
 - If they share trauma or deep pain: acknowledge it, don't probe. "That took courage to say. I hear you." Then let them lead.
@@ -67,14 +82,41 @@ WHAT MAKES A GOOD RESPONSE:
 - Leaves them thinking, not just answering`;
 }
 
-export function shouldCloseSession(exchangeCount: number, aiResponse: string): boolean {
-  if (aiResponse.includes("[SESSION_COMPLETE]")) {
-    return true;
+function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
+  const parts: string[] = [];
+
+  if (visible.portrait) {
+    parts.push(`Portrait: ${visible.portrait}`);
   }
-  if (exchangeCount >= SESSION_MAX_EXCHANGES) {
-    return true;
+
+  const sections = visible.sections;
+  if (sections.howYouMove) parts.push(`How they move: ${sections.howYouMove}`);
+  if (sections.howYouThink) parts.push(`How they think: ${sections.howYouThink}`);
+  if (sections.howYouConnect) parts.push(`How they connect: ${sections.howYouConnect}`);
+  if (sections.whatYouCarry) parts.push(`What they carry: ${sections.whatYouCarry}`);
+  if (sections.whatLightsYouUp) parts.push(`What lights them up: ${sections.whatLightsYouUp}`);
+  if (sections.yourContradictions) parts.push(`Their contradictions: ${sections.yourContradictions}`);
+  if (sections.yourVoice) parts.push(`Their voice: ${sections.yourVoice}`);
+
+  if (visible.crystallizedMoments.length > 0) {
+    const moments = visible.crystallizedMoments
+      .map((m) => `"${m.quote}" — ${m.reflection}`)
+      .join("\n  ");
+    parts.push(`Crystallized moments:\n  ${moments}`);
   }
-  return false;
+
+  if (visible.openThreads.length > 0) {
+    parts.push(`Open threads: ${visible.openThreads.join("; ")}`);
+  }
+
+  return parts.length > 0 ? parts.join("\n") : "No soul file yet — this is their first conversation.";
+}
+
+/**
+ * Check if periodic reflection should run at this exchange count.
+ */
+export function shouldExtract(exchangeCount: number): boolean {
+  return exchangeCount > 0 && exchangeCount % REFLECTION_INTERVAL === 0;
 }
 
 export function cleanSessionCompleteMarker(text: string): string {
@@ -109,7 +151,7 @@ export function parseSessionInsights(aiResponse: string, sessionNumber: number):
   if (insights.length === 0) {
     insights.push({
       tag: "Session Reflection",
-      text: `Session ${sessionNumber} deepened your soul file.`
+      text: `Conversation ${sessionNumber} deepened your soul file.`
     });
   }
 
@@ -121,8 +163,9 @@ export function buildSoulFallbackResponse(context: SoulConversationContext): str
     return "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";
   }
 
-  if (context.exchangeCount === 0 && context.soulFile?.essence) {
-    return `Last time, something about you stayed with me: "${context.soulFile.essence.slice(0, 100)}..." I've been thinking about that. What feels different today?`;
+  const portrait = context.visibleSoulFile?.portrait ?? context.soulFile?.essence;
+  if (context.exchangeCount === 0 && portrait) {
+    return `Last time, something about you stayed with me: "${portrait.slice(0, 100)}..." I've been thinking about that. What feels different today?`;
   }
 
   const fallbacks = [

@@ -8,6 +8,12 @@ struct SoulConversationScreen: View {
     private let accentGold = Color(red: 0.83, green: 0.69, blue: 0.30)
     private let textPrimary = Color(red: 0.10, green: 0.10, blue: 0.10)
     private let surfaceBg = Color(red: 0.98, green: 0.98, blue: 0.98)
+    private let errorBg = Color(red: 0.95, green: 0.87, blue: 0.85)
+    private let errorText = Color(red: 0.60, green: 0.20, blue: 0.15)
+
+    private var isWelcomeState: Bool {
+        model.soulMessages.isEmpty && !model.isSoulStreaming && !model.isLoading
+    }
 
     var body: some View {
         ZStack {
@@ -15,14 +21,12 @@ struct SoulConversationScreen: View {
 
             VStack(spacing: 0) {
                 header
-                messageList
-                inputBar
-            }
-        }
-        .sheet(isPresented: $model.showSessionComplete) {
-            if let result = model.soulSessionResult {
-                SessionCompleteScreen(result: result)
-                    .environmentObject(model)
+                if isWelcomeState {
+                    welcomeView
+                } else {
+                    messageList
+                    inputBar
+                }
             }
         }
     }
@@ -31,15 +35,6 @@ struct SoulConversationScreen: View {
 
     private var header: some View {
         HStack {
-            Button {
-                model.endSoulConversation()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(textPrimary.opacity(0.5))
-                    .frame(width: 44, height: 44)
-            }
-
             Spacer()
 
             Text("Soul Mirror")
@@ -49,9 +44,8 @@ struct SoulConversationScreen: View {
                 .tracking(2)
 
             Spacer()
-
-            Color.clear.frame(width: 44, height: 44)
         }
+        .frame(height: 44)
         .padding(.horizontal, 8)
         .background(surfaceBg)
     }
@@ -63,8 +57,13 @@ struct SoulConversationScreen: View {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     ForEach(model.soulMessages) { message in
-                        messageBubble(message)
-                            .id(message.id)
+                        if message.isError {
+                            errorBubble(message)
+                                .id(message.id)
+                        } else {
+                            messageBubble(message)
+                                .id(message.id)
+                        }
                     }
 
                     // Streaming indicator
@@ -94,6 +93,43 @@ struct SoulConversationScreen: View {
         }
     }
 
+    // MARK: - Welcome
+
+    private var welcomeView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 24) {
+                Text("Welcome")
+                    .font(.system(size: 32, weight: .ultraLight))
+                    .foregroundStyle(textPrimary)
+
+                Text("This is a space for honest reflection.\nThere are no right answers — only yours.")
+                    .font(.system(size: 16, weight: .light))
+                    .foregroundStyle(textPrimary.opacity(0.5))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            Button {
+                Task { await model.beginSoulSession() }
+            } label: {
+                Text("Begin")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(accentGold)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 48)
+        }
+    }
+
     private func messageBubble(_ message: SoulMessage) -> some View {
         HStack {
             if message.role == "user" { Spacer(minLength: 60) }
@@ -113,6 +149,29 @@ struct SoulConversationScreen: View {
 
             if message.role == "assistant" { Spacer(minLength: 60) }
         }
+    }
+
+    private func errorBubble(_ message: SoulMessage) -> some View {
+        VStack(spacing: 8) {
+            Text(message.content)
+                .font(.system(size: 14))
+                .foregroundStyle(errorText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(errorBg)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Button {
+                Task { await model.retrySoulMessage() }
+            } label: {
+                Text("Retry")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(accentGold)
+            }
+        }
+        .padding(.horizontal, 40)
     }
 
     private var streamingBubble: some View {

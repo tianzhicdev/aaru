@@ -3,63 +3,39 @@ import XCTest
 
 @MainActor
 final class AppModelTests: XCTestCase {
-    func testOnboardingGenerationUsesFallbackWithoutBackendURL() async {
+    func testVisibleSoulFileDefaultsToEmpty() {
         let model = AppModel(
             backend: BackendClient(configuration: BackendConfiguration(functionBaseURL: nil)),
             deviceID: "test-device",
             autoBootstrap: false
         )
-        model.profileInput = "I like cinema and distance running."
 
-        await model.generateSoulProfile()
-
-        XCTAssertNotNil(model.soulProfile)
-        XCTAssertEqual(model.soulProfile?.rawInput, "I like cinema and distance running.")
+        XCTAssertEqual(model.visibleSoulFile, .empty)
+        XCTAssertTrue(model.visibleSoulFile.isEmpty)
+        XCTAssertNil(model.visibleSoulFile.portrait)
     }
 
-    func testSaveSoulProfileMovesToAvatarStep() async {
+    func testBootstrapSetsUserID() async {
         let model = AppModel(
             backend: BackendClient(configuration: BackendConfiguration(functionBaseURL: nil)),
             deviceID: "test-device",
             autoBootstrap: false
         )
-        model.soulProfile = SoulProfile(
-            personality: "Curious",
-            interests: ["film"],
-            values: ["honesty"],
-            avoidTopics: [],
-            rawInput: "film",
-            guessedFields: []
-        )
 
-        await model.saveSoulProfile()
+        await model.bootstrap()
 
-        XCTAssertEqual(model.stage, .onboarding(.avatar))
+        XCTAssertNotNil(model.userID)
     }
 
-    func testUpdateAvatarMutatesSelection() {
+    func testSendSoulMessageIgnoresEmptyText() async {
         let model = AppModel(
             backend: BackendClient(configuration: BackendConfiguration(functionBaseURL: nil)),
             deviceID: "test-device",
             autoBootstrap: false
         )
 
-        model.updateAvatar(hairColor: "silver", accessory: "hat")
+        await model.sendSoulMessage("   ")
 
-        XCTAssertEqual(model.avatar.hairColor, "silver")
-        XCTAssertEqual(model.avatar.accessory, "hat")
-    }
-
-    func testSaveAvatarTransitionsIntoWorld() async {
-        let model = AppModel(
-            backend: BackendClient(configuration: BackendConfiguration(functionBaseURL: nil)),
-            deviceID: "test-device",
-            autoBootstrap: false
-        )
-        model.stage = .onboarding(.avatar)
-
-        await model.saveAvatarAndEnterWorld()
-
-        XCTAssertEqual(model.stage, .world)
+        XCTAssertTrue(model.soulMessages.isEmpty)
     }
 }

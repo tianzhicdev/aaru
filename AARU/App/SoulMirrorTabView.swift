@@ -32,14 +32,5 @@ struct SoulMirrorTabView: View {
                 model.acknowledgeSoulFileUpdate()
             }
         }
-        .onChange(of: model.sessionJustEnded) {
-            if model.sessionJustEnded {
-                withAnimation {
-                    selectedTab = 1
-                }
-                model.sessionJustEnded = false
-                model.acknowledgeSoulFileUpdate()
-            }
-        }
     }
 }

@@ -120,22 +120,6 @@ final class BackendClient {
         )
     }
 
-    func endSoulSession() async throws -> EndSoulSessionResponse {
-        guard endpoint(named: "end-soul-session") != nil else {
-            return EndSoulSessionResponse(
-                visibleSoulFile: .empty,
-                sessionCompleted: true,
-                synthesisSucceeded: false
-            )
-        }
-        return try await post(
-            "end-soul-session",
-            body: EmptyBody(),
-            requiresAuth: true,
-            retryOnServerError: true
-        )
-    }
-
     func soulConverseStream(
         message: String,
         sessionID: UUID? = nil,

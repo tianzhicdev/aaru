@@ -61,26 +61,3 @@
 **Tests:** 73 TS all passing (no iOS changes)
 
 **Next priority:** Deploy updated soul-converse to Supabase, then implement session end ceremony
-
-## Iteration 4 — 2026-03-27 00:15
-
-**Goal:** Let users end a soul session and see their synthesized soul file — the therapeutic payoff moment.
-
-**What changed:**
-- "End Session" button appears in conversation header after 4+ user messages
-- Calls `end-soul-session` backend endpoint for full 4-expert synthesis
-- On success, auto-switches to Soul File tab to reveal the updated soul file
-- Added `endSoulSession()` to BackendClient (with offline fallback)
-- Added `endSoulSession()` to AppModel with auth retry, `sessionJustEnded` + `isEndingSession` flags
-- SoulMirrorTabView watches `sessionJustEnded` and animates tab switch
-
-**Files modified:** 5 files
-- `AARU/App/Models.swift` — `EndSoulSessionResponse` struct
-- `AARU/App/BackendClient.swift` — `endSoulSession()` method
-- `AARU/App/AppModel.swift` — `endSoulSession()`, `sessionJustEnded`, `isEndingSession` state
-- `AARU/App/SoulConversationScreen.swift` — "End Session" header button (after 4+ messages)
-- `AARU/App/SoulMirrorTabView.swift` — auto-switch to Soul File tab on session end
-
-**Tests:** 73 TS all passing, iOS builds
-
-**Next priority:** SoulFileScreen polish — make the 7-section display more visually compelling with portrait, crystallized moments, and open threads

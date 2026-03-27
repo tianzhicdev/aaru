@@ -113,6 +113,26 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Fire-and-forget: run synthesis in background, update soul file silently
+    private func endSoulSessionInBackground() async {
+        logger.info("Auto-triggering session synthesis in background")
+        do {
+            let response = try await backend.endSoulSession()
+            if response.synthesisSucceeded {
+                visibleSoulFile = response.visibleSoulFile
+                cacheVisibleSoulFile(response.visibleSoulFile)
+                soulFileJustUpdated = true
+                logger.info("Background synthesis succeeded, soul file updated")
+            } else {
+                logger.warning("Background synthesis completed but synthesis_succeeded=false")
+            }
+            // Clear active session — next message will auto-create a new one
+            activeSoulSession = nil
+        } catch {
+            logger.error("Background synthesis failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     func beginSoulSession() async {
         guard !isSoulStreaming else { return }
         logger.info("Beginning soul session")
@@ -167,7 +187,16 @@ final class AppModel: ObservableObject {
 
         isSoulStreaming = false
         soulStreamingText = ""
+
+        // Auto-trigger synthesis when exchange count hits threshold
+        let userMessageCount = soulMessages.filter { $0.role == "user" }.count
+        if userMessageCount > 0, userMessageCount.isMultiple(of: sessionMaxExchanges) {
+            Task { await endSoulSessionInBackground() }
+        }
     }
+
+    /// Maximum user messages per session before auto-triggering synthesis
+    private let sessionMaxExchanges = 15
 
     func retrySoulMessage() async {
         guard let lastUserMessage = soulMessages.last(where: { $0.role == "user" }) else { return }

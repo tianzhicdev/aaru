@@ -61,3 +61,127 @@
 **Tests:** 73 TS all passing (no iOS changes)
 
 **Next priority:** Deploy updated soul-converse to Supabase, then implement session end ceremony
+
+## Iteration 4 — 2026-03-27 00:30
+
+**Goal:** Surface bootstrap error messages in the UI instead of showing a silent blank welcome screen.
+
+**What changed:**
+- When `errorMessage` is set (bootstrap/network failure), the welcome view now shows the error in a styled banner
+- "Begin" button changes to "Try Again" which re-runs `bootstrap()`
+- Uses existing error color scheme for consistency
+
+**Files modified:** 1 file
+- `AARU/App/SoulConversationScreen.swift` — error display in welcome view
+
+**Tests:** 73 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Add integration tests for Phase 1 edge functions
+
+## Iteration 5 — 2026-03-27 00:34
+
+**Goal:** Add integration tests for Phase 1 edge functions and session lifecycle.
+
+**What changed:**
+- `tests/unit/soulSession.test.ts` — 13 tests for `isSessionStale` (various timestamps, boundary at 72h) and `readBearerToken` (x-aaru-session, Bearer, precedence, edge cases)
+- `tests/integration/soulMirrorHandlers.test.ts` — 10 tests for `handleBootstrapSoul`, `handleGetSoulFile`, `handleEndSoulSession` with mocked DB/auth layer
+
+**Files modified:** 2 files
+- `tests/unit/soulSession.test.ts` — created
+- `tests/integration/soulMirrorHandlers.test.ts` — created
+
+**Tests:** 96 passing (73 → 96, +23 new)
+
+**Next priority:** Add unit tests for soulApp.ts session lifecycle functions
+
+## Iteration 6 — 2026-03-27 00:36
+
+**Goal:** Add unit tests for soulApp.ts session lifecycle functions.
+
+**What changed:**
+- `tests/unit/soulApp.test.ts` — 8 tests covering `bootstrapSoulState`, `autoCompleteStaleSession`, `runReflectionUpdate`, `runSoulSynthesis`
+- Tests mock fetch (DB layer) and callClaude (LLM) to test orchestration logic in isolation
+
+**Files modified:** 1 file
+
+**Tests:** 104 passing (96 → 104, +8 new)
+
+**Next priority:** Remove dead SESSION_COMPLETE marker infrastructure
+
+## Iteration 7 — 2026-03-27 00:37
+
+**Goal:** Remove dead [SESSION_COMPLETE] marker infrastructure.
+
+**What changed:**
+- Deleted `cleanSessionCompleteMarker`, `parseSessionInsights`, `SessionInsight` from `soul.ts`
+- Updated `soul-converse/index.ts` to use `.trim()` instead of the removed function
+- Removed 4 dead tests from `soul.test.ts`
+
+**Files modified:** 3 files
+
+**Tests:** 100 passing (removed 4 dead tests, net: 104 → 100)
+
+**Next priority:** Fix double bootstrap call
+
+## Iteration 8 — 2026-03-27 00:38
+
+**Goal:** Fix double bootstrap call on app launch.
+
+**What changed:**
+- Removed `.task { await model.bootstrapSoul() }` from `SoulMirrorTabView` — `AppModel.init(autoBootstrap: true)` already chains `bootstrap()` → `bootstrapSoul()`
+
+**Files modified:** 1 file
+
+**Tests:** 100 passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Add SSE stream timeout on iOS
+
+## Iteration 9 — 2026-03-27 00:40
+
+**Goal:** Add SSE stream timeout to prevent hung connections.
+
+**What changed:**
+- Added `request.timeoutInterval = 30` to the soul-converse SSE URLRequest
+
+**Files modified:** 1 file
+
+**Tests:** 100 passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Commit the conversation restore feature
+
+## Iteration 10 — 2026-03-27 00:42
+
+**Goal:** Commit the conversation restore feature (previously uncommitted changes).
+
+**What changed:**
+- `bootstrap-soul` now loads `soul_messages` for active sessions and returns them
+- `Models.swift` gains `SoulMessagePayload` and `messages` field on `SoulBootstrapResponse`
+- `AppModel.bootstrapSoul()` maps incoming messages to `soulMessages`
+
+**Files modified:** 3 files
+
+**Tests:** 100 passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Re-implement session end with synthesis
+
+## Iteration 11 — 2026-03-27 00:50
+
+**Goal:** Re-implement session end with synthesis — invisible auto-trigger.
+
+**What changed:**
+- Added `SESSION_MAX_EXCHANGES = 15` constant for synthesis trigger threshold
+- Added `EndSoulSessionResponse` model to `Models.swift`
+- Added `endSoulSession()` to `BackendClient` (POST to end-soul-session, auth required)
+- Added `endSoulSessionInBackground()` to `AppModel` (fire-and-forget, updates visibleSoulFile silently, clears activeSoulSession)
+- In `sendSoulMessage()`, after conversation completes, counts user messages and fires synthesis when count is a multiple of 15
+- Sessions are invisible: no UI, no ceremony. User keeps chatting, next message auto-creates a new session server-side
+
+**Files modified:** 4 files
+- `src/domain/constants.ts` — SESSION_MAX_EXCHANGES constant
+- `AARU/App/Models.swift` — EndSoulSessionResponse
+- `AARU/App/BackendClient.swift` — endSoulSession() method
+- `AARU/App/AppModel.swift` — endSoulSessionInBackground() + auto-trigger in sendSoulMessage
+
+**Tests:** 100 TS passing, iOS BUILD SUCCEEDED
+
+**Next priority:** Add pull-to-refresh on SoulFileScreen

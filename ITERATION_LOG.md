@@ -44,3 +44,20 @@
 **Tests:** 73 TS + 6 iOS all passing
 
 **Next priority:** Session end ceremony — detect session completion, call end-soul-session, show the user their synthesized soul file with a reveal transition
+
+## Iteration 3 — 2026-03-27 00:00
+
+**Goal:** Fix conversation quality — don't save `[begin]` protocol marker as a user message.
+
+**What changed:**
+- `soul-converse` now detects `[begin]` and skips saving it to `soul_messages`
+- Exchange count is not incremented for session start triggers
+- The AI's opening response is still saved as an assistant message
+- Claude no longer sees "user: [begin]" in conversation history
+
+**Files modified:** 1 file
+- `supabase/functions/soul-converse/index.ts` — session start detection, conditional save/increment
+
+**Tests:** 73 TS all passing (no iOS changes)
+
+**Next priority:** Deploy updated soul-converse to Supabase, then implement session end ceremony

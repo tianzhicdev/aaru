@@ -23,7 +23,7 @@ to publish this site at `https://tianzhistudio.com/`.
 
 ## Before you deploy
 
-1. Replace the App Store placeholder URL in:
+1. Confirm the App Store URL in:
    - `web/index.html`
 2. Confirm the support email:
    - `thumos@tianzhistudio.com`
@@ -47,7 +47,7 @@ Build settings:
 
 - Production branch: `main`
 - Framework preset: `None`
-- Build command: `exit 0`
+- Build command: leave blank
 - Build output directory: `web`
 
 After the first deploy, Cloudflare will give you a `*.pages.dev` hostname.
@@ -70,11 +70,6 @@ Open all of the following:
 - `https://tianzhistudio.com/`
 - `https://tianzhistudio.com/privacy`
 - `https://tianzhistudio.com/support`
-
-Also verify the canonical HTML files:
-
-- `https://tianzhistudio.com/privacy.html`
-- `https://tianzhistudio.com/support.html`
 
 ### 4. Enable analytics
 
@@ -118,7 +113,7 @@ You will need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environ
 
 ## Notes
 
-- The site intentionally uses relative links so it works both locally and on the apex domain.
-- `_redirects` provides nice `/privacy` and `/support` URLs.
+- The site uses root-relative links so navigation stays correct on the apex domain.
+- Let Cloudflare Pages clean URLs serve `privacy.html` at `/privacy` and `support.html` at `/support`.
 - If you have not created `thumos@tianzhistudio.com` yet, either set up Cloudflare Email Routing
   for that address or replace the email in the HTML files before launch.

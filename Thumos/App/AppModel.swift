@@ -27,8 +27,22 @@ final class AppModel: ObservableObject {
     private var lastSoulFileSynthesisRequest: Date?
 
     let backend: BackendClient
-    let deviceID: String
+    private(set) var deviceID: String
     private(set) var userID: UUID?
+
+    #if DEBUG
+    @Published var debugInfo: DebugInfoResponse?
+    @Published var isLoadingDebugInfo = false
+    var debugDeviceIDOverride: String? {
+        didSet {
+            if let override = debugDeviceIDOverride, !override.isEmpty {
+                deviceID = override
+            } else {
+                deviceID = DeviceIdentity.current()
+            }
+        }
+    }
+    #endif
 
     init(
         backend: BackendClient = BackendClient(),
@@ -342,4 +356,29 @@ final class AppModel: ObservableObject {
         guard let payloads = try? JSONDecoder().decode([SoulMessagePayload].self, from: data) else { return nil }
         return payloads.map { SoulMessage(id: UUID(), role: $0.role, content: $0.content) }
     }
+
+    // MARK: - Debug
+
+    #if DEBUG
+    func fetchDebugInfo() async {
+        isLoadingDebugInfo = true
+        defer { isLoadingDebugInfo = false }
+        do {
+            debugInfo = try await backend.getDebugInfo()
+        } catch {
+            logger.error("Debug info fetch failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func impersonateDevice(_ newDeviceID: String) async {
+        debugDeviceIDOverride = newDeviceID.isEmpty ? nil : newDeviceID
+        // Clear current state and re-bootstrap with new device ID
+        backend.sessionToken = nil
+        soulMessages = []
+        visibleSoulFile = .empty
+        activeSoulSession = nil
+        debugInfo = nil
+        await bootstrap()
+    }
+    #endif
 }

@@ -4,12 +4,30 @@ struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
+    @State private var showDebug = false
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
     }
 
     var body: some View {
+        settingsContent
+            .preferredColorScheme(.dark)
+            .alert("Delete All Data?", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete Everything", role: .destructive) {
+                    Task {
+                        await model.deleteAccount()
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text("This will permanently delete your conversations, soul file, and all associated data. This cannot be undone.")
+            }
+            .modifier(DebugSheetModifier(showDebug: $showDebug, model: model))
+    }
+
+    private var settingsContent: some View {
         ZStack {
             Theme.backgroundGradient.ignoresSafeArea()
 
@@ -83,6 +101,17 @@ struct SettingsView: View {
                         }
                         .disabled(model.isDeletingAccount)
 
+                        if DebugSheetModifier.isDebug {
+                            Divider()
+                                .frame(height: 0.5)
+                                .overlay(Theme.divider)
+                                .padding(.horizontal, 20)
+
+                            settingsRow(icon: "ant", title: "Debug") {
+                                showDebug = true
+                            }
+                        }
+
                         Spacer().frame(height: 40)
 
                         Text("Thumos v\(appVersion)")
@@ -92,18 +121,6 @@ struct SettingsView: View {
                     .padding(.top, 8)
                 }
             }
-        }
-        .preferredColorScheme(.dark)
-        .alert("Delete All Data?", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Everything", role: .destructive) {
-                Task {
-                    await model.deleteAccount()
-                    dismiss()
-                }
-            }
-        } message: {
-            Text("This will permanently delete your conversations, soul file, and all associated data. This cannot be undone.")
         }
     }
 
@@ -127,3 +144,30 @@ struct SettingsView: View {
         }
     }
 }
+
+// MARK: - Debug Sheet Modifier
+
+#if DEBUG
+struct DebugSheetModifier: ViewModifier {
+    @Binding var showDebug: Bool
+    let model: AppModel
+    static let isDebug = true
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $showDebug) {
+            DebugView()
+                .environmentObject(model)
+        }
+    }
+}
+#else
+struct DebugSheetModifier: ViewModifier {
+    @Binding var showDebug: Bool
+    let model: AppModel
+    static let isDebug = false
+
+    func body(content: Content) -> some View {
+        content
+    }
+}
+#endif

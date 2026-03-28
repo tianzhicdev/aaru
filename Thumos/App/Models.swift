@@ -168,3 +168,87 @@ struct DeleteAccountResponse: Codable {
     let deleted: Bool
 }
 
+// MARK: - Debug (stripped from Release builds)
+
+#if DEBUG
+struct CoreDriver: Codable {
+    let driver: String
+    let strength: Double
+    let inferred: Bool
+    let evidence: String
+}
+
+struct VoiceExample: Codable {
+    let trigger: String
+    let response: String
+}
+
+struct VoiceProfile: Codable {
+    let register: String
+    let density: String
+    let humorStyle: String
+    let conflictStyle: String
+    let disclosureRate: String
+    let signaturePatterns: [String]
+    let voiceExamples: [VoiceExample]
+}
+
+struct DepthMap: Codable {
+    let safeEntryPoints: [String]
+    let unlockTopics: [String]
+    let avoidEarly: [String]
+    let currentlyLiveTopics: [String]
+}
+
+struct ExpertReflections: Codable {
+    let psychologist: [String]
+    let sociologist: [String]
+    let linguist: [String]
+    let narrativeAnalyst: [String]
+}
+
+struct HiddenSoulFile: Codable {
+    let version: Int
+    let lastUpdated: String
+    let confidence: String
+    let expertReflections: ExpertReflections
+    let coreDrivers: [CoreDriver]
+    let coreValues: [String]
+    let voice: VoiceProfile
+    let depthMap: DepthMap
+    let analystNotes: [String]
+}
+
+struct DebugSessionInfo: Codable {
+    let id: String
+    let sessionNumber: Int
+    let status: String
+    let exchangeCount: Int
+    let startedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case sessionNumber = "session_number"
+        case status
+        case exchangeCount = "exchange_count"
+        case startedAt = "started_at"
+    }
+}
+
+struct DebugInfoResponse: Codable {
+    let userId: String
+    let deviceId: String
+    let hiddenSoulFile: HiddenSoulFile?
+    let visibleSoulFile: VisibleSoulFile?
+    let activeSession: DebugSessionInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case deviceId = "device_id"
+        case hiddenSoulFile = "hidden_soul_file"
+        case visibleSoulFile = "visible_soul_file"
+        case activeSession = "active_session"
+    }
+}
+#endif
+

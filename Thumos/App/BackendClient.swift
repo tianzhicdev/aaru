@@ -202,6 +202,16 @@ final class BackendClient {
         )
     }
 
+    #if DEBUG
+    func getDebugInfo() async throws -> DebugInfoResponse {
+        return try await post(
+            "get-debug-info",
+            body: EmptyBody(),
+            requiresAuth: true
+        )
+    }
+    #endif
+
     func synthesizeSoulFile() async throws -> SynthesizeSoulFileResponse {
         guard endpoint(named: "synthesize-soul-file") != nil else {
             return SynthesizeSoulFileResponse(

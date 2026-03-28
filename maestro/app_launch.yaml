@@ -1,4 +1,4 @@
-appId: com.tianzhichen.aaru
+appId: com.trythumos.app
 ---
 - launchApp
-- assertVisible: "AARU"
+- assertVisible: "Thumos"

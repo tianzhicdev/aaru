@@ -1,6 +1,6 @@
-# AARU
+# Thumos
 
-Backend-first scaffold for the AARU POC described in [AARU_Vision.md](/Users/tianzhichen/projects/aaru/AARU_Vision.md) and [AARU_Implementation_Plan.md](/Users/tianzhichen/projects/aaru/AARU_Implementation_Plan.md).
+Backend-first scaffold for the Thumos POC described in [VISION.md](VISION.md).
 
 ## Included
 

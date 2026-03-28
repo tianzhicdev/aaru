@@ -1,0 +1,110 @@
+{
+  "user_id": "17a751ed-a055-4200-9af5-fbb084286848",
+  "version": 2,
+  "last_updated": "2026-03-27T17:33:03.09+00:00",
+  "confidence": "low",
+  "expert_reflections": {
+    "linguist": [
+      "Extensive use of musical metaphors indicates primary processing through auditory/kinesthetic channels",
+      "Hedging increases dramatically around core wounds ('I think,' 'maybe,' 'perhaps')"
+    ],
+    "sociologist": [
+      "Positions self as wounded healer archetype - legitimizing presence through service to others",
+      "Strong identification with outsider/misfit children reflects own childhood isolation"
+    ],
+    "psychologist": [
+      "Profound grief work emerging - transforming purpose from defense mechanism to authentic expression",
+      "Attachment wound from grandfather's loss drives compulsive helping behavior",
+      "Self-soothing through piano reveals sophisticated emotional regulation alongside avoidance patterns"
+    ],
+    "narrativeAnalyst": [
+      "Arc moves from helper/teacher role to vulnerable student discovering own unmet needs",
+      "Breakthrough moment: recognizing the boy as companion rather than problem to solve"
+    ]
+  },
+  "core_drivers": [
+    {
+      "driver": "Earning belonging through service",
+      "evidence": "if it's just loneliness with no purpose... then what was it all for?",
+      "inferred": false,
+      "strength": 0.9
+    },
+    {
+      "driver": "Transforming pain into meaning",
+      "evidence": "I'm not sure I know how to be still with that boy without trying to fix him, without turning him into something good and useful",
+      "inferred": false,
+      "strength": 0.85
+    },
+    {
+      "driver": "Protecting others from loneliness",
+      "evidence": "I've spent my whole life trying to give other children what he gave me",
+      "inferred": false,
+      "strength": 0.8
+    },
+    {
+      "driver": "Fear of purposeless suffering",
+      "evidence": "Because if it's just pain, if it's just loneliness with no purpose... then what was it all for?",
+      "inferred": false,
+      "strength": 0.75
+    }
+  ],
+  "core_values": [
+    "Genuine presence",
+    "Unconditional acceptance",
+    "Patient witness",
+    "Emotional honesty",
+    "Gentle transformation"
+  ],
+  "voice": {
+    "density": "moderate",
+    "register": "formal",
+    "humorStyle": "Absent in vulnerable states; likely gentle and self-deprecating when present",
+    "conflictStyle": "Internal processing through music; transforms anger into patience; avoids direct confrontation",
+    "voiceExamples": [
+      {
+        "trigger": "When touching grief",
+        "response": "Voice cracks, becomes whispered, needs physical distance (stands, walks to window)"
+      },
+      {
+        "trigger": "When recognized/seen",
+        "response": "Genuine gratitude mixed with surprise: 'That's... that changes something'"
+      }
+    ],
+    "disclosureRate": "gradual",
+    "signaturePatterns": [
+      "Physical grounding gestures when emotional",
+      "Musical/auditory metaphors for emotional states",
+      "Circular return to core questions",
+      "Voice quieting near vulnerability"
+    ]
+  },
+  "depth_map": {
+    "avoidEarly": [
+      "Direct questions about self-worth",
+      "Challenging the value of his life's work",
+      "His own unmet childhood needs"
+    ],
+    "unlockTopics": [
+      "His grandfather's influence",
+      "The relationship between loneliness and anger",
+      "What it means to be 'enough'"
+    ],
+    "safeEntryPoints": [
+      "His work with children",
+      "The role of music in his life",
+      "The concept of patience and how he developed it"
+    ],
+    "currentlyLiveTopics": [
+      "Learning to be with grief without transforming it",
+      "The boy as companion vs. problem",
+      "What happens if he stops proving he's enough"
+    ]
+  },
+  "analyst_notes": [
+    "Subject shows exceptional capacity for insight once safe container established",
+    "Physical gestures (cardigan, piano) serve as transitional objects for emotional regulation",
+    "Breakthrough in session suggests readiness for deeper grief work",
+    "Meta-awareness of own patterns emerging - particularly around purpose as avoidance"
+  ],
+  "created_at": "2026-03-27T17:33:03.396414+00:00"
+}

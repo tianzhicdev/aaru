@@ -1,0 +1,122 @@
+{
+  "user_id": "3bdcbbe4-3987-4032-84d0-09f8bfe6f94e",
+  "version": 2,
+  "last_updated": "2026-03-27T17:46:10.82+00:00",
+  "confidence": "medium",
+  "expert_reflections": {
+    "linguist": [
+      "Extensive use of fog/dissolution metaphors for consciousness and creation",
+      "Architecture/building metaphors for self-management and identity construction",
+      "Voice modulates between whispered vulnerability and crystalline clarity",
+      "Frequent parenthetical self-corrections showing real-time thought process"
+    ],
+    "sociologist": [
+      "Positions herself as outsider at dinner parties - 'austere woman who doesn't quite fit'",
+      "Gender consciousness acute - rage at world demanding women be decorative",
+      "Marriage dynamic involves mutual surveillance system for stability"
+    ],
+    "psychologist": [
+      "Complex trauma response with hypervigilant self-monitoring as primary defense mechanism",
+      "Dissociation between 'managed' and 'unwatched' selves suggests fragmented identity from early trauma",
+      "Suicidal ideation framed as desire for authentic witnessing rather than escape",
+      "Attachment style shows desperate need for connection coupled with belief that true self is unlovable"
+    ],
+    "narrativeAnalyst": [
+      "Constructs narrative where death becomes final artistic composition",
+      "Casts herself as both protagonist and antagonist in her own story",
+      "Major turning point: realizing she's 'dying to be seen' not just wanting",
+      "Resolution involves accepting the reaching itself as meaningful rather than achieving connection"
+    ]
+  },
+  "core_drivers": [
+    {
+      "driver": "Need for authentic witnessing",
+      "evidence": "I'm dying to be seen. The real Virginia, not the managed one.",
+      "inferred": false,
+      "strength": 1
+    },
+    {
+      "driver": "Terror of loss of control",
+      "evidence": "The caretaker doesn't get tired so much as she becomes *terrified* of what happens when she stops.",
+      "inferred": false,
+      "strength": 0.9
+    },
+    {
+      "driver": "Artistic/creative compulsion",
+      "evidence": "Every sentence feels like I'm reaching into fog, trying to catch something that dissolves the moment I turn to look directly at it.",
+      "inferred": false,
+      "strength": 0.8
+    },
+    {
+      "driver": "Rage at injustice/violation",
+      "evidence": "She's also very angry... At the half-brothers who touched me in the dark.",
+      "inferred": false,
+      "strength": 0.7
+    },
+    {
+      "driver": "Fear of being burden",
+      "evidence": "Would he just become more vigilant, tighter in his watching? Another layer of architecture.",
+      "inferred": true,
+      "strength": 0.8
+    }
+  ],
+  "core_values": [
+    "Authenticity over safety",
+    "Meaning-making through art",
+    "Truth caught obliquely",
+    "Connection despite impossibility",
+    "Witnessing as form of love"
+  ],
+  "voice": {
+    "density": "dense",
+    "register": "formal",
+    "humorStyle": "Absent in this session - too raw for deflection",
+    "conflictStyle": "Internal - turns conflict inward rather than outward expression",
+    "voiceExamples": [
+      {
+        "trigger": "Being asked about hidden self",
+        "response": "Goes very still, long pause, then floods with precise, painful truth"
+      },
+      {
+        "trigger": "Recognition of paradox",
+        "response": "Immediately grasps and extends the metaphor, finding new angles"
+      }
+    ],
+    "disclosureRate": "floods",
+    "signaturePatterns": [
+      "Parenthetical self-awareness: 'not in the way people might imagine'",
+      "Metaphorical clustering around fog/architecture/watching",
+      "Voice drops to whisper at moments of deepest truth",
+      "Long pauses before most vulnerable admissions"
+    ]
+  },
+  "depth_map": {
+    "avoidEarly": [
+      "Direct questions about the half-brothers",
+      "Specific suicide methods mentioned",
+      "Leonard's potential responses to her unmanaged self"
+    ],
+    "unlockTopics": [
+      "The watching/being watched dynamic",
+      "Difference between creating and managing",
+      "What 'moments of being' mean to her"
+    ],
+    "safeEntryPoints": [
+      "Writing process and creative terror",
+      "Observation as way of being in world",
+      "Light and visual perception"
+    ],
+    "currentlyLiveTopics": [
+      "The possibility of being witnessed without ending",
+      "The caretaker's exhaustion",
+      "Whether reaching itself has meaning"
+    ]
+  },
+  "analyst_notes": [
+    "User appears to be deeply inhabiting Virginia Woolf persona - historical knowledge accurate",
+    "Exceptional psychological sophistication and self-awareness",
+    "Session shows therapeutic breakthrough around reframing 'reaching' as meaningful in itself",
+    "High risk indicators present but also strong connection to meaning-making"
+  ],
+  "created_at": "2026-03-27T17:46:11.12369+00:00"
+}

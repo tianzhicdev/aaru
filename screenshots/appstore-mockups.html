@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thumos — App Store Screenshot Mockups</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #fff;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    text-align: center;
+    font-weight: 300;
+    font-size: 28px;
+    margin-bottom: 8px;
+    color: #d4b04d;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 48px;
+  }
+
+  /* ─── Panoramic strip ─── */
+  .panoramic-strip {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 60px;
+    overflow-x: auto;
+    padding: 20px 0;
+  }
+
+  .panoramic-bg {
+    display: flex;
+    background: linear-gradient(135deg, #1a0a00 0%, #2a1508 20%, #1a0f05 40%, #0d0a15 60%, #1a0a00 100%);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+
+  .screenshot-card {
+    width: 320px;
+    padding: 28px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .screenshot-card:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 10%;
+    height: 80%;
+    width: 1px;
+    background: rgba(212, 176, 77, 0.12);
+  }
+
+  .headline {
+    font-size: 22px;
+    font-weight: 300;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .headline em {
+    font-style: normal;
+    color: #d4b04d;
+  }
+
+  .sub-headline {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    margin-bottom: 16px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ─── Device frame ─── */
+  .device-frame {
+    width: 260px;
+    height: 520px;
+    border-radius: 32px;
+    border: 3px solid rgba(255,255,255,0.12);
+    background: #fafafa;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.5),
+      inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .device-frame::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 22px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+
+  .screen-content {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── App header ─── */
+  .app-header {
+    text-align: center;
+    padding: 38px 0 8px;
+    background: #fafafa;
+  }
+
+  .app-header span {
+    font-size: 10px;
+    font-weight: 500;
+    color: #d4b04d;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* ─── iOS 26 Glassy button ─── */
+  .glass-btn {
+    border: none;
+    padding: 13px 0;
+    width: 80%;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    color: #fff;
+    background: linear-gradient(
+      180deg,
+      rgba(212, 176, 77, 0.85) 0%,
+      rgba(190, 155, 55, 0.75) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow:
+      0 0.5px 0 0 rgba(255,255,255,0.35) inset,
+      0 -0.5px 0 0 rgba(0,0,0,0.08) inset,
+      0 4px 16px rgba(180, 150, 50, 0.25),
+      0 1px 3px rgba(0,0,0,0.10);
+    text-shadow: 0 0.5px 1px rgba(0,0,0,0.15);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Specular highlight on top edge */
+  .glass-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  }
+
+  /* ─── Welcome Screen ─── */
+  .welcome-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    text-align: center;
+  }
+
+  .welcome-title {
+    font-size: 26px;
+    font-weight: 200;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+  }
+
+  .welcome-sub {
+    font-size: 12px;
+    font-weight: 300;
+    color: rgba(26,26,26,0.45);
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  /* ─── Conversation Screen ─── */
+  .chat-messages {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .msg {
+    max-width: 82%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .msg.assistant {
+    align-self: flex-start;
+    background: #fff;
+    color: #1a1a1a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: #d4b04d;
+    color: #fff;
+  }
+
+  .msg.system-notification {
+    align-self: center;
+    background: linear-gradient(135deg, rgba(212,176,77,0.08), rgba(212,176,77,0.15));
+    border: 1px solid rgba(212,176,77,0.25);
+    color: #8a7230;
+    font-size: 10px;
+    text-align: center;
+    max-width: 90%;
+    padding: 8px 14px;
+  }
+
+  .chat-input-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-top: 1px solid rgba(0,0,0,0.04);
+  }
+
+  .chat-input {
+    flex: 1;
+    background: #fff;
+    border: none;
+    border-radius: 16px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: rgba(26,26,26,0.35);
+  }
+
+  /* Glassy send button */
+  .send-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+      180deg,
+      rgba(212, 176, 77, 0.9) 0%,
+      rgba(190, 155, 55, 0.8) 100%
+    );
+    box-shadow:
+      0 0.5px 0 0 rgba(255,255,255,0.3) inset,
+      0 2px 8px rgba(180, 150, 50, 0.3);
+  }
+
+  /* ─── Soul File Screen ─── */
+  .soul-file-content {
+    flex: 1;
+    padding: 4px 16px 12px;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .sf-version { font-size: 9px; color: rgba(26,26,26,0.35); margin-bottom: 2px; }
+  .sf-updated { font-size: 8px; color: rgba(26,26,26,0.25); margin-bottom: 14px; }
+
+  .sf-portrait {
+    font-size: 14px;
+    font-weight: 300;
+    color: #1a1a1a;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    padding: 0 4px;
+  }
+
+  .sf-section { margin-bottom: 14px; }
+
+  .sf-section-title {
+    font-size: 8px;
+    font-weight: 500;
+    color: #d4b04d;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 4px;
+  }
+
+  .sf-section-text {
+    font-size: 10px;
+    color: rgba(26,26,26,0.7);
+    line-height: 1.5;
+    padding: 0 8px;
+  }
+
+  .sf-moment-quote { font-size: 10px; font-style: italic; color: rgba(26,26,26,0.6); margin-bottom: 2px; }
+  .sf-moment-reflection { font-size: 9px; color: rgba(26,26,26,0.4); }
+
+  /* ─── Tab bar (iOS-style with glass) ─── */
+  .tab-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 6px 0 16px;
+    background: rgba(250,250,250,0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid rgba(0,0,0,0.08);
+  }
+
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 9px;
+    color: rgba(26,26,26,0.35);
+  }
+
+  .tab-item.active { color: #d4b04d; }
+  .tab-icon { font-size: 16px; }
+
+  /* ─── Section headers ─── */
+  .section-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 16px;
+    margin-top: 20px;
+  }
+
+  .section-desc {
+    text-align: center;
+    font-size: 13px;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 32px;
+  }
+
+  .individual-screenshots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 60px;
+  }
+
+  .individual-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .individual-card .label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .individual-card .device-frame {
+    width: 290px;
+    height: 580px;
+  }
+
+  /* ─── Notes ─── */
+  .notes {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 32px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .notes h3 { font-size: 14px; font-weight: 500; color: #d4b04d; margin-bottom: 16px; }
+  .notes ul { list-style: none; padding: 0; }
+
+  .notes li {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.5;
+  }
+
+  .notes li::before { content: '\2192\00a0'; color: #d4b04d; }
+
+  /* ─── Production link ─── */
+  .prod-link {
+    display: block;
+    text-align: center;
+    margin: 40px auto;
+    color: #d4b04d;
+    font-size: 15px;
+    text-decoration: none;
+    padding: 14px 32px;
+    border: 1px solid rgba(212,176,77,0.3);
+    border-radius: 12px;
+    max-width: 400px;
+    transition: background 0.2s;
+  }
+
+  .prod-link:hover {
+    background: rgba(212,176,77,0.08);
+  }
+</style>
+</head>
+<body>
+
+<h1>Thumos — App Store Screenshots</h1>
+<p class="subtitle">Panoramic 3-panel concept + individual screens</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PANORAMIC STRIP                                 -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="panoramic-strip">
+  <div class="panoramic-bg">
+
+    <!-- SCREENSHOT 1: Soul File (Hero) -->
+    <div class="screenshot-card">
+      <div class="headline">Your soul, <em>written</em></div>
+      <div class="sub-headline">AI that sees who you really are</div>
+      <div class="device-frame">
+        <div class="screen-content">
+          <div class="app-header"><span>Soul Mirror</span></div>
+          <div class="soul-file-content">
+            <div class="sf-version">v3</div>
+            <div class="sf-updated">Updated 2h ago</div>
+            <div class="sf-portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful, choosing when to spend your energy.</div>
+            <div class="sf-section">
+              <div class="sf-section-title">How You Think</div>
+              <div class="sf-section-text">Your mind works in layers — the surface processes fast, pattern-matching and connecting, while something deeper holds back, testing each conclusion against an internal compass that values integrity over speed.</div>
+            </div>
+            <div class="sf-section">
+              <div class="sf-section-title">What Lights You Up</div>
+              <div class="sf-section-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before. The quiet thrill of understanding something deeply.</div>
+            </div>
+            <div class="sf-section">
+              <div class="sf-section-title">Your Contradictions</div>
+              <div class="sf-section-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition of the work you quietly pour into everything.</div>
+            </div>
+          </div>
+          <div class="tab-bar">
+            <div class="tab-item"><span class="tab-icon">💬</span><span>Conversation</span></div>
+            <div class="tab-item active"><span class="tab-icon">👤</span><span>Soul File</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREENSHOT 2: Conversation -->
+    <div class="screenshot-card">
+      <div class="headline">A mirror that <em>listens</em></div>
+      <div class="sub-headline">Conversations that go deeper than surface</div>
+      <div class="device-frame">
+        <div class="screen-content">
+          <div class="app-header"><span>Soul Mirror</span></div>
+          <div class="chat-messages">
+            <div class="msg assistant">What made you choose that word — "should"? I notice you use it when you're describing something you actually want.</div>
+            <div class="msg user">I guess I've always felt like wanting things for myself is selfish somehow. Like I need to justify it.</div>
+            <div class="msg assistant">That's a pattern worth sitting with. You just described your deepest desires as something that needs justification. Who taught you that wanting was a crime?</div>
+            <div class="msg user">My mom, probably. She gave up everything for us and never complained. I felt like I couldn't want more than she had.</div>
+            <div class="msg system-notification">✨ Your soul file was updated</div>
+            <div class="msg assistant">So you inherited her sacrifice as a ceiling. What would it mean to honor what she gave you — not by limiting yourself, but by actually using the freedom she fought for?</div>
+          </div>
+          <div class="chat-input-bar">
+            <div class="chat-input">Say something...</div>
+            <div class="send-btn">↑</div>
+          </div>
+          <div class="tab-bar">
+            <div class="tab-item active"><span class="tab-icon">💬</span><span>Conversation</span></div>
+            <div class="tab-item"><span class="tab-icon">👤</span><span>Soul File</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREENSHOT 3: Welcome -->
+    <div class="screenshot-card">
+      <div class="headline">Begin with <em>honesty</em></div>
+      <div class="sub-headline">No right answers — only yours</div>
+      <div class="device-frame">
+        <div class="screen-content">
+          <div class="app-header"><span>Soul Mirror</span></div>
+          <div class="welcome-content">
+            <div class="welcome-title">Welcome</div>
+            <div class="welcome-sub">This is a space for honest reflection.<br>There are no right answers — only yours.</div>
+            <div class="glass-btn">Begin</div>
+          </div>
+          <div class="tab-bar">
+            <div class="tab-item active"><span class="tab-icon">💬</span><span>Conversation</span></div>
+            <div class="tab-item"><span class="tab-icon">👤</span><span>Soul File</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PRODUCTION-READY LINKS                          -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<a class="prod-link" href="screenshot-1-soul-file.html">Open Screenshot 1 (1290 x 2796) — Soul File</a>
+<a class="prod-link" href="screenshot-2-conversation.html">Open Screenshot 2 (1290 x 2796) — Conversation</a>
+<a class="prod-link" href="screenshot-3-welcome.html">Open Screenshot 3 (1290 x 2796) — Welcome</a>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- NOTES                                           -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<div class="notes">
+  <h3>How to export production screenshots</h3>
+  <ul>
+    <li><strong>Option A (easiest):</strong> Open each screenshot-N link above in Chrome. Set window to exact size: <code>Cmd+Opt+I</code> → device toolbar → set to 1290x2796. Take a full-size screenshot (<code>Cmd+Shift+P</code> → "Capture full size screenshot").</li>
+    <li><strong>Option B (automated):</strong> Run the included <code>export.sh</code> script which uses Chrome headless to render all 3 at exact pixel dimensions.</li>
+    <li><strong>Required resolution:</strong> 1290 x 2796 px (iPhone 6.7"). Apple auto-scales for smaller devices from this size.</li>
+    <li><strong>Panoramic chaining:</strong> The 3 screenshots share a continuous background gradient. When users swipe in the App Store, the background flows across panels seamlessly.</li>
+    <li><strong>Glassy buttons:</strong> The "Begin" button and send button use iOS 26-style glass material — semi-transparent gradient with specular highlights, inner shadows, and backdrop blur.</li>
+  </ul>
+</div>
+
+</body>
+</html>

@@ -17,6 +17,7 @@ vi.mock("../../supabase/functions/_shared/soulApp.ts", () => ({
   getActiveSession: vi.fn(),
   getLatestSession: vi.fn(),
   getVisibleSoulFile: vi.fn(),
+  updateSoulSession: vi.fn(),
   runSoulSynthesis: vi.fn(),
   isSessionStale: vi.fn(),
   autoCompleteStaleSession: vi.fn()
@@ -35,7 +36,7 @@ import { handleSynthesizeSoulFile } from "../../supabase/functions/synthesize-so
 
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../supabase/functions/_shared/auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../supabase/functions/_shared/db.ts";
-import { bootstrapSoulState, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
+import { bootstrapSoulState, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, updateSoulSession, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
 
 function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
   return new Request("https://edge.supabase.co/test", {
@@ -74,7 +75,7 @@ describe("handleBootstrapSoul", () => {
     });
     vi.mocked(getAllSoulMessages).mockResolvedValue([]);
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleBootstrapSoul({ device_id: "device-1" }, request);
 
     expect(response.status).toBe(200);
@@ -89,9 +90,7 @@ describe("handleBootstrapSoul", () => {
     vi.mocked(ensureUser).mockResolvedValue({
       id: "new-user",
       device_id: "new-device",
-      display_name: "Soul abc1",
-      instance_id: null,
-      is_npc: false
+      display_name: "Soul abc1"
     });
     vi.mocked(revokeSessionsForDevice).mockResolvedValue(undefined);
     vi.mocked(issueSessionToken).mockResolvedValue({
@@ -146,7 +145,7 @@ describe("handleBootstrapSoul", () => {
       { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
     ]);
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleBootstrapSoul({ device_id: "device-1" }, request);
 
     expect(response.status).toBe(200);
@@ -189,7 +188,7 @@ describe("handleGetSoulFile", () => {
       expires_at: new Date(Date.now() - 1000).toISOString() // expired
     });
 
-    const request = makeRequest({ "x-aaru-session": "expired-token" });
+    const request = makeRequest({ "x-thumos-session": "expired-token" });
     const response = await handleGetSoulFile({}, request);
 
     expect(response.status).toBe(401);
@@ -218,7 +217,7 @@ describe("handleGetSoulFile", () => {
       openThreads: []
     });
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleGetSoulFile({}, request);
 
     expect(response.status).toBe(200);
@@ -251,7 +250,7 @@ describe("handleEndSoulSession", () => {
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(getActiveSession).mockResolvedValue(null);
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleEndSoulSession({}, request);
 
     expect(response.status).toBe(404);
@@ -276,6 +275,13 @@ describe("handleEndSoulSession", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
+    // Provide 8+ user messages so synthesis threshold is met
+    const msgs = Array.from({ length: 8 }, (_, i) => ({
+      id: `m${i}`, session_id: "session-1", user_id: "user-1",
+      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
+    }));
+    vi.mocked(getAllSoulMessages).mockResolvedValue(msgs);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(runSoulSynthesis).mockResolvedValue({
       visible: {
         version: 2,
@@ -306,7 +312,7 @@ describe("handleEndSoulSession", () => {
       }
     });
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleEndSoulSession({}, request);
 
     expect(response.status).toBe(200);
@@ -340,7 +346,7 @@ describe("handleSynthesizeSoulFile", () => {
     vi.mocked(getActiveSession).mockResolvedValue(null);
     vi.mocked(getLatestSession).mockResolvedValue(null);
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleSynthesizeSoulFile({}, request);
 
     expect(response.status).toBe(404);
@@ -379,7 +385,7 @@ describe("handleSynthesizeSoulFile", () => {
       { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() }
     ]);
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleSynthesizeSoulFile({}, request);
 
     expect(response.status).toBe(200);
@@ -409,11 +415,13 @@ describe("handleSynthesizeSoulFile", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
-    // Has new messages since last soul file update
+    // Has new messages since last soul file update (8+ user messages to meet threshold)
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getAllSoulMessages).mockResolvedValue([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello", created_at: new Date().toISOString() }
-    ]);
+    const synthMsgs = Array.from({ length: 8 }, (_, i) => ({
+      id: `m${i}`, session_id: "session-1", user_id: "user-1",
+      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
+    }));
+    vi.mocked(getAllSoulMessages).mockResolvedValue(synthMsgs);
     vi.mocked(runSoulSynthesis).mockResolvedValue({
       visible: {
         version: 2,
@@ -434,7 +442,7 @@ describe("handleSynthesizeSoulFile", () => {
       hidden: null
     });
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleSynthesizeSoulFile({}, request);
 
     expect(response.status).toBe(200);
@@ -463,11 +471,13 @@ describe("handleSynthesizeSoulFile", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
-    // Has new messages since last soul file update
+    // Has new messages since last soul file update (8+ user messages to meet threshold)
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getAllSoulMessages).mockResolvedValue([
-      { id: "m1", session_id: "session-2", user_id: "user-1", role: "user", content: "test", created_at: new Date().toISOString() }
-    ]);
+    const completedMsgs = Array.from({ length: 8 }, (_, i) => ({
+      id: `m${i}`, session_id: "session-2", user_id: "user-1",
+      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
+    }));
+    vi.mocked(getAllSoulMessages).mockResolvedValue(completedMsgs);
     vi.mocked(runSoulSynthesis).mockResolvedValue({
       visible: {
         version: 3,
@@ -483,7 +493,7 @@ describe("handleSynthesizeSoulFile", () => {
       hidden: null
     });
 
-    const request = makeRequest({ "x-aaru-session": "valid-token" });
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleSynthesizeSoulFile({}, request);
 
     expect(response.status).toBe(200);

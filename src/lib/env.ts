@@ -9,6 +9,6 @@ export const env = {
   xaiToken: readEnv("XAI_TOKEN"),
   groqToken: readEnv("GROQ_TOKEN"),
   supabaseProjectId: readEnv("SUPABASE_PROJECT_ID"),
-  supabaseSecretKey: readEnv("SUPABASE_SECRET_KEY"),
+  supabaseServiceRoleKey: readEnv("SUPABASE_SERVICE_ROLE_KEY"),
   supabasePassword: readEnv("SUPABASE_PW")
 };

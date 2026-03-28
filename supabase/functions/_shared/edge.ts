@@ -8,7 +8,7 @@ declare const Deno: {
 const defaultHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-aaru-session",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-thumos-session",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 
@@ -61,7 +61,7 @@ export function installEdgeHandler(handler: (payload: unknown, request: Request)
 export function pingResponse() {
   return jsonResponse(200, {
     ok: true,
-    service: "aaru-edge",
+    service: "thumos-edge",
     timestamp: new Date().toISOString()
   });
 }

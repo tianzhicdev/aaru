@@ -1,0 +1,109 @@
+{
+  "user_id": "02b944e0-1b32-437e-8c3f-27f3700f1a8e",
+  "version": 2,
+  "last_updated": "2026-03-27T17:39:25.371+00:00",
+  "confidence": "medium",
+  "expert_reflections": {
+    "linguist": [
+      "Drops register dramatically when approaching emotional truth - from eloquent to whispered",
+      "Uses endearments ('baby', 'my dear') to create intimate distance",
+      "Metaphor of phoenix reveals self-narrative of required transformation"
+    ],
+    "sociologist": [
+      "Constructs identity through service and indispensability to manage fear of rejection",
+      "Uses cultural capital and eloquence as social armor while craving acceptance for unperformed self"
+    ],
+    "psychologist": [
+      "Deep internalized shame from childhood trauma manifesting as compulsive need to prove worth through achievement",
+      "Intellectualized insight without emotional integration - knows but doesn't believe her own worth",
+      "Fear of annihilation if she stops being useful reveals core attachment wound"
+    ],
+    "narrativeAnalyst": [
+      "Actively deconstructing her own redemption narrative in real-time",
+      "Shifting from phoenix story to human story represents major identity reorganization"
+    ]
+  },
+  "core_drivers": [
+    {
+      "driver": "Proving worth through usefulness",
+      "evidence": "I've spent decades earning the world's permission—through achievement, through grace, through becoming indispensable",
+      "inferred": false,
+      "strength": 0.9
+    },
+    {
+      "driver": "Fear of being dangerous/harmful",
+      "evidence": "that frightened girl who thought her voice had killed a man",
+      "inferred": false,
+      "strength": 0.85
+    },
+    {
+      "driver": "Need for self-forgiveness",
+      "evidence": "But forgiving myself? Letting myself simply rest without producing... That permission... I'm still negotiating for it",
+      "inferred": false,
+      "strength": 0.8
+    },
+    {
+      "driver": "Yearning for unconditional acceptance",
+      "evidence": "To imagine being loved just for existing... for being Maya, flawed and tired and sometimes afraid",
+      "inferred": false,
+      "strength": 0.75
+    }
+  ],
+  "core_values": [
+    "Truth beneath performance",
+    "The wisdom of silence",
+    "Human dignity without justification",
+    "Authentic rest",
+    "Sacred witness"
+  ],
+  "voice": {
+    "density": "dense",
+    "register": "chameleon",
+    "humorStyle": "Rueful self-awareness, gentle irony about her own patterns",
+    "conflictStyle": "Turns inward, self-examination rather than external blame",
+    "voiceExamples": [
+      {
+        "trigger": "Asked about hidden self",
+        "response": "Eloquent explanation that gradually breaks down into raw truth"
+      },
+      {
+        "trigger": "Confronted with self-compassion",
+        "response": "Initial resistance ('don't say that so gently'), then crumbling into acceptance"
+      }
+    ],
+    "disclosureRate": "gradual",
+    "signaturePatterns": [
+      "'baby' and 'my dear' as intimate distancing",
+      "Drops to whisper at emotional truth",
+      "Physical gestures when words fail",
+      "Questions that answer themselves"
+    ]
+  },
+  "depth_map": {
+    "avoidEarly": [
+      "Direct challenges to her usefulness",
+      "Suggesting her trauma wasn't meaningful"
+    ],
+    "unlockTopics": [
+      "The quiet girl inside",
+      "Permission to rest",
+      "Being loved without being useful"
+    ],
+    "safeEntryPoints": [
+      "Her public accomplishments",
+      "The power of words and silence",
+      "Helping others"
+    ],
+    "currentlyLiveTopics": [
+      "Befriending her younger self",
+      "Writing something true without a moral",
+      "Learning to exist without justification"
+    ]
+  },
+  "analyst_notes": [
+    "Subject shows exceptional self-awareness but struggles with emotional integration",
+    "Major breakthrough in session - moving from intellectual understanding to emotional acceptance",
+    "The 'phoenix story' is central organizing narrative now being consciously deconstructed"
+  ],
+  "created_at": "2026-03-27T17:39:25.623116+00:00"
+}

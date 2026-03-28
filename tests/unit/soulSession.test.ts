@@ -60,9 +60,9 @@ describe("isSessionStale", () => {
 });
 
 describe("readBearerToken", () => {
-  it("reads token from x-aaru-session header", () => {
+  it("reads token from x-thumos-session header", () => {
     const request = new Request("https://example.com", {
-      headers: { "x-aaru-session": "my-token-123" }
+      headers: { "x-thumos-session": "my-token-123" }
     });
     expect(readBearerToken(request)).toBe("my-token-123");
   });
@@ -74,10 +74,10 @@ describe("readBearerToken", () => {
     expect(readBearerToken(request)).toBe("abc-def-456");
   });
 
-  it("prefers x-aaru-session over Authorization", () => {
+  it("prefers x-thumos-session over Authorization", () => {
     const request = new Request("https://example.com", {
       headers: {
-        "x-aaru-session": "preferred-token",
+        "x-thumos-session": "preferred-token",
         Authorization: "Bearer fallback-token"
       }
     });
@@ -98,14 +98,14 @@ describe("readBearerToken", () => {
 
   it("trims whitespace from token", () => {
     const request = new Request("https://example.com", {
-      headers: { "x-aaru-session": "  spaced-token  " }
+      headers: { "x-thumos-session": "  spaced-token  " }
     });
     expect(readBearerToken(request)).toBe("spaced-token");
   });
 
-  it("returns null for empty x-aaru-session header", () => {
+  it("returns null for empty x-thumos-session header", () => {
     const request = new Request("https://example.com", {
-      headers: { "x-aaru-session": "   " }
+      headers: { "x-thumos-session": "   " }
     });
     expect(readBearerToken(request)).toBeNull();
   });

@@ -10,6 +10,7 @@ import {
   runSoulSynthesis
 } from "../_shared/soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
+import { REFLECTION_INTERVAL } from "../../../src/domain/constants.ts";
 
 export async function handleSynthesizeSoulFile(_payload: unknown, request: Request) {
   const bearerToken = readBearerToken(request);
@@ -43,6 +44,15 @@ export async function handleSynthesizeSoulFile(_payload: unknown, request: Reque
   if (!hasNewMessages && existing) {
     return jsonResponse(200, {
       visible_soul_file: existing,
+      synthesis_succeeded: true
+    });
+  }
+
+  // Don't run synthesis until we have enough conversation data
+  const userMessageCount = allMessages.filter(m => m.role === "user").length;
+  if (userMessageCount < REFLECTION_INTERVAL) {
+    return jsonResponse(200, {
+      visible_soul_file: existing ?? emptyVisibleSoulFile(),
       synthesis_succeeded: true
     });
   }

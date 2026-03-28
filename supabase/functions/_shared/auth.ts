@@ -1,4 +1,4 @@
-import { aaruSessionSecret } from "./env.ts";
+import { thumosSessionSecret } from "./env.ts";
 
 const sessionTTLSeconds = 60 * 60 * 24 * 30;
 const encoder = new TextEncoder();
@@ -12,7 +12,7 @@ function toHex(buffer: ArrayBuffer) {
 async function importHmacKey() {
   return crypto.subtle.importKey(
     "raw",
-    encoder.encode(aaruSessionSecret()),
+    encoder.encode(thumosSessionSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -42,7 +42,7 @@ export async function issueSessionToken(userId: string, deviceId: string) {
 }
 
 export function readBearerToken(request: Request) {
-  const sessionHeader = request.headers.get("x-aaru-session") ?? request.headers.get("X-AARU-Session");
+  const sessionHeader = request.headers.get("x-thumos-session") ?? request.headers.get("X-Thumos-Session");
   if (sessionHeader && sessionHeader.trim().length > 0) {
     return sessionHeader.trim();
   }

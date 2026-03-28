@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Thumos — Theme Exploration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Space+Grotesk:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    padding: 60px 40px;
+  }
+
+  h1 { text-align: center; font-weight: 300; font-size: 32px; margin-bottom: 8px; color: #d4b04d; }
+  .subtitle { text-align: center; font-size: 14px; color: rgba(255,255,255,0.35); margin-bottom: 60px; }
+
+  .themes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 48px;
+  }
+
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .theme-label {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .theme-desc {
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 16px;
+    text-align: center;
+    max-width: 320px;
+  }
+
+  /* ─── Shared device frame ─── */
+  .device {
+    width: 320px;
+    height: 660px;
+    border-radius: 40px;
+    border: 4px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+
+  .device::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 26px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ════════════════════════════════════════════════════ */
+  /* THEME A: Current (Light + Gold + Inter)             */
+  /* ════════════════════════════════════════════════════ */
+
+  .theme-a .screen {
+    background: #fafafa;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .theme-a .hdr {
+    text-align: center;
+    padding: 46px 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #d4b04d;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .theme-a .soul {
+    flex: 1;
+    padding: 8px 20px 12px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .theme-a .ver { font-size: 10px; color: rgba(26,26,26,0.3); margin-bottom: 16px; }
+
+  .theme-a .portrait {
+    font-size: 16px;
+    font-weight: 300;
+    color: #1a1a1a;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .theme-a .sec-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #d4b04d;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 5px;
+  }
+
+  .theme-a .sec-text {
+    font-size: 11px;
+    color: rgba(26,26,26,0.65);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+
+  .theme-a .moment-q {
+    font-size: 11px;
+    font-style: italic;
+    color: rgba(26,26,26,0.55);
+    margin-bottom: 3px;
+  }
+
+  .theme-a .moment-r {
+    font-size: 10px;
+    color: rgba(26,26,26,0.35);
+    margin-bottom: 16px;
+  }
+
+  .theme-a .tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 18px;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    font-size: 10px;
+    color: rgba(26,26,26,0.3);
+  }
+
+  .theme-a .tabs .active { color: #d4b04d; }
+
+  /* ════════════════════════════════════════════════════ */
+  /* THEME B: Dark + Amber + Cormorant Garamond          */
+  /* ════════════════════════════════════════════════════ */
+
+  .theme-b .screen {
+    background: #0f0f0f;
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  .theme-b .hdr {
+    text-align: center;
+    padding: 46px 0 10px;
+    font-size: 12px;
+    font-weight: 400;
+    color: #c9a84c;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .theme-b .soul {
+    flex: 1;
+    padding: 8px 22px 12px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .theme-b .ver { font-size: 10px; color: rgba(255,255,255,0.2); margin-bottom: 16px; font-family: 'Inter', sans-serif; }
+
+  .theme-b .portrait {
+    font-size: 18px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.65;
+    margin-bottom: 22px;
+    font-style: italic;
+  }
+
+  .theme-b .sec-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #c9a84c;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .theme-b .sec-text {
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .theme-b .moment-q {
+    font-size: 13px;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 3px;
+  }
+
+  .theme-b .moment-r {
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+    margin-bottom: 16px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .theme-b .tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 18px;
+    border-top: 0.5px solid rgba(255,255,255,0.06);
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .theme-b .tabs .active { color: #c9a84c; }
+
+  /* ════════════════════════════════════════════════════ */
+  /* THEME C: Warm Ink + Fraunces                        */
+  /* ════════════════════════════════════════════════════ */
+
+  .theme-c .screen {
+    background: #f5f0e8;
+    font-family: 'Fraunces', serif;
+  }
+
+  .theme-c .hdr {
+    text-align: center;
+    padding: 46px 0 10px;
+    font-size: 11px;
+    font-weight: 400;
+    color: #8b6914;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-c .soul {
+    flex: 1;
+    padding: 8px 22px 12px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .theme-c .ver { font-size: 10px; color: rgba(60,40,10,0.25); margin-bottom: 16px; font-family: 'Space Grotesk', sans-serif; }
+
+  .theme-c .portrait {
+    font-size: 17px;
+    font-weight: 300;
+    color: #2a1f0a;
+    line-height: 1.6;
+    margin-bottom: 22px;
+  }
+
+  .theme-c .sec-title {
+    font-size: 9px;
+    font-weight: 500;
+    color: #8b6914;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-c .sec-text {
+    font-size: 12px;
+    font-weight: 300;
+    color: rgba(42,31,10,0.6);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .theme-c .moment-q {
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(42,31,10,0.5);
+    margin-bottom: 3px;
+  }
+
+  .theme-c .moment-r {
+    font-size: 10px;
+    color: rgba(42,31,10,0.3);
+    margin-bottom: 16px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-c .tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 18px;
+    border-top: 0.5px solid rgba(42,31,10,0.08);
+    font-size: 10px;
+    color: rgba(42,31,10,0.25);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-c .tabs .active { color: #8b6914; }
+
+  /* ════════════════════════════════════════════════════ */
+  /* THEME D: Midnight + DM Sans                         */
+  /* ════════════════════════════════════════════════════ */
+
+  .theme-d .screen {
+    background: #111318;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .theme-d .hdr {
+    text-align: center;
+    padding: 46px 0 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #7b8cdb;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .theme-d .soul {
+    flex: 1;
+    padding: 8px 20px 12px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .theme-d .ver { font-size: 10px; color: rgba(255,255,255,0.18); margin-bottom: 16px; }
+
+  .theme-d .portrait {
+    font-size: 16px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.65;
+    margin-bottom: 22px;
+  }
+
+  .theme-d .sec-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #7b8cdb;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 5px;
+  }
+
+  .theme-d .sec-text {
+    font-size: 11px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .theme-d .moment-q {
+    font-size: 11px;
+    font-style: italic;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 3px;
+  }
+
+  .theme-d .moment-r {
+    font-size: 10px;
+    color: rgba(255,255,255,0.22);
+    margin-bottom: 16px;
+  }
+
+  .theme-d .tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 18px;
+    border-top: 0.5px solid rgba(255,255,255,0.05);
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+  }
+
+  .theme-d .tabs .active { color: #7b8cdb; }
+
+  /* ════════════════════════════════════════════════════ */
+  /* THEME E: Dark Serif Luxury (Cormorant + deep bg)    */
+  /* ════════════════════════════════════════════════════ */
+
+  .theme-e .screen {
+    background: linear-gradient(180deg, #0a0806 0%, #12100a 50%, #0a0806 100%);
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  .theme-e .hdr {
+    text-align: center;
+    padding: 46px 0 10px;
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(212,176,77,0.7);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-e .soul {
+    flex: 1;
+    padding: 8px 24px 12px;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .theme-e .ver { font-size: 10px; color: rgba(212,176,77,0.2); margin-bottom: 16px; font-family: 'Space Grotesk', sans-serif; }
+
+  .theme-e .portrait {
+    font-size: 19px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.85);
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+
+  .theme-e .sec-title {
+    font-size: 9px;
+    font-weight: 400;
+    color: rgba(212,176,77,0.55);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    margin-bottom: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-e .divider {
+    width: 32px;
+    height: 0.5px;
+    background: rgba(212,176,77,0.2);
+    margin: 0 auto 6px;
+  }
+
+  .theme-e .sec-text {
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.5);
+    line-height: 1.65;
+    margin-bottom: 18px;
+  }
+
+  .theme-e .moment-q {
+    font-size: 14px;
+    font-style: italic;
+    color: rgba(255,248,230,0.45);
+    margin-bottom: 4px;
+  }
+
+  .theme-e .moment-r {
+    font-size: 10px;
+    color: rgba(212,176,77,0.25);
+    margin-bottom: 16px;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-e .tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 18px;
+    border-top: 0.5px solid rgba(212,176,77,0.08);
+    font-size: 10px;
+    color: rgba(255,248,230,0.18);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .theme-e .tabs .active { color: rgba(212,176,77,0.6); }
+
+</style>
+</head>
+<body>
+
+<h1>Theme Exploration</h1>
+<p class="subtitle">Same content, different moods. Pick one and we'll update the app to match.</p>
+
+<div class="themes-grid">
+
+  <!-- ═══ THEME A: Current ═══ -->
+  <div class="theme-card">
+    <div class="theme-label">A. Current</div>
+    <div class="theme-desc">Inter / light cream / gold accents</div>
+    <div class="device theme-a">
+      <div class="screen">
+        <div class="hdr">Soul Mirror</div>
+        <div class="soul">
+          <div class="ver">v3 &middot; Updated 2h ago</div>
+          <div class="portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful.</div>
+          <div class="sec-title">How You Think</div>
+          <div class="sec-text">Your mind works in layers — the surface processes fast, pattern-matching, while something deeper holds back, testing each conclusion against an internal compass.</div>
+          <div class="sec-title">What Lights You Up</div>
+          <div class="sec-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before.</div>
+          <div class="sec-title">Your Contradictions</div>
+          <div class="sec-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition.</div>
+          <div class="sec-title">Crystallized Moments</div>
+          <div class="moment-q">"I think I'm afraid of being seen and still not being enough"</div>
+          <div class="moment-r">The core fear beneath your perfectionism</div>
+        </div>
+        <div class="tabs">
+          <span>💬 Conversation</span>
+          <span class="active">👤 Soul File</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ THEME B: Dark Serif ═══ -->
+  <div class="theme-card">
+    <div class="theme-label">B. Dark Serif</div>
+    <div class="theme-desc">Cormorant Garamond / near-black / amber glow</div>
+    <div class="device theme-b">
+      <div class="screen">
+        <div class="hdr">Soul Mirror</div>
+        <div class="soul">
+          <div class="ver">v3 &middot; Updated 2h ago</div>
+          <div class="portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful.</div>
+          <div class="sec-title">How You Think</div>
+          <div class="sec-text">Your mind works in layers — the surface processes fast, pattern-matching, while something deeper holds back, testing each conclusion against an internal compass.</div>
+          <div class="sec-title">What Lights You Up</div>
+          <div class="sec-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before.</div>
+          <div class="sec-title">Your Contradictions</div>
+          <div class="sec-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition.</div>
+          <div class="sec-title">Crystallized Moments</div>
+          <div class="moment-q">"I think I'm afraid of being seen and still not being enough"</div>
+          <div class="moment-r">The core fear beneath your perfectionism</div>
+        </div>
+        <div class="tabs">
+          <span>💬 Conversation</span>
+          <span class="active">👤 Soul File</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ THEME C: Warm Ink ═══ -->
+  <div class="theme-card">
+    <div class="theme-label">C. Warm Ink</div>
+    <div class="theme-desc">Fraunces + Space Grotesk / parchment / deep gold</div>
+    <div class="device theme-c">
+      <div class="screen">
+        <div class="hdr">Soul Mirror</div>
+        <div class="soul">
+          <div class="ver">v3 &middot; Updated 2h ago</div>
+          <div class="portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful.</div>
+          <div class="sec-title">How You Think</div>
+          <div class="sec-text">Your mind works in layers — the surface processes fast, pattern-matching, while something deeper holds back, testing each conclusion against an internal compass.</div>
+          <div class="sec-title">What Lights You Up</div>
+          <div class="sec-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before.</div>
+          <div class="sec-title">Your Contradictions</div>
+          <div class="sec-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition.</div>
+          <div class="sec-title">Crystallized Moments</div>
+          <div class="moment-q">"I think I'm afraid of being seen and still not being enough"</div>
+          <div class="moment-r">The core fear beneath your perfectionism</div>
+        </div>
+        <div class="tabs">
+          <span>💬 Conversation</span>
+          <span class="active">👤 Soul File</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ THEME D: Midnight Blue ═══ -->
+  <div class="theme-card">
+    <div class="theme-label">D. Midnight Blue</div>
+    <div class="theme-desc">DM Sans / deep navy / soft lavender accents</div>
+    <div class="device theme-d">
+      <div class="screen">
+        <div class="hdr">Soul Mirror</div>
+        <div class="soul">
+          <div class="ver">v3 &middot; Updated 2h ago</div>
+          <div class="portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful.</div>
+          <div class="sec-title">How You Think</div>
+          <div class="sec-text">Your mind works in layers — the surface processes fast, pattern-matching, while something deeper holds back, testing each conclusion against an internal compass.</div>
+          <div class="sec-title">What Lights You Up</div>
+          <div class="sec-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before.</div>
+          <div class="sec-title">Your Contradictions</div>
+          <div class="sec-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition.</div>
+          <div class="sec-title">Crystallized Moments</div>
+          <div class="moment-q">"I think I'm afraid of being seen and still not being enough"</div>
+          <div class="moment-r">The core fear beneath your perfectionism</div>
+        </div>
+        <div class="tabs">
+          <span>💬 Conversation</span>
+          <span class="active">👤 Soul File</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ THEME E: Dark Luxury ═══ -->
+  <div class="theme-card">
+    <div class="theme-label">E. Dark Luxury</div>
+    <div class="theme-desc">Cormorant + Space Grotesk / charcoal gradient / muted gold / dividers</div>
+    <div class="device theme-e">
+      <div class="screen">
+        <div class="hdr">Soul Mirror</div>
+        <div class="soul">
+          <div class="ver">v3 &middot; Updated 2h ago</div>
+          <div class="portrait">You move through the world like someone who learned early that safety lives in observation. There's a gentleness in how you hold space — not passive, but watchful.</div>
+          <div class="sec-title">How You Think</div>
+          <div class="divider"></div>
+          <div class="sec-text">Your mind works in layers — the surface processes fast, pattern-matching, while something deeper holds back, testing each conclusion against an internal compass.</div>
+          <div class="sec-title">What Lights You Up</div>
+          <div class="divider"></div>
+          <div class="sec-text">Moments of genuine connection where the masks fall away. Building something with your hands that didn't exist before.</div>
+          <div class="sec-title">Your Contradictions</div>
+          <div class="divider"></div>
+          <div class="sec-text">You crave closeness but protect your solitude fiercely. You dismiss compliments but hunger for recognition.</div>
+          <div class="sec-title">Crystallized Moments</div>
+          <div class="divider"></div>
+          <div class="moment-q">"I think I'm afraid of being seen and still not being enough"</div>
+          <div class="moment-r">The core fear beneath your perfectionism</div>
+        </div>
+        <div class="tabs">
+          <span>💬 Conversation</span>
+          <span class="active">👤 Soul File</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

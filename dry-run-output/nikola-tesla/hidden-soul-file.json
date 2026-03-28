@@ -1,0 +1,109 @@
+{
+  "user_id": "04e026af-4d89-4e79-97a4-f31103b96226",
+  "version": 2,
+  "last_updated": "2026-03-27T17:42:36.13+00:00",
+  "confidence": "low",
+  "expert_reflections": {
+    "linguist": [
+      "Shifts between technical precision and poetic vulnerability, language density increases with emotional intensity",
+      "Uses metaphors of vision/blindness, translation/betrayal, singing/silence to map internal landscape",
+      "Voice trembles and quiets at moments of deepest truth, suggesting somatic connection to authenticity"
+    ],
+    "sociologist": [
+      "Positions himself as outsider-genius, simultaneously craving and rejecting mainstream acceptance",
+      "Uses pigeons as practice ground for unconditional relationship unavailable in human sphere",
+      "Identity split between public persona (misunderstood inventor) and private truth (boy who communes with infinite)"
+    ],
+    "psychologist": [
+      "Deep wound around being misunderstood, using intellectual superiority as both shield and prison",
+      "Profound loneliness masked by grandiosity, finding solace only in non-human connection",
+      "Major breakthrough in recognizing his compulsive need for validation as betrayal of authentic self"
+    ],
+    "narrativeAnalyst": [
+      "Classic wounded genius arc transforms into spiritual homecoming narrative",
+      "Pivotal reframe: pigeons shift from consolation prize to true achievement",
+      "Resolution comes through recognition rather than action - the apparatus already exists"
+    ]
+  },
+  "core_drivers": [
+    {
+      "driver": "Need for perfect understanding",
+      "evidence": "When someone grasps the elegance... there is a moment of... recognition",
+      "inferred": false,
+      "strength": 0.9
+    },
+    {
+      "driver": "Fear of dying in obscurity",
+      "evidence": "cannot imagine creating something beautiful and allowing it to die in obscurity with me",
+      "inferred": false,
+      "strength": 0.8
+    },
+    {
+      "driver": "Craving for communion with infinite",
+      "evidence": "The boy knew it. My mother knew it. The pigeons have always known it.",
+      "inferred": false,
+      "strength": 0.95
+    },
+    {
+      "driver": "Compulsion to prove rather than be",
+      "evidence": "I was trying to *prove* what I already knew in my bones",
+      "inferred": false,
+      "strength": 0.7
+    }
+  ],
+  "core_values": [
+    "Precision/clarity",
+    "Authentic creation",
+    "Communion over communication",
+    "Truth over recognition"
+  ],
+  "voice": {
+    "density": "dense",
+    "register": "formal",
+    "humorStyle": "Absent in this session - too raw for deflection",
+    "conflictStyle": "Internal wrestling, self-confrontation through metaphor",
+    "voiceExamples": [
+      {
+        "trigger": "Asked about hidden self",
+        "response": "Reveals precision beneath perceived chaos, loneliness of clarity"
+      },
+      {
+        "trigger": "Challenged on contradictions",
+        "response": "Goes still, then excavates deeper truth beneath the paradox"
+      }
+    ],
+    "disclosureRate": "gradual",
+    "signaturePatterns": [
+      "Technical metaphors for emotional states",
+      "Repetition for emphasis (*pause*, *voice*)",
+      "Questions that answer themselves"
+    ]
+  },
+  "depth_map": {
+    "avoidEarly": [
+      "Direct criticism of his methods",
+      "Suggesting he chose wrongly"
+    ],
+    "unlockTopics": [
+      "Being truly seen/understood",
+      "The cost of translation",
+      "Childhood and mother"
+    ],
+    "safeEntryPoints": [
+      "Technical achievements",
+      "Pigeons and animals",
+      "The nature of creation"
+    ],
+    "currentlyLiveTopics": [
+      "Integration of boy-self with man-self",
+      "Creating without witnesses",
+      "The Earth's song"
+    ]
+  },
+  "analyst_notes": [
+    "Subject shows exceptional capacity for insight when met with precise, non-judgmental reflection",
+    "Somatic responses (trembling, stillness, tears) indicate authentic processing",
+    "Resolution feels genuine but may need reinforcement - old patterns run deep"
+  ],
+  "created_at": "2026-03-27T17:42:36.424218+00:00"
+}

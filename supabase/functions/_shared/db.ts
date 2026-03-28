@@ -6,8 +6,6 @@ interface UserRow {
   id: string;
   device_id: string;
   display_name: string;
-  instance_id: string | null;
-  is_npc: boolean;
 }
 
 interface DeviceSessionRow {
@@ -54,8 +52,7 @@ export async function createUser(deviceId: string): Promise<UserRow> {
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify({
       device_id: deviceId,
-      display_name: `Soul ${deviceId.slice(-4)}`,
-      is_npc: false
+      display_name: `Soul ${deviceId.slice(-4)}`
     })
   });
   return created[0];

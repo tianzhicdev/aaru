@@ -15,7 +15,7 @@ Date: 2026-03-27
 
 ### Refactor and clean
 - [x] Remove dead `[SESSION_COMPLETE]` marker infrastructure — `parseSessionInsights`, `SessionInsight`, and `cleanSessionCompleteMarker` are vestigial; the system prompt no longer emits this marker
-- [x] Fix double bootstrap call — `AARUApp` triggers `bootstrap()` via `autoBootstrap: true`, then `SoulMirrorTabView.task` calls `bootstrapSoul()` again, causing two network calls on every launch
+- [x] Fix double bootstrap call — `ThumosApp` triggers `bootstrap()` via `autoBootstrap: true`, then `SoulMirrorTabView.task` calls `bootstrapSoul()` again, causing two network calls on every launch
 
 ### Tooling / infrastructure
 - [x] Add SSE stream timeout on iOS — `URLSession.bytes` has no timeout; a hung edge function leaves `isSoulStreaming` stuck true indefinitely; add a reasonable timeout (e.g. 60s inactivity)

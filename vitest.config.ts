@@ -7,7 +7,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@aaru": new URL("./src", import.meta.url).pathname
+      "@thumos": new URL("./src", import.meta.url).pathname
     }
   }
 });

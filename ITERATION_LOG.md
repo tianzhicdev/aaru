@@ -1,4 +1,4 @@
-# AARU Iteration Log
+# Thumos Iteration Log
 
 ## Iteration 1 — 2026-03-26 22:15
 
@@ -13,8 +13,8 @@
 - Updated CLAUDE.md and ARCHITECTURE.md to reflect current codebase (removed stale onboarding references, updated test counts from 18→73, documented Soul Mirror V2 dual soul file architecture)
 
 **Files modified:** 7 files
-- `AARU/App/SoulConversationScreen.swift` — welcome view + begin button
-- `AARU/App/AppModel.swift` — `beginSoulSession()` method
+- `Thumos/App/SoulConversationScreen.swift` — welcome view + begin button
+- `Thumos/App/AppModel.swift` — `beginSoulSession()` method
 - `ARCHITECTURE.md` — full rewrite to reflect current reality
 - `CLAUDE.md` — updated to reflect current reality
 - `VERIFICATION.md` — created
@@ -37,9 +37,9 @@
 - System messages (non-error) now render as golden notification cards instead of chat bubbles
 
 **Files modified:** 3 files
-- `AARU/App/AppModel.swift` — pending update flag, notification message insertion, acknowledge method
-- `AARU/App/SoulConversationScreen.swift` — golden notification bubble for system messages
-- `AARU/App/SoulMirrorTabView.swift` — tab badge + clear on switch
+- `Thumos/App/AppModel.swift` — pending update flag, notification message insertion, acknowledge method
+- `Thumos/App/SoulConversationScreen.swift` — golden notification bubble for system messages
+- `Thumos/App/SoulMirrorTabView.swift` — tab badge + clear on switch
 
 **Tests:** 73 TS + 6 iOS all passing
 
@@ -72,7 +72,7 @@
 - Uses existing error color scheme for consistency
 
 **Files modified:** 1 file
-- `AARU/App/SoulConversationScreen.swift` — error display in welcome view
+- `Thumos/App/SoulConversationScreen.swift` — error display in welcome view
 
 **Tests:** 73 TS passing, iOS BUILD SUCCEEDED
 
@@ -83,7 +83,7 @@
 **Goal:** Add integration tests for Phase 1 edge functions and session lifecycle.
 
 **What changed:**
-- `tests/unit/soulSession.test.ts` — 13 tests for `isSessionStale` (various timestamps, boundary at 72h) and `readBearerToken` (x-aaru-session, Bearer, precedence, edge cases)
+- `tests/unit/soulSession.test.ts` — 13 tests for `isSessionStale` (various timestamps, boundary at 72h) and `readBearerToken` (x-thumos-session, Bearer, precedence, edge cases)
 - `tests/integration/soulMirrorHandlers.test.ts` — 10 tests for `handleBootstrapSoul`, `handleGetSoulFile`, `handleEndSoulSession` with mocked DB/auth layer
 
 **Files modified:** 2 files
@@ -178,9 +178,9 @@
 
 **Files modified:** 4 files
 - `src/domain/constants.ts` — SESSION_MAX_EXCHANGES constant
-- `AARU/App/Models.swift` — EndSoulSessionResponse
-- `AARU/App/BackendClient.swift` — endSoulSession() method
-- `AARU/App/AppModel.swift` — endSoulSessionInBackground() + auto-trigger in sendSoulMessage
+- `Thumos/App/Models.swift` — EndSoulSessionResponse
+- `Thumos/App/BackendClient.swift` — endSoulSession() method
+- `Thumos/App/AppModel.swift` — endSoulSessionInBackground() + auto-trigger in sendSoulMessage
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
@@ -195,7 +195,7 @@
 - Users can now pull down on the Soul File tab to fetch the latest soul file from the server
 
 **Files modified:** 1 file
-- `AARU/App/SoulFileScreen.swift` — added .refreshable modifier
+- `Thumos/App/SoulFileScreen.swift` — added .refreshable modifier
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
@@ -211,7 +211,7 @@
 - Cycle: 400ms per dot, smooth `easeInOut` transitions
 
 **Files modified:** 1 file
-- `AARU/App/SoulConversationScreen.swift` — animated typingIndicator
+- `Thumos/App/SoulConversationScreen.swift` — animated typingIndicator
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
@@ -227,7 +227,7 @@
 - Replaces the blank grey screen users saw during the 2 network calls
 
 **Files modified:** 1 file
-- `AARU/App/SoulConversationScreen.swift` — loadingView + conditional in body
+- `Thumos/App/SoulConversationScreen.swift` — loadingView + conditional in body
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
@@ -244,7 +244,7 @@
 - Handles both fractional-seconds and standard ISO8601 formats
 
 **Files modified:** 1 file
-- `AARU/App/SoulFileScreen.swift` — formattedLastUpdated computed property + display in header
+- `Thumos/App/SoulFileScreen.swift` — formattedLastUpdated computed property + display in header
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 
@@ -260,7 +260,7 @@
 - Warmer, more inviting tone that sets expectations
 
 **Files modified:** 1 file
-- `AARU/App/SoulFileScreen.swift` — updated empty state copy
+- `Thumos/App/SoulFileScreen.swift` — updated empty state copy
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 

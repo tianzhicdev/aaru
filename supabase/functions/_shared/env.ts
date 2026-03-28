@@ -26,19 +26,16 @@ export function requireEnv(name: string): string {
 export function supabaseUrl(): string {
   return (
     readEnv("SUPABASE_URL") ??
-    `https://${readEnv("AARU_PROJECT_ID") ?? requireEnv("SUPABASE_PROJECT_ID")}.supabase.co`
+    `https://${readEnv("THUMOS_PROJECT_ID") ?? requireEnv("SUPABASE_PROJECT_ID")}.supabase.co`
   );
 }
 
 export function supabaseServiceRoleKey(): string {
-  return (
-    readEnv("AARU_SERVICE_ROLE_KEY") ??
-    requireEnv("SUPABASE_SECRET_KEY")
-  );
+  return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
 }
 
-export function aaruSessionSecret(): string {
-  return readEnv("AARU_SESSION_SECRET") ?? requireEnv("AARU_SESSION_SECRET");
+export function thumosSessionSecret(): string {
+  return readEnv("THUMOS_SESSION_SECRET") ?? requireEnv("THUMOS_SESSION_SECRET");
 }
 
 export function xaiToken(): string | undefined {

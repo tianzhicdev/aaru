@@ -1,7 +1,7 @@
-# AARU — Claude Operating Rules
+# Thumos — Claude Operating Rules
 
 ## Project Overview
-AARU is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file.
+Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file.
 
 **Two codebases in one repo:**
 - **TypeScript backend** — domain logic, Supabase Edge Functions
@@ -32,16 +32,16 @@ npx tsc -p tsconfig.json --noEmit
 
 ### iOS unit tests (requires macOS + Xcode + simulator)
 ```bash
-xcodebuild test -scheme AARU \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3' \
+xcodebuild test -scheme Thumos \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -resultBundlePath ./TestResults \
   | xcpretty
 ```
 
 ### iOS build
 ```bash
-xcodebuild build -scheme AARU \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3' \
+xcodebuild build -scheme Thumos \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -derivedDataPath ./DerivedData \
   | xcpretty
 ```
@@ -59,17 +59,17 @@ xcodebuild build -scheme AARU \
 - `tests/unit/` — Unit tests for domain functions
 - `tests/integration/` — Handler integration tests
 
-### Swift (AARU/)
-- `AARU/App/AARUApp.swift` — Entry point
-- `AARU/App/AppModel.swift` — Main @MainActor ObservableObject (state management)
-- `AARU/App/BackendClient.swift` — HTTP + SSE streaming client with fallback mode
-- `AARU/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
-- `AARU/App/RootView.swift` — Root view (→ SoulMirrorTabView)
-- `AARU/App/SoulMirrorTabView.swift` — Tab container (Conversation + Soul File)
-- `AARU/App/SoulConversationScreen.swift` — Streaming chat UI
-- `AARU/App/SoulFileScreen.swift` — 7-section soul file display
-- `AARU/App/SecureStore.swift` — Keychain wrapper (device/session identity)
-- `AARUTests/` — XCTest unit tests
+### Swift (Thumos/)
+- `Thumos/App/ThumosApp.swift` — Entry point
+- `Thumos/App/AppModel.swift` — Main @MainActor ObservableObject (state management)
+- `Thumos/App/BackendClient.swift` — HTTP + SSE streaming client with fallback mode
+- `Thumos/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
+- `Thumos/App/RootView.swift` — Root view (→ SoulMirrorTabView)
+- `Thumos/App/SoulMirrorTabView.swift` — Tab container (Conversation + Soul File)
+- `Thumos/App/SoulConversationScreen.swift` — Streaming chat UI
+- `Thumos/App/SoulFileScreen.swift` — 7-section soul file display
+- `Thumos/App/SecureStore.swift` — Keychain wrapper (device/session identity)
+- `ThumosTests/` — XCTest unit tests
 
 ### Key domain files
 - `soul.ts` — Soul Mirror prompts, session context builder, fallback responses
@@ -83,7 +83,7 @@ xcodebuild build -scheme AARU \
 - 2-space indentation, no trailing semicolons enforced (mixed)
 - camelCase functions/variables, PascalCase types, SCREAMING_SNAKE_CASE constants
 - Named exports, explicit type imports (`import type { ... }`)
-- Path aliases: `@aaru/domain/...`, `@aaru/lib/...`
+- Path aliases: `@thumos/domain/...`, `@thumos/lib/...`
 - Every LLM-dependent function has a deterministic fallback
 - Zod schemas for all domain types crossing boundaries
 
@@ -92,7 +92,7 @@ xcodebuild build -scheme AARU \
 - MVVM with @StateObject/@EnvironmentObject
 - async/await + Task for concurrency
 - Custom CodingKeys for snake_case <-> camelCase
-- OSLog with subsystem "com.tianzhichen.aaru"
+- OSLog with subsystem "com.trythumos.app"
 - private/fileprivate for encapsulation
 
 ## Definition of Done
@@ -110,7 +110,7 @@ A task is complete when ALL of the following are true:
 - **Session lifecycle** — in_session → extracting → synthesizing → complete | failed
 - **72h stale session threshold** — auto-complete sessions older than 72 hours
 - **iOS client is a display layer** — all state is server-authoritative
-- **XcodeGen** — project.yml generates AARU.xcodeproj; don't edit .xcodeproj directly
+- **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
 
 ## Autonomous Operating Loop
@@ -129,8 +129,8 @@ supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
 Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, ping
 
 ## iOS QA (when macOS/Xcode available)
-- Scheme: AARU
-- Bundle ID: com.tianzhichen.aaru
+- Scheme: Thumos
+- Bundle ID: com.trythumos.app
 - Simulator: iPhone 17 Pro (iOS 26.3)
 - Boot: `xcrun simctl boot "iPhone 17 Pro"`
 - Screenshot: `xcrun simctl io booted screenshot /tmp/state.png`

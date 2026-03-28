@@ -2,7 +2,7 @@
 
 ## Overview
 
-Static site at `tianzhistudio.com/thumos`. Three purposes:
+Static site at `trythumos.com/thumos`. Three purposes:
 1. **App Store compliance** — privacy policy + support URL (hard requirements)
 2. **Landing page** — SEO + social sharing + App Store marketing URL
 3. **Foundation** — can add blog later for organic traffic
@@ -114,7 +114,7 @@ Matches the iOS app exactly:
 │       [Download on App Store]       │
 │                                     │
 │  Privacy · Support                  │
-│  © 2026 Tianzhi Studio             │
+│  © 2026 Kwafy LLC             │
 │                                     │
 └─────────────────────────────────────┘
 ```
@@ -133,7 +133,7 @@ Matches the iOS app exactly:
 
 6. **Bottom CTA** — App Store badge again + brief "Free. No account needed." line.
 
-7. **Footer** — Privacy, Support, © Tianzhi Studio.
+7. **Footer** — Privacy, Support, © Kwafy LLC.
 
 **SEO meta:**
 ```html
@@ -141,9 +141,9 @@ Matches the iOS app exactly:
 <meta name="description" content="Thumos is a soul mirror — an AI that helps you understand who you really are through honest, reflective conversation. No quizzes. No labels. Just a mirror.">
 <meta property="og:title" content="Thumos — The Spirit Within">
 <meta property="og:description" content="An AI soul mirror. Understand who you really are through reflective conversation.">
-<meta property="og:image" content="https://tianzhistudio.com/thumos/assets/og-image.png">
-<meta property="og:url" content="https://tianzhistudio.com/thumos/">
-<link rel="canonical" href="https://tianzhistudio.com/thumos/">
+<meta property="og:image" content="https://trythumos.com/thumos/assets/og-image.png">
+<meta property="og:url" content="https://trythumos.com/thumos/">
+<link rel="canonical" href="https://trythumos.com/thumos/">
 ```
 
 **Structured data (JSON-LD):**
@@ -245,7 +245,7 @@ web/
 
 1. Cloudflare dashboard → Pages → Create project → Connect to GitHub
 2. Build settings: build output directory = `web/`, no build command needed
-3. Custom domain: add `tianzhistudio.com` → create route for `/thumos/` path
+3. Custom domain: add `trythumos.com` → create route for `/thumos/` path
 4. Enable Web Analytics (dashboard toggle → copy snippet into HTML)
 
 **Path handling:** The site lives at `/thumos/`. All internal links use relative paths (`privacy.html`, not `/thumos/privacy.html`) so the site works both locally and deployed. Cloudflare routes `/thumos/*` to the Pages project root.

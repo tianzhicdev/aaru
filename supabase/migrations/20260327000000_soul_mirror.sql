@@ -1,4 +1,4 @@
--- AARU Soul Mirror — complete schema
+-- Thumos Soul Mirror — complete schema
 -- Single migration for a clean start
 
 create extension if not exists "pgcrypto";

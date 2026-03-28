@@ -1,8 +1,8 @@
-# AARU Architecture
+# Thumos Architecture
 
 ## Overview
 
-AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** — reflective AI conversations that build a living "soul file" portrait of the user.
+Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** — reflective AI conversations that build a living "soul file" portrait of the user.
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -65,7 +65,7 @@ AARU is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** �
 ## Directory Structure
 
 ```
-aaru/
+thumos/
 ├── src/domain/              # Pure TypeScript domain logic
 │   ├── constants.ts         # Magic numbers (reflection interval, session max)
 │   ├── schemas.ts           # Zod validation schemas
@@ -88,9 +88,9 @@ aaru/
 │   │   ├── synthesize-soul-file/ # On-demand synthesis
 │   │   └── ping/            # Health check
 │   └── migrations/          # Postgres schema
-├── AARU/                    # iOS client
+├── Thumos/                    # iOS client
 │   └── App/
-│       ├── AARUApp.swift              # Entry point
+│       ├── ThumosApp.swift              # Entry point
 │       ├── AppModel.swift             # @MainActor state manager
 │       ├── Models.swift               # Codable data types
 │       ├── BackendClient.swift        # HTTP + SSE client
@@ -99,7 +99,7 @@ aaru/
 │       ├── SoulConversationScreen.swift # Streaming chat UI
 │       ├── SoulFileScreen.swift       # 7-section soul file display
 │       └── SecureStore.swift          # Keychain wrapper
-├── AARUTests/               # XCTest unit tests
+├── ThumosTests/               # XCTest unit tests
 ├── tests/
 │   ├── unit/                # Domain logic tests (60 tests)
 │   └── integration/         # Handler tests
@@ -173,7 +173,7 @@ User types message → sendSoulMessage(text)
   ▼
 POST /soul-converse (SSE streaming)
   │
-  ├─ Auth: validate x-aaru-session token
+  ├─ Auth: validate x-thumos-session token
   ├─ Get or create active session
   ├─ Save user message to soul_messages
   │
@@ -236,7 +236,7 @@ end-soul-session (called when session closes)
 ### Navigation
 
 ```
-AARUApp
+ThumosApp
   └─ RootView
        └─ SoulMirrorTabView
             ├─ Tab 0: SoulConversationScreen (streaming chat)
@@ -286,7 +286,7 @@ Device-based anonymous auth:
 3. Server issues session token:
    token = userId.deviceId.issuedAt.nonce.HMAC-SHA256(secret)
    TTL = 30 days
-4. Token stored in Keychain, sent as x-aaru-session header
+4. Token stored in Keychain, sent as x-thumos-session header
 5. On auth failure: re-bootstrap, get new token, retry
 ```
 
@@ -324,11 +324,11 @@ npx vitest run
 npx tsc -p tsconfig.json --noEmit
 
 # iOS build
-xcodebuild build -scheme AARU \
+xcodebuild build -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
 
 # iOS tests
-xcodebuild test -scheme AARU \
+xcodebuild test -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
 ```
 
@@ -349,7 +349,7 @@ Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session
 | Secret | Used By |
 |--------|---------|
 | ANTHROPIC_API_KEY | claude.ts (Soul Mirror) |
-| AARU_SESSION_SECRET | auth.ts (HMAC signing) |
+| Thumos_SESSION_SECRET | auth.ts (HMAC signing) |
 | SUPABASE_SERVICE_ROLE_KEY | db.ts (admin access) |
 
 ### iOS → XcodeGen

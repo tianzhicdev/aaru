@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   buildSoulSystemPrompt,
   shouldExtract,
-  buildSoulFallbackResponse
+  buildSoulFallbackResponse,
+  detectSoftSessionGap
 } from "../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../src/domain/soul.ts";
 import { REFLECTION_INTERVAL } from "../../src/domain/constants.ts";
@@ -120,7 +121,9 @@ describe("shouldExtract", () => {
 describe("buildSoulFallbackResponse", () => {
   it("returns first session opener for session 1 exchange 0", () => {
     const response = buildSoulFallbackResponse(makeContext());
-    expect(response).toContain("most people don't see");
+    // Opener is randomly selected from a pool — verify it's a substantive question
+    expect(response.length).toBeGreaterThan(20);
+    expect(response).toMatch(/\?$/); // ends with a question mark
   });
 
   it("returns returning session opener with visible soul file portrait", () => {
@@ -142,5 +145,99 @@ describe("buildSoulFallbackResponse", () => {
   it("returns generic fallback for mid-conversation", () => {
     const response = buildSoulFallbackResponse(makeContext({ exchangeCount: 3 }));
     expect(response.length).toBeGreaterThan(10);
+  });
+});
+
+describe("detectSoftSessionGap", () => {
+  const THRESHOLD = 60 * 60 * 1000; // 1 hour
+
+  function makeMessages(gaps: Array<{ role: string; minutesAfterStart: number; content?: string }>) {
+    const base = new Date("2026-03-27T10:00:00Z").getTime();
+    return gaps.map((g) => ({
+      role: g.role,
+      content: g.content || "test message",
+      created_at: new Date(base + g.minutesAfterStart * 60 * 1000).toISOString()
+    }));
+  }
+
+  it("returns null when no messages", () => {
+    expect(detectSoftSessionGap([], THRESHOLD)).toBeNull();
+  });
+
+  it("returns null with only one message", () => {
+    const msgs = makeMessages([{ role: "user", minutesAfterStart: 0 }]);
+    expect(detectSoftSessionGap(msgs, THRESHOLD)).toBeNull();
+  });
+
+  it("returns null when all messages are within threshold", () => {
+    const msgs = makeMessages([
+      { role: "user", minutesAfterStart: 0 },
+      { role: "assistant", minutesAfterStart: 1 },
+      { role: "user", minutesAfterStart: 5 },
+      { role: "assistant", minutesAfterStart: 6 }
+    ]);
+    expect(detectSoftSessionGap(msgs, THRESHOLD)).toBeNull();
+  });
+
+  it("returns SoftSessionInfo when gap exceeds threshold", () => {
+    const msgs = makeMessages([
+      { role: "user", minutesAfterStart: 0 },
+      { role: "assistant", minutesAfterStart: 1 },
+      { role: "user", minutesAfterStart: 5, content: "I need to go" },
+      { role: "assistant", minutesAfterStart: 6 },
+      { role: "user", minutesAfterStart: 120 } // 2 hours later
+    ]);
+    const result = detectSoftSessionGap(msgs, THRESHOLD);
+    expect(result).not.toBeNull();
+    expect(result!.softSessionCount).toBe(1);
+    expect(result!.gapMs).toBeGreaterThanOrEqual(THRESHOLD);
+    expect(result!.lastUserMessage).toBe("I need to go");
+  });
+
+  it("correctly counts multiple soft sessions", () => {
+    const msgs = makeMessages([
+      { role: "user", minutesAfterStart: 0 },
+      { role: "assistant", minutesAfterStart: 1 },
+      { role: "user", minutesAfterStart: 120 }, // 2h gap
+      { role: "assistant", minutesAfterStart: 121 },
+      { role: "user", minutesAfterStart: 300 } // another 3h gap
+    ]);
+    const result = detectSoftSessionGap(msgs, THRESHOLD);
+    expect(result).not.toBeNull();
+    expect(result!.softSessionCount).toBe(2);
+  });
+
+  it("returns last user message before the gap", () => {
+    const msgs = makeMessages([
+      { role: "user", minutesAfterStart: 0, content: "hello" },
+      { role: "assistant", minutesAfterStart: 1, content: "hi there" },
+      { role: "user", minutesAfterStart: 2, content: "gotta run" },
+      { role: "assistant", minutesAfterStart: 3, content: "see you" },
+      { role: "user", minutesAfterStart: 120, content: "I'm back" }
+    ]);
+    const result = detectSoftSessionGap(msgs, THRESHOLD);
+    expect(result).not.toBeNull();
+    expect(result!.lastUserMessage).toBe("gotta run");
+  });
+});
+
+describe("buildSoulSystemPrompt — returning after break", () => {
+  it("includes RETURNING AFTER BREAK when returningAfterBreak is set", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      returningAfterBreak: {
+        gapMs: 2 * 60 * 60 * 1000,
+        softSessionCount: 1,
+        lastUserMessage: "I need to think about that"
+      }
+    }));
+    expect(prompt).toContain("RETURNING AFTER BREAK");
+    expect(prompt).toContain("2h");
+    expect(prompt).toContain("soft session 1");
+    expect(prompt).toContain("I need to think about that");
+  });
+
+  it("does not include RETURNING AFTER BREAK when not set", () => {
+    const prompt = buildSoulSystemPrompt(makeContext());
+    expect(prompt).not.toContain("RETURNING AFTER BREAK");
   });
 });

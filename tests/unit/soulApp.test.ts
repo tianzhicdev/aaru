@@ -8,7 +8,7 @@ vi.mock("../../supabase/functions/_shared/claude.ts", () => ({
 vi.mock("../../supabase/functions/_shared/env.ts", () => ({
   supabaseUrl: vi.fn(() => "https://mock.supabase.co"),
   supabaseServiceRoleKey: vi.fn(() => "mock-key"),
-  aaruSessionSecret: vi.fn(() => "mock-secret")
+  thumosSessionSecret: vi.fn(() => "mock-secret")
 }));
 
 // We need to mock the internal `rest` function used by soulApp.ts

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Screenshot 3 — Welcome</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Space+Grotesk:wght@300;400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #0a0806; }
+
+  body {
+    width: 1284px;
+    height: 2778px;
+    background: linear-gradient(180deg, #0a0806 0%, #12100a 40%, #0a0806 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  /* ─── Marketing headline ─── */
+  .marketing {
+    padding: 160px 80px 0;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .marketing h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 82px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.92);
+    letter-spacing: -1px;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+
+  .marketing h1 em {
+    font-style: italic;
+    color: rgba(212,176,77,0.85);
+  }
+
+  .marketing p {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 34px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.40);
+  }
+
+  /* ─── Phone device frame ─── */
+  .device {
+    margin-top: 80px;
+    width: 940px;
+    height: 2200px;
+    border-radius: 56px;
+    border: 5px solid rgba(255,255,255,0.10);
+    background: linear-gradient(180deg, #0a0806 0%, #12100a 50%, #0a0806 100%);
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 40px 120px rgba(0,0,0,0.7);
+    flex-shrink: 0;
+  }
+
+  .device::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 44px;
+    background: #000;
+    border-radius: 24px;
+    z-index: 10;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    padding: 84px 40px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  /* ─── App content: Welcome ─── */
+  .app-header {
+    text-align: center;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .app-header span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: rgba(212,176,77,0.55);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+  }
+
+  .welcome-spacer {
+    flex: 1;
+  }
+
+  .welcome-text {
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .welcome-title {
+    font-size: 80px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.85);
+    margin-bottom: 36px;
+  }
+
+  .welcome-sub {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 300;
+    color: rgba(255,248,230,0.42);
+    line-height: 1.6;
+  }
+
+  .welcome-spacer-2 {
+    flex: 1.5;
+  }
+
+  /* Glass button */
+  .glass-btn {
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 32px 0;
+    width: 580px;
+    border-radius: 30px;
+    font-size: 36px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.95);
+    background: linear-gradient(180deg, rgba(212,176,77,0.65) 0%, rgba(190,155,55,0.50) 100%);
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,0.20) inset,
+      0 8px 32px rgba(180,150,50,0.15);
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 100px;
+  }
+</style>
+</head>
+<body>
+
+<div class="marketing">
+  <h1>Begin with <em>honesty</em></h1>
+  <p>No right answers — only yours</p>
+</div>
+
+<div class="device">
+  <div class="screen">
+    <div class="app-header"><span>Soul Mirror</span></div>
+
+    <div class="welcome-spacer"></div>
+
+    <div class="welcome-text">
+      <div class="welcome-title">Welcome</div>
+      <div class="welcome-sub">This is a space for honest reflection.<br>There are no right answers — only yours.</div>
+    </div>
+
+    <div class="welcome-spacer-2"></div>
+
+    <div class="glass-btn">Begin</div>
+  </div>
+</div>
+
+</body>
+</html>

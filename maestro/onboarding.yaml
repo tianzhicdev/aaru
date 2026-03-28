@@ -1,7 +1,7 @@
-appId: com.tianzhichen.aaru
+appId: com.trythumos.app
 ---
 - launchApp
-- assertVisible: "AARU"
+- assertVisible: "Thumos"
 - assertVisible: "Describe your soul"
 - tapOn: "Describe your soul.*"
 - inputText: "I love exploring ancient myths, writing poetry, and stargazing on quiet nights."

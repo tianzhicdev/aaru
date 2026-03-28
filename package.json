@@ -1,5 +1,5 @@
 {
-  "name": "aaru",
+  "name": "thumos",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "test:watch": "vitest",
     "lint": "tsc -p tsconfig.json --noEmit",
     "ios:generate": "xcodegen generate",
-    "ios:list": "xcodebuild -list -project AARU.xcodeproj",
+    "ios:list": "xcodebuild -list -project Thumos.xcodeproj",
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:status": "npx supabase status",

@@ -9,11 +9,13 @@ import {
   insertSoulMessage,
   getVisibleSoulFile,
   isSessionStale,
-  autoCompleteStaleSession
+  autoCompleteStaleSession,
+  runReflectionUpdate
 } from "../_shared/soulApp.ts";
-import { buildSoulSystemPrompt, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
+import { buildSoulSystemPrompt, buildSoulFallbackResponse, detectSoftSessionGap, shouldExtract } from "../../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../../src/domain/soul.ts";
 import type { ReflectionNote } from "../../../src/domain/schemas.ts";
+import { SOFT_SESSION_GAP_MS } from "../../../src/domain/constants.ts";
 import { streamClaude } from "../_shared/claude.ts";
 import { z } from "zod";
 
@@ -31,7 +33,7 @@ const sseHeaders = {
   "Cache-Control": "no-cache",
   Connection: "keep-alive",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-aaru-session",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-thumos-session",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
@@ -108,12 +110,25 @@ async function handleSoulConverse(request: Request): Promise<Response> {
       content: m.content
     }));
 
-  const visibleSoulFile = await getVisibleSoulFile(userId);
   const exchangeCount = isSessionStart
     ? activeSession.exchange_count
     : activeSession.exchange_count + 1;
 
-  // Get latest reflection note from session
+  // Detect soft session gap
+  const rawMessagesWithTimestamps = messages.filter((m) => m.content !== "[begin]");
+  const softSessionInfo = detectSoftSessionGap(
+    rawMessagesWithTimestamps.map((m) => ({ role: m.role, content: m.content, created_at: m.created_at })),
+    SOFT_SESSION_GAP_MS
+  );
+
+  // If returning after a break and at a reflection boundary, run reflection first
+  if (softSessionInfo && shouldExtract(exchangeCount)) {
+    await runReflectionUpdate(activeSession, userId);
+  }
+
+  const visibleSoulFile = await getVisibleSoulFile(userId);
+
+  // Get latest reflection note from session (may have been updated by soft session reflection)
   const reflectionNotes = (activeSession.reflection_notes as ReflectionNote[] | null) ?? [];
   const latestReflection = reflectionNotes.length > 0 ? reflectionNotes[reflectionNotes.length - 1] : null;
 
@@ -123,7 +138,8 @@ async function handleSoulConverse(request: Request): Promise<Response> {
     visibleSoulFile,
     reflectionNote: latestReflection,
     previousSummaries: [],
-    messages: claudeMessages
+    messages: claudeMessages,
+    returningAfterBreak: softSessionInfo
   };
 
   const systemPrompt = buildSoulSystemPrompt(context);

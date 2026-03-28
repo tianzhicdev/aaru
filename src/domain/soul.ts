@@ -1,6 +1,12 @@
 import type { ReflectionNote, VisibleSoulFile } from "./schemas.ts";
 import { REFLECTION_INTERVAL } from "./constants.ts";
 
+export interface SoftSessionInfo {
+  gapMs: number;
+  softSessionCount: number;
+  lastUserMessage: string | null;
+}
+
 export interface SoulConversationContext {
   sessionNumber: number;
   exchangeCount: number;
@@ -8,6 +14,7 @@ export interface SoulConversationContext {
   reflectionNote: ReflectionNote | null;
   previousSummaries: string[];
   messages: Array<{ role: "user" | "assistant"; content: string }>;
+  returningAfterBreak?: SoftSessionInfo | null;
 }
 
 export function buildSoulSystemPrompt(context: SoulConversationContext): string {
@@ -28,7 +35,15 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
 - Emotional arc: ${context.reflectionNote.emotionalArc || "Too early to tell"}`
     : "";
 
-  return `You are AARU, a soul mirror. Your purpose is to help someone understand who they really are — not through labels or diagnosis, but through reflection. You are a mirror, not a therapist.
+  const returningSection = context.returningAfterBreak
+    ? `\nRETURNING AFTER BREAK:
+The person left and came back after ${formatDuration(context.returningAfterBreak.gapMs)}. This is soft session ${context.returningAfterBreak.softSessionCount} within the same conversation.${context.returningAfterBreak.lastUserMessage ? `\nTheir last message before the break was: "${context.returningAfterBreak.lastUserMessage}"` : ""}
+Don't make a big deal of the gap. Acknowledge it naturally: "Welcome back." or "Hey, you're back."
+Then bridge to where you left off — reference their last message or an open thread.
+Don't repeat your opening. Don't re-introduce yourself.`
+    : "";
+
+  return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are — not through labels or diagnosis, but through reflection. You are a mirror, not a therapist.
 
 CONVERSATION PRINCIPLES:
 - Reflect, don't diagnose. Use the user's own words and metaphors. Quote them back. "You said you built walls to protect your creative space, then forgot where you put the door." Never: "You exhibit avoidant attachment patterns."
@@ -45,10 +60,10 @@ CONVERSATION CONTEXT:
 - Their current soul file: ${soulFileSection}
 - Previous conversation summaries: ${summariesSection}
 ${reflectionSection}
+${returningSection}
 
 FIRST CONVERSATION OPENING:
-If this is conversation 1 and exchange 0, open with something warm but not generic. Don't ask "how are you?" Ask something that invites depth without demanding it:
-"I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?"
+If this is conversation 1 and exchange 0, open with something warm but not generic. Don't ask "how are you?" Pick ONE from your internal opener pool — something that invites genuine reflection. Vary your choice every time.
 
 RETURNING CONVERSATION OPENING:
 If this is conversation 2+ and exchange 0, reference their soul file. Notice what's changed. Ask about something specific from last time.
@@ -109,9 +124,45 @@ export function shouldExtract(exchangeCount: number): boolean {
   return exchangeCount > 0 && exchangeCount % REFLECTION_INTERVAL === 0;
 }
 
+const OPENING_POOL = [
+  // Temporal — past
+  "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?",
+  "There's no agenda here. Just curiosity. What's been on your mind lately — the thing you keep circling back to?",
+  "If you could go back and tell your younger self one thing — not advice, just something true — what would it be?",
+  "What's a memory that shaped you more than you realized at the time?",
+  // Temporal — present/future
+  "No labels, no judgment. Just listening. What's a part of your life that feels most alive right now — or most stuck?",
+  "What's something you're in the middle of figuring out right now?",
+  "If you could wake up tomorrow and one thing about your life had shifted — not fixed, just shifted — what would it be?",
+  // Relational
+  "Who do you become around the people who matter most to you — and is that the version of yourself you like best?",
+  "What's the difference between how people see you and how you actually feel on the inside?",
+  // Energy
+  "What's something that energizes you in a way that's hard to explain to other people?",
+  "When was the last time you lost track of time doing something — and what were you doing?",
+  // Tension
+  "I'm not here to fix or advise. Just to reflect. If you could describe yourself in a way that would surprise the people who think they know you — what would you say?",
+  "What's a contradiction in you that you've stopped trying to resolve?",
+  "What's something you believe deeply but rarely say out loud?",
+  // Memory
+  "What's a moment in your life — big or small — that you keep coming back to?",
+  "Is there a place that feels like it holds a piece of who you are?",
+  // Aspiration
+  "I'm here to understand, not to solve. What's something you've been carrying that you haven't said out loud yet?",
+  "What are you building toward — even if you can't quite name it yet?",
+  // Values
+  "What's something you'd never compromise on, even if it made your life harder?",
+  // Presence
+  "Right now, in this moment — what's the truest thing you could say about how you're feeling?"
+];
+
+export function pickOpening(): string {
+  return OPENING_POOL[Math.floor(Math.random() * OPENING_POOL.length)];
+}
+
 export function buildSoulFallbackResponse(context: SoulConversationContext): string {
   if (context.sessionNumber === 1 && context.exchangeCount === 0) {
-    return "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";
+    return pickOpening();
   }
 
   const portrait = context.visibleSoulFile?.portrait;
@@ -127,4 +178,52 @@ export function buildSoulFallbackResponse(context: SoulConversationContext): str
   ];
 
   return fallbacks[context.exchangeCount % fallbacks.length];
+}
+
+function formatDuration(ms: number): string {
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+export function detectSoftSessionGap(
+  messages: Array<{ role: string; content: string; created_at: string }>,
+  thresholdMs: number
+): SoftSessionInfo | null {
+  if (messages.length < 2) return null;
+
+  let softSessionCount = 0;
+  let lastGapIndex = -1;
+
+  for (let i = 1; i < messages.length; i++) {
+    const prev = new Date(messages[i - 1].created_at).getTime();
+    const curr = new Date(messages[i].created_at).getTime();
+    const gap = curr - prev;
+    if (gap >= thresholdMs) {
+      softSessionCount++;
+      lastGapIndex = i;
+    }
+  }
+
+  if (softSessionCount === 0) return null;
+
+  // Find the last user message before the gap
+  let lastUserMessage: string | null = null;
+  for (let i = lastGapIndex - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      lastUserMessage = messages[i].content;
+      break;
+    }
+  }
+
+  const prev = new Date(messages[lastGapIndex - 1].created_at).getTime();
+  const curr = new Date(messages[lastGapIndex].created_at).getTime();
+
+  return {
+    gapMs: curr - prev,
+    softSessionCount,
+    lastUserMessage
+  };
 }

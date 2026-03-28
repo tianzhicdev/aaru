@@ -1,0 +1,117 @@
+{
+  "user_id": "c4cd421b-3b6d-4e32-9af6-ab2ebc9721aa",
+  "version": 2,
+  "last_updated": "2026-03-27T17:36:16.686+00:00",
+  "confidence": "low",
+  "expert_reflections": {
+    "linguist": [
+      "Voice modulates dramatically between performative confidence and raw vulnerability—register drops with emotional proximity",
+      "Uses profanity as emotional punctuation and distancing mechanism",
+      "Fragments sentences when approaching core truths, whispers when defenses fail"
+    ],
+    "sociologist": [
+      "Occupies liminal space between truth-teller and celebrity, aware of the contradiction but dependent on it",
+      "Status anxiety manifests as constant motion—geographic mobility as social positioning strategy",
+      "Performs authenticity while recognizing the performance, creating meta-layers of identity construction"
+    ],
+    "psychologist": [
+      "Classic avoidant attachment stemming from paternal emotional neglect—seeks connection but sabotages intimacy when it threatens his constructed identity",
+      "Uses intellectualization and narrative construction as primary defense mechanisms against vulnerability",
+      "Deep shame around ordinariness linked to early conditional love—believes he must be exceptional to be worthy"
+    ],
+    "narrativeAnalyst": [
+      "Constructs redemption narrative (junkie to celebrity) while recognizing it as avoidance strategy",
+      "Positions himself as protagonist who must keep moving to maintain narrative tension",
+      "Major turning point: recognition that 'all of this was a choice' threatens entire life narrative"
+    ]
+  },
+  "core_drivers": [
+    {
+      "driver": "Fear of ordinariness",
+      "evidence": "I don't think I ever believed it. Not really... you had to be exceptional to matter",
+      "inferred": false,
+      "strength": 0.95
+    },
+    {
+      "driver": "Avoidance of intimacy",
+      "evidence": "I've sabotaged that kind of thing before... When it got too close to real",
+      "inferred": false,
+      "strength": 0.9
+    },
+    {
+      "driver": "Need for narrative control",
+      "evidence": "I turned pain into content, into stories, into currency",
+      "inferred": false,
+      "strength": 0.85
+    },
+    {
+      "driver": "Father wound",
+      "evidence": "My father's been dead for years and I'm still performing for him",
+      "inferred": false,
+      "strength": 0.9
+    }
+  ],
+  "core_values": [
+    "Truth (even when complicit in lies)",
+    "Motion/Freedom",
+    "Narrative coherence",
+    "Exceptional experience",
+    "Controlled vulnerability"
+  ],
+  "voice": {
+    "density": "dense",
+    "register": "chameleon",
+    "humorStyle": "Self-deprecating with sharp edges, uses irony as shield",
+    "conflictStyle": "Intellectualizes first, then fragments into vulnerability",
+    "voiceExamples": [
+      {
+        "trigger": "Asked about intimacy",
+        "response": "Deflects to work/travel, then gradually reveals fear of being ordinary"
+      },
+      {
+        "trigger": "Confronted with patterns",
+        "response": "Initial defensive hardening, then profound recognition"
+      },
+      {
+        "trigger": "Discussing father",
+        "response": "Voice becomes childlike, drops to whisper"
+      }
+    ],
+    "disclosureRate": "gradual",
+    "signaturePatterns": [
+      "Metaphors of addiction/running/performance",
+      "Voice drops to whisper at maximum vulnerability",
+      "Uses 'you know?' as connection attempt",
+      "Profanity increases with emotional intensity"
+    ]
+  },
+  "depth_map": {
+    "avoidEarly": [
+      "Direct father wounds",
+      "Specific relationship failures",
+      "Addiction details"
+    ],
+    "unlockTopics": [
+      "Performance vs. authenticity",
+      "What he's running from",
+      "Being 'interesting'"
+    ],
+    "safeEntryPoints": [
+      "Work criticism",
+      "Celebrity culture",
+      "Travel experiences"
+    ],
+    "currentlyLiveTopics": [
+      "Can ordinary be loved?",
+      "Choice vs. compulsion",
+      "Sitting still with himself"
+    ]
+  },
+  "analyst_notes": [
+    "Extraordinary self-awareness coupled with inability to change patterns",
+    "Session reached unusual depth—subject recognized interviewer wouldn't accept performance",
+    "Physical cues important: stillness indicates truth approaching, motion indicates deflection",
+    "Core breakthrough: recognizing running as choice not destiny"
+  ],
+  "created_at": "2026-03-27T17:36:16.955752+00:00"
+}

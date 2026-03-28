@@ -55,7 +55,7 @@ describe("buildSoulSynthesisPrompt", () => {
     expect(prompt).toContain("wanderer");
     // Visible soul file sections should use second person
     expect(prompt).toContain("How you move through the world");
-    expect(prompt).toContain("Second person (you/your)");
+    expect(prompt).toContain("MUST use second person");
   });
 });
 

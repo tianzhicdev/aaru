@@ -1,4 +1,4 @@
-# AARU Verification Checklist
+# Thumos Verification Checklist
 
 Run all steps below. Every step must pass before committing.
 
@@ -16,7 +16,7 @@ Expected: Zero errors.
 
 ## 3. iOS Build (required when iOS code changed)
 ```bash
-xcodegen generate && xcodebuild build -scheme AARU \
+xcodegen generate && xcodebuild build -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3' \
   -derivedDataPath ./DerivedData \
   | xcpretty
@@ -25,7 +25,7 @@ Expected: BUILD SUCCEEDED
 
 ## 4. iOS Tests (required when iOS code changed)
 ```bash
-xcodebuild test -scheme AARU \
+xcodebuild test -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3' \
   -resultBundlePath ./TestResults \
   | xcpretty

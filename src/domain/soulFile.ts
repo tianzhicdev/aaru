@@ -75,7 +75,7 @@ export function buildReflectionPrompt(
   exchangeCount: number
 ): string {
   const transcript = messages
-    .map((m) => `${m.role === "assistant" ? "AARU" : "User"}: ${m.content}`)
+    .map((m) => `${m.role === "assistant" ? "Thumos" : "User"}: ${m.content}`)
     .join("\n");
 
   const existingContext = existingNote
@@ -114,7 +114,7 @@ export function buildLightVisiblePrompt(
   sessionNumber: number
 ): string {
   const transcript = messages
-    .map((m) => `${m.role === "assistant" ? "AARU" : "User"}: ${m.content}`)
+    .map((m) => `${m.role === "assistant" ? "Thumos" : "User"}: ${m.content}`)
     .join("\n");
 
   const existingContext = existingVisible
@@ -156,7 +156,7 @@ export function buildSoulSynthesisPrompt(
   sessionNumber: number
 ): string {
   const transcript = messages
-    .map((m) => `${m.role === "assistant" ? "AARU" : "User"}: ${m.content}`)
+    .map((m) => `${m.role === "assistant" ? "Thumos" : "User"}: ${m.content}`)
     .join("\n");
 
   const reflectionsContext = reflectionNotes.length > 0
@@ -203,7 +203,7 @@ After your 4-pass analysis, output TWO JSON objects separated by <<<SPLIT>>>.
 {
   "version": ${(existingVisible?.version ?? 0) + 1},
   "lastUpdated": "${new Date().toISOString()}",
-  "portrait": "2-4 sentences. Novel-like. Second person (you/your). Uses their metaphors.",
+  "portrait": "2-4 sentences. Novel-like. MUST use second person (you/your, never he/she/they). Uses their metaphors.",
   "sections": {
     "howYouMove": "How you move through the world — your energy, pace, relationship to space and time.",
     "howYouThink": "How your mind works — patterns, associations, what catches your attention.",
@@ -249,6 +249,7 @@ After your 4-pass analysis, output TWO JSON objects separated by <<<SPLIT>>>.
 }
 
 ## RULES
+- CRITICAL: The VisibleSoulFile MUST use second person throughout. Write "you" and "your", NEVER "he/she/they/him/her/his". The reader IS the person. "You move through the world like..." not "He moves through..."
 - Use their EXACT words for all quotes.
 - Each section should be 1-3 sentences, evocative not clinical.
 - If evolving existing files, integrate new understanding — don't discard previous insights.

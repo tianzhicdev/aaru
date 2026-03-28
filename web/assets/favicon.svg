@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">Thumos favicon</title>
+  <rect width="256" height="256" rx="52" fill="#fafafa" />
+  <circle cx="128" cy="128" r="92" fill="#f5f1e4" stroke="#d4b04d" stroke-width="8" />
+  <path d="M91 84h74v20h-27v68h-20v-68H91z" fill="#1a1a1a" />
+</svg>

@@ -1,6 +1,7 @@
 name = "thumos-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
+account_id = "8dec2b1d93b5b5be6cbbacb723b74fc3"
 
 [observability]
 enabled = true

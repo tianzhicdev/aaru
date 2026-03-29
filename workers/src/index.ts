@@ -10,6 +10,7 @@ import { handleEndSoulSession } from "./handlers/end-soul-session.ts";
 import { handleSynthesizeSoulFile } from "./handlers/synthesize-soul-file.ts";
 import { handleDeleteAccount } from "./handlers/delete-account.ts";
 import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
+import { handleGenerateReengagement } from "./handlers/generate-reengagement.ts";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -60,6 +61,11 @@ export default {
       case "get-debug-info":
         return withErrorHandling(request, (payload, req) =>
           handleGetDebugInfo(sql, payload, req)
+        );
+
+      case "generate-reengagement":
+        return withErrorHandling(request, (payload, req) =>
+          handleGenerateReengagement(sql, env, payload, req)
         );
 
       default:

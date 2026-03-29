@@ -1,36 +1,31 @@
 import { describe, it, expect } from "vitest";
 import {
   buildSoulSystemPrompt,
-  shouldExtract,
   buildSoulFallbackResponse,
   detectSoftSessionGap
 } from "../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../src/domain/soul.ts";
-import { REFLECTION_INTERVAL } from "../../src/domain/constants.ts";
 
 function makeContext(overrides: Partial<SoulConversationContext> = {}): SoulConversationContext {
   return {
-    sessionNumber: 1,
-    exchangeCount: 0,
     visibleSoulFile: null,
     reflectionNote: null,
-    previousSummaries: [],
+    steering: null,
     messages: [],
+    isFirstEverMessage: false,
     ...overrides
   };
 }
 
 describe("buildSoulSystemPrompt", () => {
   it("includes first conversation context when no soul file", () => {
-    const prompt = buildSoulSystemPrompt(makeContext());
-    expect(prompt).toContain("conversation 1");
+    const prompt = buildSoulSystemPrompt(makeContext({ isFirstEverMessage: true }));
     expect(prompt).toContain("No soul file yet");
-    expect(prompt).toContain("first conversation");
+    expect(prompt).toContain("FIRST MESSAGE");
   });
 
   it("includes visible soul file context when available", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
-      sessionNumber: 2,
       visibleSoulFile: {
         version: 1,
         lastUpdated: "2026-03-26T00:00:00Z",
@@ -45,7 +40,8 @@ describe("buildSoulSystemPrompt", () => {
           yourVoice: ""
         },
         crystallizedMoments: [{ quote: "I built walls", reflection: "Protection as architecture" }],
-        openThreads: ["The door metaphor"]
+        openThreads: ["The door metaphor"],
+        compassScores: {}
       }
     }));
     expect(prompt).toContain("A wanderer who builds bridges");
@@ -53,97 +49,121 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("I built walls");
   });
 
-  it("includes reflection note as working memory", () => {
+  it("includes reflection note as memory", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: {
-        updatedAtExchange: 8,
+        updatedAt: "2026-03-26T00:00:00Z",
         factualAnchors: { job: "software engineer" },
         tensions: ["Says they love solitude but happiest memory involves a crowd"],
         recurringThemes: ["architecture", "boundaries"],
         notableAbsences: ["family"],
-        emotionalArc: "Started guarded, gradually opening up"
+        emotionalArc: "Started guarded, gradually opening up",
+        domainCoverage: [
+          { domain: "work_and_purpose", depth: "explored", evidence: "Software engineer" },
+          { domain: "origins", depth: "untouched", evidence: "" }
+        ]
       }
     }));
-    expect(prompt).toContain("WORKING MEMORY");
+    expect(prompt).toContain("YOUR MEMORY");
     expect(prompt).toContain("software engineer");
     expect(prompt).toContain("love solitude but happiest memory involves a crowd");
     expect(prompt).toContain("architecture");
     expect(prompt).toContain("family");
     expect(prompt).toContain("Started guarded");
+    expect(prompt).toContain("work_and_purpose: explored");
   });
 
-  it("includes previous summaries when available", () => {
+  it("includes steering section when steering context provided", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
-      sessionNumber: 2,
-      previousSummaries: ["Talked about creativity and loneliness"]
+      steering: {
+        domainCoverage: [
+          { domain: "origins", depth: "explored", evidence: "Rural Oregon childhood" },
+          { domain: "relationships", depth: "mentioned", evidence: "Referenced best friend" },
+          { domain: "work_and_purpose", depth: "deep", evidence: "Career transition" },
+          { domain: "values_and_beliefs", depth: "untouched", evidence: "" },
+          { domain: "emotional_life", depth: "explored", evidence: "Anxiety strategies" },
+          { domain: "growth_and_change", depth: "mentioned", evidence: "Moving cities" },
+          { domain: "aspirations", depth: "untouched", evidence: "" }
+        ],
+        safeEntryPoints: ["work", "creative process"],
+        unlockTopics: ["the door"],
+        avoidEarly: ["family"],
+        currentlyLiveTopics: ["identity"]
+      }
     }));
-    expect(prompt).toContain("Talked about creativity and loneliness");
+    expect(prompt).toContain("INNER COMPASS");
+    expect(prompt).toContain("Uncharted territory");
+    expect(prompt).toContain("Values & Beliefs");
+    expect(prompt).toContain("Safe entry points");
   });
 
-  it("includes exchange count", () => {
-    const prompt = buildSoulSystemPrompt(makeContext({ exchangeCount: 5 }));
-    expect(prompt).toContain("exchange 5");
+  it("includes memory update instructions", () => {
+    const prompt = buildSoulSystemPrompt(makeContext());
+    expect(prompt).toContain("<<<MEMORY>>>");
+    expect(prompt).toContain("domainCoverage");
+    expect(prompt).toContain("factualAnchors");
   });
 
-  it("includes continuous pacing guidance instead of session closing", () => {
+  it("includes continuous pacing guidance", () => {
     const prompt = buildSoulSystemPrompt(makeContext());
     expect(prompt).toContain("no time limit");
     expect(prompt).toContain("Never force closure");
-    expect(prompt).not.toContain("[SESSION_COMPLETE]");
-  });
-});
-
-describe("shouldExtract", () => {
-  it("returns true at reflection interval", () => {
-    expect(shouldExtract(REFLECTION_INTERVAL)).toBe(true);
-    expect(shouldExtract(REFLECTION_INTERVAL * 2)).toBe(true);
-    expect(shouldExtract(REFLECTION_INTERVAL * 3)).toBe(true);
   });
 
-  it("returns false between intervals", () => {
-    expect(shouldExtract(1)).toBe(false);
-    expect(shouldExtract(REFLECTION_INTERVAL - 1)).toBe(false);
-    expect(shouldExtract(REFLECTION_INTERVAL + 1)).toBe(false);
+  it("includes story-over-assessment instruction", () => {
+    const prompt = buildSoulSystemPrompt(makeContext());
+    expect(prompt).toContain("Ask for stories, not self-assessments");
+    expect(prompt).toContain("Tell me about a time");
   });
 
-  it("returns false at exchange 0", () => {
-    expect(shouldExtract(0)).toBe(false);
-  });
-
-  it("uses interval of 8", () => {
-    expect(REFLECTION_INTERVAL).toBe(8);
-    expect(shouldExtract(8)).toBe(true);
-    expect(shouldExtract(16)).toBe(true);
-    expect(shouldExtract(7)).toBe(false);
+  it("includes returning user section when soul file has portrait", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      visibleSoulFile: {
+        version: 2,
+        lastUpdated: "2026-03-26",
+        portrait: "A dreamer who builds alone",
+        sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+        crystallizedMoments: [],
+        openThreads: [],
+        compassScores: {}
+      }
+    }));
+    expect(prompt).toContain("RETURNING USER");
+    expect(prompt).toContain("A dreamer who builds alone");
   });
 });
 
 describe("buildSoulFallbackResponse", () => {
-  it("returns first session opener for session 1 exchange 0", () => {
-    const response = buildSoulFallbackResponse(makeContext());
-    // Opener is randomly selected from a pool — verify it's a substantive question
+  it("returns opening for first ever message", () => {
+    const response = buildSoulFallbackResponse(makeContext({ isFirstEverMessage: true }));
     expect(response.length).toBeGreaterThan(20);
-    expect(response).toMatch(/\?$/); // ends with a question mark
+    expect(response).toMatch(/\?$/);
   });
 
-  it("returns returning session opener with visible soul file portrait", () => {
+  it("returns returning response with portrait when returning", () => {
     const response = buildSoulFallbackResponse(makeContext({
-      sessionNumber: 2,
-      exchangeCount: 0,
+      messages: [],
       visibleSoulFile: {
         version: 1,
         lastUpdated: "2026-03-26",
         portrait: "A dreamer who builds alone",
         sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
         crystallizedMoments: [],
-        openThreads: []
+        openThreads: [],
+        compassScores: {}
       }
     }));
     expect(response).toContain("A dreamer");
   });
 
   it("returns generic fallback for mid-conversation", () => {
-    const response = buildSoulFallbackResponse(makeContext({ exchangeCount: 3 }));
+    const response = buildSoulFallbackResponse(makeContext({
+      messages: [
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "hi" },
+        { role: "user", content: "test" }
+      ]
+    }));
     expect(response.length).toBeGreaterThan(10);
   });
 });
@@ -179,13 +199,13 @@ describe("detectSoftSessionGap", () => {
     expect(detectSoftSessionGap(msgs, THRESHOLD)).toBeNull();
   });
 
-  it("returns SoftSessionInfo when gap exceeds threshold", () => {
+  it("returns info when gap exceeds threshold", () => {
     const msgs = makeMessages([
       { role: "user", minutesAfterStart: 0 },
       { role: "assistant", minutesAfterStart: 1 },
       { role: "user", minutesAfterStart: 5, content: "I need to go" },
       { role: "assistant", minutesAfterStart: 6 },
-      { role: "user", minutesAfterStart: 120 } // 2 hours later
+      { role: "user", minutesAfterStart: 120 }
     ]);
     const result = detectSoftSessionGap(msgs, THRESHOLD);
     expect(result).not.toBeNull();
@@ -198,9 +218,9 @@ describe("detectSoftSessionGap", () => {
     const msgs = makeMessages([
       { role: "user", minutesAfterStart: 0 },
       { role: "assistant", minutesAfterStart: 1 },
-      { role: "user", minutesAfterStart: 120 }, // 2h gap
+      { role: "user", minutesAfterStart: 120 },
       { role: "assistant", minutesAfterStart: 121 },
-      { role: "user", minutesAfterStart: 300 } // another 3h gap
+      { role: "user", minutesAfterStart: 300 }
     ]);
     const result = detectSoftSessionGap(msgs, THRESHOLD);
     expect(result).not.toBeNull();
@@ -218,26 +238,5 @@ describe("detectSoftSessionGap", () => {
     const result = detectSoftSessionGap(msgs, THRESHOLD);
     expect(result).not.toBeNull();
     expect(result!.lastUserMessage).toBe("gotta run");
-  });
-});
-
-describe("buildSoulSystemPrompt — returning after break", () => {
-  it("includes RETURNING AFTER BREAK when returningAfterBreak is set", () => {
-    const prompt = buildSoulSystemPrompt(makeContext({
-      returningAfterBreak: {
-        gapMs: 2 * 60 * 60 * 1000,
-        softSessionCount: 1,
-        lastUserMessage: "I need to think about that"
-      }
-    }));
-    expect(prompt).toContain("RETURNING AFTER BREAK");
-    expect(prompt).toContain("2h");
-    expect(prompt).toContain("soft session 1");
-    expect(prompt).toContain("I need to think about that");
-  });
-
-  it("does not include RETURNING AFTER BREAK when not set", () => {
-    const prompt = buildSoulSystemPrompt(makeContext());
-    expect(prompt).not.toContain("RETURNING AFTER BREAK");
   });
 });

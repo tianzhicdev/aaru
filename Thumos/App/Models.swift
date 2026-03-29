@@ -39,6 +39,7 @@ struct VisibleSoulFile: Codable, Equatable {
     var sections: VisibleSoulFileSections
     var crystallizedMoments: [CrystallizedMoment]
     var openThreads: [String]
+    var compassScores: [String: Double?]?
 
     enum CodingKeys: String, CodingKey {
         case version
@@ -47,6 +48,7 @@ struct VisibleSoulFile: Codable, Equatable {
         case sections
         case crystallizedMoments
         case openThreads
+        case compassScores
     }
 
     static let empty = VisibleSoulFile(
@@ -55,7 +57,8 @@ struct VisibleSoulFile: Codable, Equatable {
         portrait: nil,
         sections: .empty,
         crystallizedMoments: [],
-        openThreads: []
+        openThreads: [],
+        compassScores: nil
     )
 
     var isEmpty: Bool {
@@ -64,21 +67,7 @@ struct VisibleSoulFile: Codable, Equatable {
     }
 }
 
-// MARK: - Soul Session
-
-struct SoulSessionInfo: Codable, Equatable {
-    let id: UUID
-    let sessionNumber: Int
-    let exchangeCount: Int
-    let status: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case sessionNumber = "session_number"
-        case exchangeCount = "exchange_count"
-        case status
-    }
-}
+// MARK: - Soul Messages
 
 struct SoulMessagePayload: Codable, Equatable {
     let role: String
@@ -89,21 +78,15 @@ struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
     let visibleSoulFile: VisibleSoulFile?
-    let activeSession: SoulSessionInfo?
     let messages: [SoulMessagePayload]?
-    let canStartSession: Bool
-    let cooldownRemainingMs: Int
-    let nextSessionNumber: Int
+    let hasMessages: Bool?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case token
         case visibleSoulFile = "visible_soul_file"
-        case activeSession = "active_session"
         case messages
-        case canStartSession = "can_start_session"
-        case cooldownRemainingMs = "cooldown_remaining_ms"
-        case nextSessionNumber = "next_session_number"
+        case hasMessages = "has_messages"
     }
 }
 
@@ -116,18 +99,6 @@ struct SoulFileResponse: Codable {
         case visibleSoulFile = "visible_soul_file"
         case version
         case lastUpdated = "last_updated"
-    }
-}
-
-struct EndSoulSessionResponse: Codable {
-    let visibleSoulFile: VisibleSoulFile
-    let sessionCompleted: Bool
-    let synthesisSucceeded: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case visibleSoulFile = "visible_soul_file"
-        case sessionCompleted = "session_completed"
-        case synthesisSucceeded = "synthesis_succeeded"
     }
 }
 
@@ -160,6 +131,12 @@ struct VersionCheckResponse: Codable {
         case minVersion = "min_version"
         case message
     }
+}
+
+// MARK: - Reengagement
+
+struct ReengagementResponse: Codable {
+    let question: String
 }
 
 // MARK: - Delete Account
@@ -219,36 +196,17 @@ struct HiddenSoulFile: Codable {
     let analystNotes: [String]
 }
 
-struct DebugSessionInfo: Codable {
-    let id: String
-    let sessionNumber: Int
-    let status: String
-    let exchangeCount: Int
-    let startedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case sessionNumber = "session_number"
-        case status
-        case exchangeCount = "exchange_count"
-        case startedAt = "started_at"
-    }
-}
-
 struct DebugInfoResponse: Codable {
     let userId: String
     let deviceId: String
     let hiddenSoulFile: HiddenSoulFile?
     let visibleSoulFile: VisibleSoulFile?
-    let activeSession: DebugSessionInfo?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case deviceId = "device_id"
         case hiddenSoulFile = "hidden_soul_file"
         case visibleSoulFile = "visible_soul_file"
-        case activeSession = "active_session"
     }
 }
 #endif
-

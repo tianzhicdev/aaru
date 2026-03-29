@@ -3,29 +3,25 @@ import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession } from "../db.ts";
 import {
-  getActiveSession,
-  getLatestSession,
-  createSoulSession,
-  updateSoulSession,
-  getRecentMessages,
-  insertSoulMessage,
+  getLastNMessages,
+  getReflectionNote,
   getVisibleSoulFile,
-  isSessionStale,
-  autoCompleteStaleSession,
-  runReflectionUpdate
+  getHiddenSoulFile,
+  insertSoulMessage,
+  upsertReflectionNote,
+  parseReflectionNote
 } from "../soulApp.ts";
-import { buildSoulSystemPrompt, buildSoulFallbackResponse, detectSoftSessionGap, shouldExtract } from "../../../src/domain/soul.ts";
-import type { SoulConversationContext } from "../../../src/domain/soul.ts";
-import type { ReflectionNote } from "../../../src/domain/schemas.ts";
-import { SOFT_SESSION_GAP_MS } from "../../../src/domain/constants.ts";
+import { buildSoulSystemPrompt, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
+import type { SoulConversationContext, SteeringContext } from "../../../src/domain/soul.ts";
 import { streamClaude } from "../claude.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { z } from "zod";
 
 const soulConverseRequestSchema = z.object({
-  message: z.string().min(1).max(2000),
-  session_id: z.string().uuid().optional()
+  message: z.string().min(1).max(2000)
 });
+
+const MEMORY_MARKER = "<<<MEMORY>>>";
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -51,6 +47,11 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   await touchDeviceSession(sql, deviceSession.id);
   const userId = deviceSession.user_id;
 
+  // Update last_active_at for re-engagement eligibility tracking
+  sql`UPDATE users SET last_active_at = NOW() WHERE id = ${userId}`.catch((err) =>
+    console.error("Failed to update last_active_at:", err)
+  );
+
   // Parse body
   let body: z.infer<typeof soulConverseRequestSchema>;
   try {
@@ -60,150 +61,191 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     return jsonResp(400, { code: 400, message: "Invalid request" });
   }
 
-  // Get or create active session
-  let activeSession = await getActiveSession(sql, userId);
-
-  if (activeSession && isSessionStale(activeSession)) {
-    await autoCompleteStaleSession(sql, activeSession);
-    activeSession = null;
+  // Skip [begin] messages — no longer needed, but handle gracefully
+  const isBeginMessage = body.message === "[begin]";
+  if (!isBeginMessage) {
+    await insertSoulMessage(sql, userId, "user", body.message);
   }
 
-  if (!activeSession) {
-    const latestSession = await getLatestSession(sql, userId);
-    const sessionNumber = (latestSession?.session_number ?? 0) + 1;
-    activeSession = await createSoulSession(sql, userId, sessionNumber);
-  }
-
-  const isSessionStart = body.message === "[begin]";
-
-  if (!isSessionStart) {
-    await insertSoulMessage(sql, activeSession.id, userId, "user", body.message);
-  }
-
-  // EGRESS FIX: Use windowed messages instead of full history
-  const messages = await getRecentMessages(sql, userId, activeSession.id);
-  const claudeMessages = messages
-    .filter((m) => m.content !== "[begin]")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content
-    }));
-
-  const exchangeCount = isSessionStart
-    ? activeSession.exchange_count
-    : activeSession.exchange_count + 1;
-
-  // Detect soft session gap
-  const rawMessagesWithTimestamps = messages.filter((m) => m.content !== "[begin]");
-  const softSessionInfo = detectSoftSessionGap(
-    rawMessagesWithTimestamps.map((m) => ({ role: m.role, content: m.content, created_at: m.created_at })),
-    SOFT_SESSION_GAP_MS
-  );
-
-  if (softSessionInfo && shouldExtract(exchangeCount)) {
-    await runReflectionUpdate(sql, env.ANTHROPIC_API_KEY, activeSession, userId);
-  }
-
+  // Fetch context
+  const reflectionNote = await getReflectionNote(sql, userId);
+  const recentMessages = await getLastNMessages(sql, userId, 10);
   const visibleSoulFile = await getVisibleSoulFile(sql, userId);
+  const hiddenSoulFile = await getHiddenSoulFile(sql, userId);
 
-  const reflectionNotes = (activeSession.reflection_notes as ReflectionNote[] | null) ?? [];
-  const latestReflection = reflectionNotes.length > 0 ? reflectionNotes[reflectionNotes.length - 1] : null;
+  const isFirstEver = recentMessages.filter(m => m.role === "user" && m.content !== "[begin]").length === 0
+    && !isBeginMessage;
+
+  // Build steering from hidden soul file
+  const steering: SteeringContext | null = hiddenSoulFile ? {
+    domainCoverage: hiddenSoulFile.depthMap.domainCoverage ?? [],
+    safeEntryPoints: hiddenSoulFile.depthMap.safeEntryPoints,
+    unlockTopics: hiddenSoulFile.depthMap.unlockTopics,
+    avoidEarly: hiddenSoulFile.depthMap.avoidEarly,
+    currentlyLiveTopics: hiddenSoulFile.depthMap.currentlyLiveTopics
+  } : null;
+
+  const claudeMessages = recentMessages
+    .filter(m => m.content !== "[begin]")
+    .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
 
   const context: SoulConversationContext = {
-    sessionNumber: activeSession.session_number,
-    exchangeCount,
     visibleSoulFile,
-    reflectionNote: latestReflection,
-    previousSummaries: [],
+    reflectionNote,
+    steering,
     messages: claudeMessages,
-    returningAfterBreak: softSessionInfo
+    isFirstEverMessage: isFirstEver || isBeginMessage
   };
 
   const systemPrompt = buildSoulSystemPrompt(context);
 
-  // Create SSE stream
+  // Create SSE stream with <<<MEMORY>>> parsing
+  const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
+      let lastSentIndex = 0;
+      let markerFound = false;
       let streamSucceeded = false;
 
       try {
         const tokenStream = streamClaude(systemPrompt, claudeMessages, {
           apiKey: env.ANTHROPIC_API_KEY,
           model: "claude-opus-4-20250514",
-          maxTokens: 512,
+          maxTokens: 1024,
           temperature: 0.8
         });
 
         for await (const token of tokenStream) {
           fullResponse += token;
-          controller.enqueue(
-            new TextEncoder().encode(sseEvent("token", { text: token }))
-          );
+
+          if (markerFound) continue; // Still reading memory section, don't send
+
+          const markerIndex = fullResponse.indexOf(MEMORY_MARKER);
+          if (markerIndex !== -1) {
+            markerFound = true;
+            // Send any unsent reply text before the marker
+            const unsent = fullResponse.substring(lastSentIndex, markerIndex).trimEnd();
+            if (unsent) {
+              controller.enqueue(encoder.encode(sseEvent("token", { text: unsent })));
+            }
+            continue;
+          }
+
+          // Buffer: hold back last 15 chars in case marker is split across tokens
+          const safeEnd = fullResponse.length - MEMORY_MARKER.length;
+          if (safeEnd > lastSentIndex) {
+            const chunk = fullResponse.substring(lastSentIndex, safeEnd);
+            controller.enqueue(encoder.encode(sseEvent("token", { text: chunk })));
+            lastSentIndex = safeEnd;
+          }
+        }
+
+        // Flush remaining if no marker found
+        if (!markerFound && lastSentIndex < fullResponse.length) {
+          controller.enqueue(encoder.encode(sseEvent("token", {
+            text: fullResponse.substring(lastSentIndex)
+          })));
         }
 
         streamSucceeded = true;
       } catch (error) {
         console.error("Claude stream error:", error);
 
+        // Retry once
         try {
           fullResponse = "";
+          lastSentIndex = 0;
+          markerFound = false;
+
           const retryStream = streamClaude(systemPrompt, claudeMessages, {
             apiKey: env.ANTHROPIC_API_KEY,
             model: "claude-opus-4-20250514",
-            maxTokens: 512,
+            maxTokens: 1024,
             temperature: 0.8
           });
 
           for await (const token of retryStream) {
             fullResponse += token;
-            controller.enqueue(
-              new TextEncoder().encode(sseEvent("token", { text: token }))
-            );
+
+            if (markerFound) continue;
+
+            const markerIndex = fullResponse.indexOf(MEMORY_MARKER);
+            if (markerIndex !== -1) {
+              markerFound = true;
+              const unsent = fullResponse.substring(lastSentIndex, markerIndex).trimEnd();
+              if (unsent) {
+                controller.enqueue(encoder.encode(sseEvent("token", { text: unsent })));
+              }
+              continue;
+            }
+
+            const safeEnd = fullResponse.length - MEMORY_MARKER.length;
+            if (safeEnd > lastSentIndex) {
+              const chunk = fullResponse.substring(lastSentIndex, safeEnd);
+              controller.enqueue(encoder.encode(sseEvent("token", { text: chunk })));
+              lastSentIndex = safeEnd;
+            }
           }
+
+          if (!markerFound && lastSentIndex < fullResponse.length) {
+            controller.enqueue(encoder.encode(sseEvent("token", {
+              text: fullResponse.substring(lastSentIndex)
+            })));
+          }
+
           streamSucceeded = true;
         } catch (retryError) {
           console.error("Claude stream retry failed:", retryError);
 
           fullResponse = buildSoulFallbackResponse(context);
-          controller.enqueue(
-            new TextEncoder().encode(sseEvent("token", { text: fullResponse }))
-          );
+          markerFound = false;
+          controller.enqueue(encoder.encode(sseEvent("token", { text: fullResponse })));
           streamSucceeded = true;
         }
       }
 
+      // Save message and reflection note
       if (streamSucceeded && fullResponse.length > 0) {
-        const cleanedResponse = fullResponse.trim();
+        // Extract reply content (before marker) and memory content (after marker)
+        const replyContent = markerFound
+          ? fullResponse.substring(0, fullResponse.indexOf(MEMORY_MARKER)).trim()
+          : fullResponse.trim();
+
+        const memoryContent = markerFound
+          ? fullResponse.substring(fullResponse.indexOf(MEMORY_MARKER) + MEMORY_MARKER.length).trim()
+          : null;
+
+        // Save assistant reply (without memory section)
         try {
-          await insertSoulMessage(sql, activeSession!.id, userId, "assistant", cleanedResponse);
-          if (!isSessionStart) {
-            await updateSoulSession(sql, activeSession!.id, {
-              exchange_count: exchangeCount
-            });
-          }
+          await insertSoulMessage(sql, userId, "assistant", replyContent);
         } catch (dbError) {
           console.error("DB write failed for soul message:", dbError);
           try {
-            await insertSoulMessage(sql, activeSession!.id, userId, "assistant", cleanedResponse);
-            if (!isSessionStart) {
-              await updateSoulSession(sql, activeSession!.id, { exchange_count: exchangeCount });
-            }
+            await insertSoulMessage(sql, userId, "assistant", replyContent);
           } catch (retryDbError) {
             console.error("DB write retry failed:", retryDbError);
-            controller.enqueue(
-              new TextEncoder().encode(sseEvent("error", {
-                type: "db_write_failure",
-                message: "I lost my train of thought. Your message was saved but my response may not have been."
-              }))
-            );
+            controller.enqueue(encoder.encode(sseEvent("error", {
+              type: "db_write_failure",
+              message: "I lost my train of thought. Your message was saved but my response may not have been."
+            })));
+          }
+        }
+
+        // Parse and save updated reflection note
+        if (memoryContent) {
+          try {
+            const parsed = parseReflectionNote(memoryContent);
+            if (parsed) {
+              await upsertReflectionNote(sql, userId, parsed);
+            }
+          } catch (noteError) {
+            console.error("Failed to save reflection note:", noteError);
           }
         }
       }
 
-      controller.enqueue(
-        new TextEncoder().encode(sseEvent("done", {}))
-      );
+      controller.enqueue(encoder.encode(sseEvent("done", {})));
       controller.close();
     }
   });

@@ -15,6 +15,7 @@ struct SoulFileScreen: View {
                     // Bordered soul file content
                     VStack(spacing: 28) {
                         portraitSection
+                        compassSection
                         soulSections
                         crystallizedMomentsSection
                         openThreadsSection
@@ -125,6 +126,17 @@ struct SoulFileScreen: View {
             }
         }
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Soul Compass
+
+    private var compassSection: some View {
+        Group {
+            if let scores = model.visibleSoulFile.compassScores,
+               scores.values.contains(where: { $0 != nil }) {
+                SoulCompassView(scores: scores)
+            }
+        }
     }
 
     // MARK: - 7 Soul Sections

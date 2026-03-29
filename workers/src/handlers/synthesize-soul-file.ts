@@ -4,14 +4,11 @@ import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession } from "../db.ts";
 import {
-  getActiveSession,
-  getLatestSession,
   getVisibleSoulFile,
   getAllSoulMessages,
   runSoulSynthesis
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
-import { REFLECTION_INTERVAL } from "../../../src/domain/constants.ts";
 
 export async function handleSynthesizeSoulFile(sql: NeonSQL, env: Env, _payload: unknown, request: Request) {
   const bearerToken = readBearerToken(request);
@@ -28,15 +25,19 @@ export async function handleSynthesizeSoulFile(sql: NeonSQL, env: Env, _payload:
   await touchDeviceSession(sql, session.id);
   const userId = session.user_id;
 
-  const activeSession = await getActiveSession(sql, userId);
-  const targetSession = activeSession ?? await getLatestSession(sql, userId);
-
-  if (!targetSession) {
-    return jsonResponse(404, { code: 404, message: "No soul session found" });
-  }
-
   const existing = await getVisibleSoulFile(sql, userId);
   const allMessages = await getAllSoulMessages(sql, userId);
+
+  // Need at least some user messages to synthesize
+  const userMessageCount = allMessages.filter(m => m.role === "user" && m.content !== "[begin]").length;
+  if (userMessageCount < 3) {
+    return jsonResponse(200, {
+      visible_soul_file: existing ?? emptyVisibleSoulFile(),
+      synthesis_succeeded: true
+    });
+  }
+
+  // Check if there are new messages since last synthesis
   const lastSoulFileTime = existing?.lastUpdated ? new Date(existing.lastUpdated).getTime() : 0;
   const hasNewMessages = allMessages.some(m => new Date(m.created_at).getTime() > lastSoulFileTime);
 
@@ -47,15 +48,7 @@ export async function handleSynthesizeSoulFile(sql: NeonSQL, env: Env, _payload:
     });
   }
 
-  const userMessageCount = allMessages.filter(m => m.role === "user").length;
-  if (userMessageCount < REFLECTION_INTERVAL) {
-    return jsonResponse(200, {
-      visible_soul_file: existing ?? emptyVisibleSoulFile(),
-      synthesis_succeeded: true
-    });
-  }
-
-  const { visible } = await runSoulSynthesis(sql, env.ANTHROPIC_API_KEY, targetSession, userId);
+  const { visible } = await runSoulSynthesis(sql, env.ANTHROPIC_API_KEY, userId);
 
   return jsonResponse(200, {
     visible_soul_file: visible ?? emptyVisibleSoulFile(),

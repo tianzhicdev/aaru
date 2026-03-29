@@ -16,19 +16,23 @@ final class AppModel: ObservableObject {
 
     // Soul Mirror state
     @Published var visibleSoulFile: VisibleSoulFile = .empty
-    @Published var canStartSoulSession = false
-    @Published var nextSessionNumber = 1
-    @Published var activeSoulSession: SoulSessionInfo?
+    @Published var hasMessages = false
     @Published var soulMessages: [SoulMessage] = []
     @Published var soulStreamingText = ""
     @Published var isSoulStreaming = false
     @Published var isSoulFileUpdating = false
     @Published var isDeletingAccount = false
     private var lastSoulFileSynthesisRequest: Date?
+    /// Re-engagement question fetched on-demand, used as AI's opening message.
+    @Published var pendingReengagementQuestion: String?
+    private var hasCompletedFirstSession: Bool {
+        UserDefaults.standard.bool(forKey: "has_completed_first_session")
+    }
 
     let backend: BackendClient
     private(set) var deviceID: String
     private(set) var userID: UUID?
+    var notificationManager: NotificationManager?
 
     #if DEBUG
     @Published var debugInfo: DebugInfoResponse?
@@ -120,9 +124,7 @@ final class AppModel: ObservableObject {
         // Reset in-memory state
         hasAgreedToAI = false
         visibleSoulFile = .empty
-        canStartSoulSession = false
-        nextSessionNumber = 1
-        activeSoulSession = nil
+        hasMessages = false
         soulMessages = []
         soulStreamingText = ""
         isSoulStreaming = false
@@ -131,6 +133,47 @@ final class AppModel: ObservableObject {
         appUpdateMessage = nil
         userID = nil
         errorMessage = nil
+    }
+
+    // MARK: - Notifications
+
+    /// Mark first session as completed (called when synthesis succeeds).
+    func markFirstSessionCompleted() {
+        if !hasCompletedFirstSession {
+            UserDefaults.standard.set(true, forKey: "has_completed_first_session")
+        }
+    }
+
+    /// Request notification permission after first session, then schedule local notification.
+    private func scheduleLocalNotificationIfEligible() async {
+        guard hasCompletedFirstSession else { return }
+        guard let nm = notificationManager else { return }
+
+        if !nm.isPermissionGranted {
+            let granted = await nm.requestPermission()
+            guard granted else { return }
+        }
+
+        await nm.scheduleWeeklyNotification()
+    }
+
+    // MARK: - Reengagement
+
+    /// Check if user is eligible for a re-engagement question and fetch one.
+    /// Eligible: returning user with no recent messages loaded.
+    private func checkReengagementEligibility() async {
+        // Only fetch if user has had messages before but none are loaded
+        guard hasMessages, soulMessages.isEmpty else { return }
+
+        do {
+            let response = try await backend.generateReengagement()
+            if !response.question.isEmpty {
+                pendingReengagementQuestion = response.question
+                logger.info("Fetched re-engagement question")
+            }
+        } catch {
+            logger.error("Reengagement fetch failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - Soul Mirror
@@ -159,9 +202,7 @@ final class AppModel: ObservableObject {
                 SessionIdentity.save(token)
             }
             visibleSoulFile = response.visibleSoulFile ?? .empty
-            activeSoulSession = response.activeSession
-            canStartSoulSession = response.canStartSession
-            nextSessionNumber = response.nextSessionNumber
+            hasMessages = response.hasMessages ?? false
 
             if let payloads = response.messages, !payloads.isEmpty {
                 soulMessages = payloads.map { msg in
@@ -172,7 +213,15 @@ final class AppModel: ObservableObject {
 
             cacheVisibleSoulFile(visibleSoulFile)
 
-            logger.info("Soul bootstrap complete: session \(self.nextSessionNumber), canStart=\(self.canStartSoulSession)")
+            logger.info("Soul bootstrap complete: hasMessages=\(self.hasMessages)")
+
+            // Post-bootstrap: schedule local notification + check reengagement
+            Task {
+                await scheduleLocalNotificationIfEligible()
+            }
+            Task {
+                await checkReengagementEligibility()
+            }
         } catch {
             // Cached data already loaded above — keep it visible
             errorMessage = error.localizedDescription
@@ -202,6 +251,7 @@ final class AppModel: ObservableObject {
             if response.synthesisSucceeded {
                 visibleSoulFile = response.visibleSoulFile
                 cacheVisibleSoulFile(visibleSoulFile)
+                markFirstSessionCompleted()
                 logger.info("Soul file synthesis succeeded")
             } else {
                 // Synthesis didn't succeed — fall back to fetching current file
@@ -225,9 +275,20 @@ final class AppModel: ObservableObject {
         isSoulFileUpdating = false
     }
 
-    func beginSoulSession() async {
+    func beginSoulConversation() async {
         guard !isSoulStreaming else { return }
-        logger.info("Beginning soul session")
+        logger.info("Beginning soul conversation")
+
+        // If we have a re-engagement question, use it as the AI's opening
+        if let reengagementQuestion = pendingReengagementQuestion {
+            pendingReengagementQuestion = nil
+            let aiMessage = SoulMessage(id: UUID(), role: "assistant", content: reengagementQuestion)
+            soulMessages.append(aiMessage)
+            cacheSoulMessages(soulMessages)
+            return
+        }
+
+        // Send a first message to get the AI's opening question
         isSoulStreaming = true
         soulStreamingText = ""
 
@@ -295,7 +356,6 @@ final class AppModel: ObservableObject {
     private func performSoulConverse(message: String) async throws {
         try await backend.soulConverseStream(
             message: message,
-            sessionID: activeSoulSession?.id,
             onToken: { [weak self] token in
                 Task { @MainActor in
                     self?.soulStreamingText += token
@@ -376,7 +436,7 @@ final class AppModel: ObservableObject {
         backend.sessionToken = nil
         soulMessages = []
         visibleSoulFile = .empty
-        activeSoulSession = nil
+        hasMessages = false
         debugInfo = nil
         await bootstrap()
     }

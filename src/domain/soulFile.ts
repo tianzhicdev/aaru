@@ -1,8 +1,10 @@
 import type {
   VisibleSoulFile,
   HiddenSoulFile,
-  ReflectionNote
+  ReflectionNote,
+  DomainCoverageEntry
 } from "./schemas.ts";
+import { LIFE_DOMAINS, DOMAIN_LABELS } from "./schemas.ts";
 
 // ── Visible Soul File Update ──
 
@@ -11,6 +13,7 @@ export interface VisibleSoulFileUpdate {
   sections?: Partial<VisibleSoulFile["sections"]>;
   crystallizedMoments?: Array<{ quote: string; reflection: string }>;
   openThreads?: string[];
+  compassScores?: Record<string, number | null>;
 }
 
 // ── Empty constructors ─────────────────────────────────────────
@@ -30,7 +33,8 @@ export function emptyVisibleSoulFile(): VisibleSoulFile {
       yourVoice: ""
     },
     crystallizedMoments: [],
-    openThreads: []
+    openThreads: [],
+    compassScores: {}
   };
 }
 
@@ -60,7 +64,8 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
       safeEntryPoints: [],
       unlockTopics: [],
       avoidEarly: [],
-      currentlyLiveTopics: []
+      currentlyLiveTopics: [],
+      domainCoverage: []
     },
     analystNotes: []
   };
@@ -146,22 +151,21 @@ Rules:
 - Respond with ONLY valid JSON, no markdown, no explanation.`;
 }
 
-// ── Soul Synthesis Prompt (Prompt 3 — full synthesis at session end) ──
+// ── Soul Synthesis Prompt (full synthesis, user-triggered) ──
 
 export function buildSoulSynthesisPrompt(
   messages: Array<{ role: string; content: string }>,
-  reflectionNotes: ReflectionNote[],
+  reflectionNote: ReflectionNote | null,
   existingVisible: VisibleSoulFile | null,
-  existingHidden: HiddenSoulFile | null,
-  sessionNumber: number
+  existingHidden: HiddenSoulFile | null
 ): string {
   const transcript = messages
     .map((m) => `${m.role === "assistant" ? "Thumos" : "User"}: ${m.content}`)
     .join("\n");
 
-  const reflectionsContext = reflectionNotes.length > 0
-    ? `\nReflection notes from this session:\n${JSON.stringify(reflectionNotes, null, 2)}`
-    : "\nNo reflection notes from this session.";
+  const reflectionContext = reflectionNote
+    ? `\nCurrent reflection note (rolling memory):\n${JSON.stringify(reflectionNote, null, 2)}`
+    : "\nNo reflection note yet.";
 
   const existingVisibleContext = existingVisible
     ? `\nExisting visible soul file:\n${JSON.stringify(existingVisible, null, 2)}`
@@ -171,14 +175,21 @@ export function buildSoulSynthesisPrompt(
     ? `\nExisting hidden soul file:\n${JSON.stringify(existingHidden, null, 2)}`
     : "\nNo existing hidden soul file.";
 
-  return `You are conducting a deep analysis of a soul mirror conversation to build a comprehensive soul file. This is session ${sessionNumber}.
+  const domainCoverageSpec = LIFE_DOMAINS.map(d =>
+    `    {"domain": "${d}", "depth": "untouched|mentioned|explored|deep", "evidence": "brief factual note"}`
+  ).join(",\n");
+
+  const messageCount = messages.filter(m => m.role === "user").length;
+  const confidenceHint = messageCount < 10 ? "low" : messageCount < 30 ? "medium" : "high";
+
+  return `You are conducting a deep analysis of soul mirror conversations to build a comprehensive soul file. This covers ALL conversations this person has had.
 
 You will analyze the transcript through 4 expert lenses, then synthesize into two outputs.
-${reflectionsContext}
+${reflectionContext}
 ${existingVisibleContext}
 ${existingHiddenContext}
 
-Transcript:
+Transcript (${messages.length} messages):
 ${transcript}
 
 ## ANALYSIS PROCEDURE
@@ -214,14 +225,24 @@ After your 4-pass analysis, output TWO JSON objects separated by <<<SPLIT>>>.
     "yourVoice": "How you sound — your register, rhythm, humor, the shape of your sentences."
   },
   "crystallizedMoments": [{"quote": "exact verbatim quote", "reflection": "1-sentence observation"}],
-  "openThreads": ["curiosity threads left unexplored"]
+  "openThreads": ["curiosity threads left unexplored"],
+  "compassScores": {
+    "openness": 0-100 or null,
+    "vitality": 0-100 or null,
+    "warmth": 0-100 or null,
+    "depth": 0-100 or null,
+    "purpose": 0-100 or null,
+    "resilience": 0-100 or null,
+    "autonomy": 0-100 or null,
+    "connection": 0-100 or null
+  }
 }
 
 ### SECOND: HiddenSoulFile (agent-facing, clinical)
 {
   "version": ${(existingHidden?.version ?? 0) + 1},
   "lastUpdated": "${new Date().toISOString()}",
-  "confidence": "low|medium|high",
+  "confidence": "${confidenceHint}",
   "expertReflections": {
     "psychologist": ["key insight 1", "key insight 2"],
     "sociologist": ["key insight 1"],
@@ -243,19 +264,55 @@ After your 4-pass analysis, output TWO JSON objects separated by <<<SPLIT>>>.
     "safeEntryPoints": ["topics they open up about easily"],
     "unlockTopics": ["topics that lead to deeper disclosure"],
     "avoidEarly": ["topics to approach carefully"],
-    "currentlyLiveTopics": ["what's active in their mind right now"]
+    "currentlyLiveTopics": ["what's active in their mind right now"],
+    "domainCoverage": [
+${domainCoverageSpec}
+    ]
   },
   "analystNotes": ["meta-observations about the analysis itself"]
 }
+
+## COMPASS SCORING
+Score each dimension 0-100 based on evidence from the transcript and soul file.
+Use null if insufficient evidence (prefer null over guessing).
+- openness: intellectual curiosity, receptivity to new ideas, willingness to explore
+- vitality: energy, engagement with life, enthusiasm, aliveness
+- warmth: empathy, care for others, emotional generosity
+- depth: reflective capacity, comfort with complexity, philosophical tendency
+- purpose: sense of direction, meaning-making, values clarity
+- resilience: adaptability, recovery from setbacks, emotional regulation
+- autonomy: self-direction, independent thinking, personal agency
+- connection: desire for belonging, relational investment, community orientation
+With few messages, most scores should be null — only score what you have clear evidence for.
 
 ## RULES
 - CRITICAL: The VisibleSoulFile MUST use second person throughout. Write "you" and "your", NEVER "he/she/they/him/her/his". The reader IS the person. "You move through the world like..." not "He moves through..."
 - Use their EXACT words for all quotes.
 - Each section should be 1-3 sentences, evocative not clinical.
 - If evolving existing files, integrate new understanding — don't discard previous insights.
-- Confidence: "low" for 1 session, "medium" for 2-3, "high" for 4+.
+- Rate ALL 7 domains in domainCoverage. Prioritize factual evidence over tonal observations.
 - Max 5 core drivers, 5 core values, 5 expert reflections per lens.
 - Output ONLY the two JSON objects separated by <<<SPLIT>>>. No other text.`;
+}
+
+// ── Compass Score Helpers ────────────────────────────────────────
+
+const COMPASS_AXES = ["openness", "vitality", "warmth", "depth", "purpose", "resilience", "autonomy", "connection"] as const;
+
+function parseCompassScores(raw: unknown): Record<string, number | null> {
+  const scores: Record<string, number | null> = {};
+  if (typeof raw !== "object" || raw === null) return scores;
+  for (const axis of COMPASS_AXES) {
+    const val = (raw as Record<string, unknown>)[axis];
+    if (val === null || val === undefined) {
+      scores[axis] = null;
+    } else if (typeof val === "number" && val >= 0 && val <= 100) {
+      scores[axis] = Math.round(val);
+    } else {
+      scores[axis] = null;
+    }
+  }
+  return scores;
 }
 
 // ── Parsers ────────────────────────────────────────────────────
@@ -289,7 +346,8 @@ export function parseSoulSynthesis(raw: string): { visible: VisibleSoulFile; hid
         .filter((m) => typeof m.quote === "string" && typeof m.reflection === "string")
         .slice(0, 10)
         .map((m) => ({ quote: m.quote.slice(0, 200), reflection: m.reflection.slice(0, 200) })),
-      openThreads: safeStringArray(visibleParsed.openThreads, 5, 200)
+      openThreads: safeStringArray(visibleParsed.openThreads, 5, 200),
+      compassScores: parseCompassScores(visibleParsed.compassScores)
     };
 
     // Validate and construct HiddenSoulFile
@@ -329,7 +387,8 @@ export function parseSoulSynthesis(raw: string): { visible: VisibleSoulFile; hid
         safeEntryPoints: safeStringArray(hiddenParsed.depthMap?.safeEntryPoints, 5, 200),
         unlockTopics: safeStringArray(hiddenParsed.depthMap?.unlockTopics, 5, 200),
         avoidEarly: safeStringArray(hiddenParsed.depthMap?.avoidEarly, 5, 200),
-        currentlyLiveTopics: safeStringArray(hiddenParsed.depthMap?.currentlyLiveTopics, 5, 200)
+        currentlyLiveTopics: safeStringArray(hiddenParsed.depthMap?.currentlyLiveTopics, 5, 200),
+        domainCoverage: parseDomainCoverage(hiddenParsed.depthMap?.domainCoverage)
       },
       analystNotes: safeStringArray(hiddenParsed.analystNotes, 5, 300)
     };
@@ -348,12 +407,13 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
     const parsed = JSON.parse(cleaned);
 
     const note: ReflectionNote = {
-      updatedAtExchange: typeof parsed.updatedAtExchange === "number" ? parsed.updatedAtExchange : 0,
+      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
       factualAnchors: {},
       tensions: [],
       recurringThemes: [],
       notableAbsences: [],
-      emotionalArc: ""
+      emotionalArc: "",
+      domainCoverage: []
     };
 
     if (typeof parsed.factualAnchors === "object" && parsed.factualAnchors !== null && !Array.isArray(parsed.factualAnchors)) {
@@ -388,6 +448,8 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
     if (typeof parsed.emotionalArc === "string") {
       note.emotionalArc = parsed.emotionalArc.slice(0, 500);
     }
+
+    note.domainCoverage = parseDomainCoverage(parsed.domainCoverage);
 
     return note;
   } catch {
@@ -473,6 +535,17 @@ export function mergeVisibleSoulFile(
     merged.openThreads = update.openThreads.slice(0, 5);
   }
 
+  if (update.compassScores && Object.keys(update.compassScores).length > 0) {
+    const baseScores = base.compassScores ?? {};
+    merged.compassScores = { ...baseScores };
+    for (const [axis, score] of Object.entries(update.compassScores)) {
+      if (score !== null) {
+        merged.compassScores[axis] = score;
+      }
+      // null from update doesn't overwrite existing non-null score
+    }
+  }
+
   return merged;
 }
 
@@ -516,6 +589,23 @@ function safeStringArray(val: unknown, maxItems: number, maxLen: number): string
 function safeArray(val: unknown): Array<any> {
   if (!Array.isArray(val)) return [];
   return val.filter((item: unknown) => typeof item === "object" && item !== null);
+}
+
+function parseDomainCoverage(val: unknown): DomainCoverageEntry[] {
+  if (!Array.isArray(val)) return [];
+  const validDepths = ["untouched", "mentioned", "explored", "deep"];
+  return val
+    .filter((item: unknown) =>
+      typeof item === "object" && item !== null &&
+      "domain" in item && typeof (item as { domain: unknown }).domain === "string" &&
+      "depth" in item && validDepths.includes((item as { depth: string }).depth)
+    )
+    .slice(0, 7)
+    .map((item: { domain: string; depth: string; evidence?: string }) => ({
+      domain: item.domain.slice(0, 50),
+      depth: item.depth as DomainCoverageEntry["depth"],
+      evidence: typeof item.evidence === "string" ? item.evidence.slice(0, 200) : ""
+    }));
 }
 
 function mergeStringArrays(existing: string[], incoming: string[], max: number): string[] {

@@ -4,16 +4,16 @@
 Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file.
 
 **Two codebases in one repo:**
-- **TypeScript backend** — domain logic, Supabase Edge Functions
+- **TypeScript backend** — domain logic + Cloudflare Workers API
 - **Swift iOS client** — SwiftUI display layer
 
 ## Stack
 | Layer | Technology |
 |-------|-----------|
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
-| Backend | Supabase Edge Functions (Deno), Postgres |
+| Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (src/domain/), Zod validation |
-| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (extraction) |
+| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (extraction + reengagement) |
 | Tests | Vitest (TS), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
@@ -23,7 +23,7 @@ Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective
 ```bash
 npx vitest run
 ```
-All 60 tests must pass. Tests work without API keys (fallback paths are exercised).
+All 79 tests must pass. Tests work without API keys (fallback paths are exercised).
 
 ### TypeScript lint
 ```bash
@@ -52,18 +52,35 @@ xcodebuild build -scheme Thumos \
 - `src/domain/` — Pure domain logic (soul mirror only)
 - `src/domain/soul.ts` — Soul Mirror system prompts, conversation context, fallbacks
 - `src/domain/soulFile.ts` — Soul file extraction, 4-expert synthesis, reflection, merging
+- `src/domain/reengagement.ts` — Personalized re-engagement question generation + fallbacks
 - `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
-- `src/domain/constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, SESSION_MAX_EXCHANGES=15
-- `supabase/functions/` — Edge Function handlers
-- `supabase/functions/_shared/soulApp.ts` — Soul session management + extraction logic
-- `tests/unit/` — Unit tests for domain functions
-- `tests/integration/` — Handler integration tests
+- `src/domain/constants.ts` — SOFT_SESSION_GAP_MS (1 hour)
+
+### Cloudflare Workers (workers/src/)
+- `workers/src/index.ts` — Raw fetch() router
+- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET)
+- `workers/src/db.ts` — Neon serverless driver + user/session CRUD
+- `workers/src/auth.ts` — HMAC SHA-256 session tokens
+- `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
+- `workers/src/soulApp.ts` — Soul message CRUD + synthesis logic
+- `workers/src/edge.ts` — CORS + SSE headers + error handling
+- `workers/src/handlers/` — Route handlers:
+  - `bootstrap-soul.ts` — User bootstrap + session creation
+  - `soul-converse.ts` — SSE streaming soul conversations + last_active_at tracking
+  - `get-soul-file.ts` — Fetch visible soul file
+  - `end-soul-session.ts` — Deprecated no-op (backward compat)
+  - `synthesize-soul-file.ts` — Full 4-expert soul file synthesis
+  - `generate-reengagement.ts` — On-demand Haiku-generated re-engagement question
+  - `delete-account.ts` — Cascade delete user
+  - `get-debug-info.ts` — Debug endpoint
+  - `ping.ts`, `version.ts` — Health check + version gate
 
 ### Swift (Thumos/)
 - `Thumos/App/ThumosApp.swift` — Entry point
-- `Thumos/App/AppModel.swift` — Main @MainActor ObservableObject (state management)
+- `Thumos/App/AppModel.swift` — Main @MainActor ObservableObject (state management + reengagement)
 - `Thumos/App/BackendClient.swift` — HTTP + SSE streaming client with fallback mode
 - `Thumos/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
+- `Thumos/App/NotificationManager.swift` — Local notification scheduling (weekly Saturday 8pm)
 - `Thumos/App/RootView.swift` — Root view (→ SoulMirrorTabView)
 - `Thumos/App/SoulMirrorTabView.swift` — Tab container (Conversation + Soul File)
 - `Thumos/App/SoulConversationScreen.swift` — Streaming chat UI
@@ -71,11 +88,9 @@ xcodebuild build -scheme Thumos \
 - `Thumos/App/SecureStore.swift` — Keychain wrapper (device/session identity)
 - `ThumosTests/` — XCTest unit tests
 
-### Key domain files
-- `soul.ts` — Soul Mirror prompts, session context builder, fallback responses
-- `soulFile.ts` — 4-expert synthesis (psych, socio, linguist, narrative), reflection prompts, visible/hidden merging
-- `constants.ts` — REFLECTION_INTERVAL=8, STALE_SESSION_HOURS=72, SESSION_MAX_EXCHANGES=15
-- `schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote, SoulSession, SoulMessage
+### Tests (tests/)
+- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, reengagement, version)
+- `tests/integration/` — Handler integration tests (soulMirrorHandlers, deleteAccount)
 
 ## Code Style Conventions
 
@@ -97,7 +112,7 @@ xcodebuild build -scheme Thumos \
 
 ## Definition of Done
 A task is complete when ALL of the following are true:
-1. `npx vitest run` — all tests pass (60 currently)
+1. `npx vitest run` — all tests pass (79 currently)
 2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
@@ -106,12 +121,12 @@ A task is complete when ALL of the following are true:
 ## Known Constraints & Gotchas
 - **No API keys in CI/test** — all LLM-dependent code must have fallback paths. Tests exercise fallbacks.
 - **Dual soul file architecture** — VisibleSoulFile (user-facing, "accurate and loving") + HiddenSoulFile (agent-facing, clinical). Both generated by 4-expert synthesis.
-- **Periodic extraction every 8 exchanges** — Haiku 4.5 runs reflection + light visible update
-- **Session lifecycle** — in_session → extracting → synthesizing → complete | failed
-- **72h stale session threshold** — auto-complete sessions older than 72 hours
+- **No soul sessions** — Messages belong directly to users (no session grouping)
 - **iOS client is a display layer** — all state is server-authoritative
 - **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
+- **Re-engagement** — On-demand: app opens → if no active session & returning user → POST /generate-reengagement → Haiku question shown as AI's opening. Local notification scheduled for next Saturday 8pm (>3 days out).
+- **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
 
 ## Autonomous Operating Loop
 When given a task:
@@ -121,12 +136,15 @@ When given a task:
 4. If still failing after 3 attempts: write BLOCKED.md explaining why
 5. Only mark done when: tests pass + no regressions + code is committed
 
-## Edge Function Deployment
+## Deployment
 ```bash
-supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
+cd workers && wrangler deploy
+wrangler secret put DATABASE_URL
+wrangler secret put ANTHROPIC_API_KEY
+wrangler secret put THUMOS_SESSION_SECRET
 ```
 
-Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, ping
+Active endpoints: ping, version, bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, generate-reengagement, delete-account, get-debug-info
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: Thumos

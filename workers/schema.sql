@@ -30,37 +30,17 @@ CREATE INDEX device_sessions_user_id_idx ON public.device_sessions(user_id);
 CREATE INDEX device_sessions_device_id_idx ON public.device_sessions(device_id);
 CREATE INDEX device_sessions_expires_at_idx ON public.device_sessions(expires_at);
 
--- ── Soul Sessions ────────────────────────────────────────────
-
-CREATE TABLE public.soul_sessions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  session_number int NOT NULL,
-  status text NOT NULL DEFAULT 'in_session'
-    CHECK (status IN ('in_session', 'extracting', 'synthesizing', 'complete', 'failed')),
-  exchange_count int DEFAULT 0,
-  reflection_notes jsonb DEFAULT '[]'::jsonb,
-  started_at timestamptz DEFAULT now(),
-  completed_at timestamptz,
-  next_available_at timestamptz,
-  extraction_error text,
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX idx_soul_sessions_user_status ON public.soul_sessions(user_id, status);
-
 -- ── Soul Messages ────────────────────────────────────────────
 
 CREATE TABLE public.soul_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id uuid NOT NULL REFERENCES public.soul_sessions(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   role text NOT NULL CHECK (role IN ('user', 'assistant')),
   content text NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_soul_messages_session ON public.soul_messages(session_id, created_at);
+CREATE INDEX idx_soul_messages_user_created ON public.soul_messages(user_id, created_at);
 
 -- ── Visible Soul Files (user-facing, poetic) ────────────────
 

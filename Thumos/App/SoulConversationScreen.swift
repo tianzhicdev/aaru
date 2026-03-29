@@ -168,7 +168,7 @@ struct SoulConversationScreen: View {
                 .padding(.bottom, 48)
             } else {
                 Button {
-                    Task { await model.beginSoulSession() }
+                    Task { await model.beginSoulConversation() }
                 } label: {
                     Text("Begin")
                         .font(Theme.sans(17, weight: .medium))

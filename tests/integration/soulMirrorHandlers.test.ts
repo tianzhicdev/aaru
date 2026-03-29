@@ -12,19 +12,24 @@ vi.mock("../../workers/src/db.ts", () => ({
 }));
 
 vi.mock("../../workers/src/soulApp.ts", () => ({
-  bootstrapSoulState: vi.fn(),
-  createSoulSession: vi.fn(),
-  getSoulMessages: vi.fn(),
   getAllSoulMessages: vi.fn(),
-  getCurrentSessionMessages: vi.fn(),
-  getRecentMessages: vi.fn(),
-  getActiveSession: vi.fn(),
-  getLatestSession: vi.fn(),
+  getLastNMessages: vi.fn(),
   getVisibleSoulFile: vi.fn(),
-  updateSoulSession: vi.fn(),
+  getHiddenSoulFile: vi.fn(),
+  getReflectionNote: vi.fn(),
+  upsertReflectionNote: vi.fn(),
   runSoulSynthesis: vi.fn(),
-  isSessionStale: vi.fn(),
-  autoCompleteStaleSession: vi.fn()
+  insertSoulMessage: vi.fn(),
+  parseReflectionNote: vi.fn(),
+  emptyVisibleSoulFile: vi.fn(() => ({
+    version: 1,
+    lastUpdated: "",
+    portrait: null,
+    sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+    crystallizedMoments: [],
+    openThreads: [],
+    compassScores: {}
+  }))
 }));
 
 vi.mock("../../workers/src/auth.ts", () => ({
@@ -40,7 +45,7 @@ import { handleSynthesizeSoulFile } from "../../workers/src/handlers/synthesize-
 
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../workers/src/db.ts";
-import { bootstrapSoulState, getAllSoulMessages, getCurrentSessionMessages, getActiveSession, getLatestSession, getVisibleSoulFile, updateSoulSession, runSoulSynthesis } from "../../workers/src/soulApp.ts";
+import { getAllSoulMessages, getLastNMessages, getVisibleSoulFile, getReflectionNote, runSoulSynthesis } from "../../workers/src/soulApp.ts";
 
 const mockSQL = vi.fn();
 const mockEnv = { DATABASE_URL: "mock", ANTHROPIC_API_KEY: "mock", THUMOS_SESSION_SECRET: "mock" };
@@ -68,27 +73,20 @@ describe("handleBootstrapSoul", () => {
     vi.clearAllMocks();
   });
 
-  it("returns soul state for authenticated user with existing session", async () => {
+  it("returns soul state for authenticated user", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(bootstrapSoulState).mockResolvedValue({
-      visibleSoulFile: null,
-      activeSession: null,
-      canStartSession: true,
-      cooldownRemainingMs: 0,
-      nextSessionNumber: 1
-    });
-    vi.mocked(getCurrentSessionMessages).mockResolvedValue([]);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getLastNMessages).mockResolvedValue([]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "user-1");
-    expect(response.body).toHaveProperty("can_start_session", true);
-    expect(response.body).toHaveProperty("next_session_number", 1);
+    expect(response.body).toHaveProperty("has_messages", false);
     expect(response.body).toHaveProperty("visible_soul_file");
   });
 
@@ -106,13 +104,8 @@ describe("handleBootstrapSoul", () => {
       expiresAt: new Date(Date.now() + 86400000).toISOString()
     });
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
-    vi.mocked(bootstrapSoulState).mockResolvedValue({
-      visibleSoulFile: null,
-      activeSession: null,
-      canStartSession: true,
-      cooldownRemainingMs: 0,
-      nextSessionNumber: 1
-    });
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getLastNMessages).mockResolvedValue([]);
 
     const request = makeRequest();
     const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "new-device" }, request);
@@ -122,33 +115,15 @@ describe("handleBootstrapSoul", () => {
     expect(response.body).toHaveProperty("token", "new-token");
   });
 
-  it("includes messages when user has active session", async () => {
+  it("includes messages when user has recent messages", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(bootstrapSoulState).mockResolvedValue({
-      visibleSoulFile: null,
-      activeSession: {
-        id: "session-1",
-        user_id: "user-1",
-        session_number: 1,
-        status: "in_session",
-        exchange_count: 3,
-        reflection_notes: null,
-        started_at: new Date().toISOString(),
-        completed_at: null,
-        next_available_at: null,
-        extraction_error: null,
-        created_at: new Date().toISOString()
-      },
-      canStartSession: false,
-      cooldownRemainingMs: 0,
-      nextSessionNumber: 1
-    });
-    vi.mocked(getCurrentSessionMessages).mockResolvedValue([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: new Date().toISOString() },
-      { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getLastNMessages).mockResolvedValue([
+      { id: "m1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: new Date().toISOString() },
+      { id: "m2", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
     ]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
@@ -156,6 +131,7 @@ describe("handleBootstrapSoul", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("messages");
+    expect(response.body).toHaveProperty("has_messages", true);
     const body = response.body as Record<string, unknown>;
     const messages = body.messages as Array<{ role: string; content: string }>;
     expect(messages).toHaveLength(2);
@@ -168,6 +144,29 @@ describe("handleBootstrapSoul", () => {
     await expect(
       handleBootstrapSoul(mockSQL, mockEnv, { device_id: "" }, request)
     ).rejects.toThrow();
+  });
+
+  it("has_messages is true when visible soul file exists but no messages loaded", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue({
+      version: 2,
+      lastUpdated: "2026-03-26",
+      portrait: "A builder",
+      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+      crystallizedMoments: [],
+      openThreads: [],
+      compassScores: {}
+    });
+    vi.mocked(getLastNMessages).mockResolvedValue([]);
+
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("has_messages", true);
   });
 });
 
@@ -220,7 +219,8 @@ describe("handleGetSoulFile", () => {
         yourVoice: ""
       },
       crystallizedMoments: [],
-      openThreads: []
+      openThreads: [],
+      compassScores: {}
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
@@ -235,7 +235,7 @@ describe("handleGetSoulFile", () => {
   });
 });
 
-describe("handleEndSoulSession", () => {
+describe("handleEndSoulSession (deprecated — no-op)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -249,72 +249,19 @@ describe("handleEndSoulSession", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 404 when no active session", async () => {
+  it("returns 200 with success for any authenticated user (no-op)", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue(null);
-
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(404);
-    expect(response.body).toHaveProperty("message", "No active soul session");
-  });
-
-  it("runs synthesis and returns updated soul file", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue({
-      id: "session-1",
-      user_id: "user-1",
-      session_number: 1,
-      status: "in_session",
-      exchange_count: 10,
-      reflection_notes: null,
-      started_at: new Date().toISOString(),
-      completed_at: null,
-      next_available_at: null,
-      extraction_error: null,
-      created_at: new Date().toISOString()
-    });
-    const msgs = Array.from({ length: 8 }, (_, i) => ({
-      id: `m${i}`, session_id: "session-1", user_id: "user-1",
-      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
-    }));
-    vi.mocked(getAllSoulMessages).mockResolvedValue(msgs);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(runSoulSynthesis).mockResolvedValue({
-      visible: {
-        version: 2,
-        lastUpdated: "2026-03-27",
-        portrait: "A synthesized portrait",
-        sections: {
-          howYouMove: "Boldly",
-          howYouThink: "In systems",
-          howYouConnect: "Cautiously",
-          whatYouCarry: "The weight",
-          whatLightsYouUp: "Discovery",
-          yourContradictions: "Many",
-          yourVoice: "Measured"
-        },
-        crystallizedMoments: [],
-        openThreads: []
-      },
-      hidden: {
-        version: 2,
-        lastUpdated: "2026-03-27",
-        confidence: "medium" as const,
-        expertReflections: { psychologist: [], sociologist: [], linguist: [], narrativeAnalyst: [] },
-        coreDrivers: [],
-        coreValues: [],
-        voice: { register: "casual", density: "moderate", humorStyle: "", conflictStyle: "", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
-        depthMap: { safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [] },
-        analystNotes: []
-      }
+    vi.mocked(getVisibleSoulFile).mockResolvedValue({
+      version: 2,
+      lastUpdated: "2026-03-26",
+      portrait: "A builder",
+      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+      crystallizedMoments: [],
+      openThreads: [],
+      compassScores: {}
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
@@ -325,7 +272,22 @@ describe("handleEndSoulSession", () => {
     expect(body).toHaveProperty("session_completed", true);
     expect(body).toHaveProperty("synthesis_succeeded", true);
     const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("A synthesized portrait");
+    expect(vsf.portrait).toBe("A builder");
+  });
+
+  it("returns empty soul file when no soul file exists", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+
+    const request = makeRequest({ "x-thumos-session": "valid-token" });
+    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
+
+    expect(response.status).toBe(200);
+    const body = response.body as Record<string, unknown>;
+    expect(body).toHaveProperty("session_completed", true);
   });
 });
 
@@ -343,19 +305,23 @@ describe("handleSynthesizeSoulFile", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 404 when no session exists", async () => {
+  it("skips synthesis when fewer than 3 user messages", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue(null);
-    vi.mocked(getLatestSession).mockResolvedValue(null);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", user_id: "user-1", role: "user", content: "hello", created_at: new Date().toISOString() }
+    ]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
     const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
-    expect(response.status).toBe(404);
-    expect(response.body).toHaveProperty("message", "No soul session found");
+    expect(response.status).toBe(200);
+    const body = response.body as Record<string, unknown>;
+    expect(body).toHaveProperty("synthesis_succeeded", true);
+    expect(runSoulSynthesis).not.toHaveBeenCalled();
   });
 
   it("skips synthesis when no new messages since last update", async () => {
@@ -364,29 +330,19 @@ describe("handleSynthesizeSoulFile", () => {
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue({
-      id: "session-1",
-      user_id: "user-1",
-      session_number: 1,
-      status: "in_session",
-      exchange_count: 10,
-      reflection_notes: null,
-      started_at: new Date().toISOString(),
-      completed_at: null,
-      next_available_at: null,
-      extraction_error: null,
-      created_at: new Date().toISOString()
-    });
     vi.mocked(getVisibleSoulFile).mockResolvedValue({
       version: 2,
       lastUpdated,
       portrait: "Existing portrait",
       sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
       crystallizedMoments: [],
-      openThreads: []
+      openThreads: [],
+      compassScores: {}
     });
     vi.mocked(getAllSoulMessages).mockResolvedValue([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() }
+      { id: "m1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() },
+      { id: "m2", user_id: "user-1", role: "user", content: "old2", created_at: new Date(Date.now() - 50000).toISOString() },
+      { id: "m3", user_id: "user-1", role: "user", content: "old3", created_at: new Date(Date.now() - 40000).toISOString() }
     ]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
@@ -400,27 +356,14 @@ describe("handleSynthesizeSoulFile", () => {
     expect(runSoulSynthesis).not.toHaveBeenCalled();
   });
 
-  it("runs synthesis on active session and returns result", async () => {
+  it("runs synthesis and returns result", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue({
-      id: "session-1",
-      user_id: "user-1",
-      session_number: 1,
-      status: "in_session",
-      exchange_count: 10,
-      reflection_notes: null,
-      started_at: new Date().toISOString(),
-      completed_at: null,
-      next_available_at: null,
-      extraction_error: null,
-      created_at: new Date().toISOString()
-    });
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     const synthMsgs = Array.from({ length: 8 }, (_, i) => ({
-      id: `m${i}`, session_id: "session-1", user_id: "user-1",
+      id: `m${i}`, user_id: "user-1",
       role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
     }));
     vi.mocked(getAllSoulMessages).mockResolvedValue(synthMsgs);
@@ -439,7 +382,8 @@ describe("handleSynthesizeSoulFile", () => {
           yourVoice: "Measured"
         },
         crystallizedMoments: [],
-        openThreads: []
+        openThreads: [],
+        compassScores: {}
       },
       hidden: null
     });
@@ -452,55 +396,6 @@ describe("handleSynthesizeSoulFile", () => {
     expect(body).toHaveProperty("synthesis_succeeded", true);
     const vsf = body.visible_soul_file as Record<string, unknown>;
     expect(vsf.portrait).toBe("A synthesized portrait");
-  });
-
-  it("falls back to latest completed session when no active session", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getActiveSession).mockResolvedValue(null);
-    vi.mocked(getLatestSession).mockResolvedValue({
-      id: "session-2",
-      user_id: "user-1",
-      session_number: 2,
-      status: "complete",
-      exchange_count: 12,
-      reflection_notes: null,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
-      next_available_at: null,
-      extraction_error: null,
-      created_at: new Date().toISOString()
-    });
-    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    const completedMsgs = Array.from({ length: 8 }, (_, i) => ({
-      id: `m${i}`, session_id: "session-2", user_id: "user-1",
-      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
-    }));
-    vi.mocked(getAllSoulMessages).mockResolvedValue(completedMsgs);
-    vi.mocked(runSoulSynthesis).mockResolvedValue({
-      visible: {
-        version: 3,
-        lastUpdated: "2026-03-27",
-        portrait: "Portrait from completed session",
-        sections: {
-          howYouMove: "", howYouThink: "", howYouConnect: "",
-          whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: ""
-        },
-        crystallizedMoments: [],
-        openThreads: []
-      },
-      hidden: null
-    });
-
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("synthesis_succeeded", true);
-    const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("Portrait from completed session");
+    expect(runSoulSynthesis).toHaveBeenCalledWith(mockSQL, "mock", "user-1");
   });
 });

@@ -2,7 +2,7 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
 import { getActiveSessionByTokenHash } from "../db.ts";
-import { getHiddenSoulFile, getActiveSession, getVisibleSoulFile } from "../soulApp.ts";
+import { getHiddenSoulFile, getVisibleSoulFile } from "../soulApp.ts";
 
 export async function handleGetDebugInfo(sql: NeonSQL, _payload: unknown, request: Request) {
   const bearerToken = readBearerToken(request);
@@ -18,9 +18,8 @@ export async function handleGetDebugInfo(sql: NeonSQL, _payload: unknown, reques
 
   const userId = session.user_id;
 
-  const [hiddenSoulFile, activeSoulSession, visibleSoulFile] = await Promise.all([
+  const [hiddenSoulFile, visibleSoulFile] = await Promise.all([
     getHiddenSoulFile(sql, userId),
-    getActiveSession(sql, userId),
     getVisibleSoulFile(sql, userId)
   ]);
 
@@ -28,13 +27,6 @@ export async function handleGetDebugInfo(sql: NeonSQL, _payload: unknown, reques
     user_id: userId,
     device_id: session.device_id,
     hidden_soul_file: hiddenSoulFile,
-    visible_soul_file: visibleSoulFile,
-    active_session: activeSoulSession ? {
-      id: activeSoulSession.id,
-      session_number: activeSoulSession.session_number,
-      status: activeSoulSession.status,
-      exchange_count: activeSoulSession.exchange_count,
-      started_at: activeSoulSession.started_at
-    } : null
+    visible_soul_file: visibleSoulFile
   });
 }

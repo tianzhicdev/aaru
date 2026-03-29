@@ -1,14 +1,49 @@
 import { z } from "zod";
 
+// ── Life Domains ──────────────────────────────────────────────
+
+export const LIFE_DOMAINS = [
+  "origins",
+  "relationships",
+  "work_and_purpose",
+  "values_and_beliefs",
+  "emotional_life",
+  "growth_and_change",
+  "aspirations"
+] as const;
+
+export type LifeDomain = typeof LIFE_DOMAINS[number];
+
+export const DOMAIN_LABELS: Record<LifeDomain, string> = {
+  origins: "Origins — where you're from, childhood, formative experiences",
+  relationships: "Relationships — family, friendships, romantic partners, social world",
+  work_and_purpose: "Work & Purpose — career, daily routine, what drives you",
+  values_and_beliefs: "Values & Beliefs — what matters most, worldview, spirituality",
+  emotional_life: "Emotional Life — how you handle stress, fears, joy, vulnerability",
+  growth_and_change: "Growth & Change — turning points, how you've evolved, resilience",
+  aspirations: "Aspirations — hopes, dreams, what you're building toward"
+};
+
+// ── Domain Coverage ───────────────────────────────────────────
+
+export const domainCoverageEntrySchema = z.object({
+  domain: z.string(),
+  depth: z.enum(["untouched", "mentioned", "explored", "deep"]),
+  evidence: z.string().default("")
+});
+
+export type DomainCoverageEntry = z.infer<typeof domainCoverageEntrySchema>;
+
 // ── Reflection Note ────────────────────────────────────────────
 
 export const reflectionNoteSchema = z.object({
-  updatedAtExchange: z.number().int(),
+  updatedAt: z.string().default(""),
   factualAnchors: z.record(z.string(), z.string()).default({}),
   tensions: z.array(z.string()).default([]),
   recurringThemes: z.array(z.string()).default([]),
   notableAbsences: z.array(z.string()).default([]),
-  emotionalArc: z.string().default("")
+  emotionalArc: z.string().default(""),
+  domainCoverage: z.array(domainCoverageEntrySchema).default([])
 });
 
 export type ReflectionNote = z.infer<typeof reflectionNoteSchema>;
@@ -37,7 +72,8 @@ export const visibleSoulFileSchema = z.object({
     whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: ""
   }),
   crystallizedMoments: z.array(crystallizedMomentSchema).default([]),
-  openThreads: z.array(z.string()).default([])
+  openThreads: z.array(z.string()).default([]),
+  compassScores: z.record(z.string(), z.number().nullable()).default({})
 });
 
 export type VisibleSoulFile = z.infer<typeof visibleSoulFileSchema>;
@@ -68,7 +104,8 @@ export const depthMapSchema = z.object({
   safeEntryPoints: z.array(z.string()).default([]),
   unlockTopics: z.array(z.string()).default([]),
   avoidEarly: z.array(z.string()).default([]),
-  currentlyLiveTopics: z.array(z.string()).default([])
+  currentlyLiveTopics: z.array(z.string()).default([]),
+  domainCoverage: z.array(domainCoverageEntrySchema).default([])
 });
 
 export const hiddenSoulFileSchema = z.object({
@@ -90,36 +127,21 @@ export const hiddenSoulFileSchema = z.object({
     disclosureRate: "gradual", signaturePatterns: [], voiceExamples: []
   }),
   depthMap: depthMapSchema.default({
-    safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: []
+    safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: []
   }),
   analystNotes: z.array(z.string()).default([])
 });
 
 export type HiddenSoulFile = z.infer<typeof hiddenSoulFileSchema>;
 
-// ── Soul Session ───────────────────────────────────────────────
-
-export const soulSessionSchema = z.object({
-  id: z.string().uuid().optional(),
-  user_id: z.string().uuid(),
-  session_number: z.number().int().min(1),
-  status: z.enum(["in_session", "extracting", "synthesizing", "complete", "failed"]).default("in_session"),
-  exchange_count: z.number().int().default(0),
-  reflection_notes: z.array(reflectionNoteSchema).default([]),
-  started_at: z.string().datetime({ offset: true }).optional(),
-  completed_at: z.string().datetime({ offset: true }).nullable().optional(),
-  next_available_at: z.string().datetime({ offset: true }).nullable().optional(),
-  extraction_error: z.string().nullable().optional()
-});
+// ── Soul Message ──────────────────────────────────────────────
 
 export const soulMessageSchema = z.object({
   id: z.string().uuid().optional(),
-  session_id: z.string().uuid(),
   user_id: z.string().uuid(),
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1),
   created_at: z.string().datetime({ offset: true }).optional()
 });
 
-export type SoulSession = z.infer<typeof soulSessionSchema>;
 export type SoulMessage = z.infer<typeof soulMessageSchema>;

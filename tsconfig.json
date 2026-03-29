@@ -26,7 +26,6 @@
     "src/**/*.ts",
     "tests/**/*.ts",
     "workers/src/**/*.ts",
-    "supabase/functions/**/*.ts",
     "vitest.config.ts"
   ]
 }

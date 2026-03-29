@@ -24,27 +24,28 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
             │ HTTPS + SSE
             ▼
 ┌──────────────────────────────────────────────────┐
-│               Supabase Platform                   │
+│            Cloudflare Workers (V8)                │
 │                                                   │
 │  ┌─────────────────────┐  ┌────────────────────┐ │
-│  │   Edge Functions     │  │   Postgres          │ │
-│  │   (Deno runtime)     │  │                     │ │
-│  │                      │  │  users              │ │
-│  │  bootstrap-soul      │  │  device_sessions    │ │
-│  │  soul-converse (SSE) │  │  soul_sessions      │ │
+│  │   Route Handlers     │  │   Neon Postgres     │ │
+│  │                      │  │                     │ │
+│  │  bootstrap-soul      │  │  users              │ │
+│  │  soul-converse (SSE) │  │  device_sessions    │ │
 │  │  get-soul-file       │  │  soul_messages      │ │
-│  │  end-soul-session    │  │  visible_soul_files │ │
+│  │  end-soul-session*   │  │  visible_soul_files │ │
 │  │  synthesize-soul-file│  │  hidden_soul_files  │ │
+│  │  generate-reengagement│ │                     │ │
+│  │  delete-account      │  │                     │ │
 │  └──────────┬───────────┘  └────────────────────┘ │
 └─────────────┼────────────────────────────────────────┘
-              │
+              │              * deprecated no-op
     ┌─────────┴──────────┐
     ▼                    ▼
 ┌────────┐        ┌───────────┐
 │ Claude │        │  Claude   │
 │ Opus 4 │        │ Haiku 4.5 │
-│(convo, │        │(periodic  │
-│ synth) │        │ extract)  │
+│(convo, │        │(reflection│
+│ synth) │        │ re-engage)│
 └────────┘        └───────────┘
 ```
 
@@ -53,11 +54,11 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 | Layer | Technology |
 |-------|-----------|
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
-| Backend | Supabase Edge Functions (Deno), Postgres |
+| Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (`src/domain/`), Zod validation |
 | Soul Mirror LLM | Claude Opus 4 (conversation + synthesis) |
-| Extraction LLM | Claude Haiku 4.5 (periodic reflection + light extraction) |
-| Tests | Vitest (60 TS tests), XCTest (Swift) |
+| Extraction LLM | Claude Haiku 4.5 (reflection + re-engagement) |
+| Tests | Vitest (75 TS tests), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
 ---
@@ -67,44 +68,50 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 ```
 thumos/
 ├── src/domain/              # Pure TypeScript domain logic
-│   ├── constants.ts         # Magic numbers (reflection interval, session max)
+│   ├── constants.ts         # SOFT_SESSION_GAP_MS
 │   ├── schemas.ts           # Zod validation schemas
-│   ├── soul.ts              # Soul Mirror prompts + session logic
-│   └── soulFile.ts          # Soul file extraction, 4-expert synthesis, merging
+│   ├── soul.ts              # Soul Mirror prompts + conversation logic
+│   ├── soulFile.ts          # Soul file extraction, 4-expert synthesis, merging
+│   └── reengagement.ts      # Personalized re-engagement question generation
 ├── src/lib/                 # Utilities (env, http)
-├── supabase/
-│   ├── functions/
-│   │   ├── _shared/         # Shared modules
-│   │   │   ├── auth.ts      # HMAC session tokens
-│   │   │   ├── db.ts        # Supabase REST client (auth/user CRUD)
-│   │   │   ├── soulApp.ts   # Soul Mirror session management + extraction
-│   │   │   ├── claude.ts    # Claude streaming client
-│   │   │   ├── edge.ts      # Edge Function boilerplate
-│   │   │   └── env.ts       # Environment variable accessors
-│   │   ├── bootstrap-soul/  # Soul file + session state init
-│   │   ├── soul-converse/   # SSE streaming Claude conversation
-│   │   ├── get-soul-file/   # Fetch visible soul file
-│   │   ├── end-soul-session/# Full 4-expert synthesis
-│   │   ├── synthesize-soul-file/ # On-demand synthesis
-│   │   └── ping/            # Health check
-│   └── migrations/          # Postgres schema
-├── Thumos/                    # iOS client
+├── workers/src/             # Cloudflare Workers API
+│   ├── index.ts             # Raw fetch() router
+│   ├── env.ts               # Env interface
+│   ├── db.ts                # Neon serverless driver + user/session CRUD
+│   ├── auth.ts              # HMAC SHA-256 session tokens
+│   ├── claude.ts            # Anthropic API wrapper (streaming + completion)
+│   ├── soulApp.ts           # Soul message CRUD + synthesis logic
+│   ├── edge.ts              # CORS + SSE headers + error handling
+│   └── handlers/
+│       ├── bootstrap-soul.ts       # User bootstrap + device session creation
+│       ├── soul-converse.ts        # SSE streaming soul conversations
+│       ├── get-soul-file.ts        # Fetch visible soul file
+│       ├── end-soul-session.ts     # Deprecated no-op (backward compat)
+│       ├── synthesize-soul-file.ts # Full 4-expert soul file synthesis
+│       ├── generate-reengagement.ts # On-demand Haiku re-engagement question
+│       ├── delete-account.ts       # Cascade delete user
+│       ├── get-debug-info.ts       # Debug endpoint
+│       └── ping.ts, version.ts     # Health check + version gate
+├── supabase/migrations/     # Postgres migration SQL (run manually against Neon)
+├── Thumos/                  # iOS client
 │   └── App/
 │       ├── ThumosApp.swift              # Entry point
-│       ├── AppModel.swift             # @MainActor state manager
-│       ├── Models.swift               # Codable data types
-│       ├── BackendClient.swift        # HTTP + SSE client
-│       ├── RootView.swift             # → SoulMirrorTabView
-│       ├── SoulMirrorTabView.swift    # Tab container (Conversation + Soul File)
+│       ├── AppModel.swift               # @MainActor state manager + reengagement
+│       ├── Models.swift                 # Codable data types
+│       ├── BackendClient.swift          # HTTP + SSE client + fallback mode
+│       ├── NotificationManager.swift    # Local notification scheduling
+│       ├── RootView.swift               # → SoulMirrorTabView
+│       ├── SoulMirrorTabView.swift      # Tab container (Conversation + Soul File)
 │       ├── SoulConversationScreen.swift # Streaming chat UI
-│       ├── SoulFileScreen.swift       # 7-section soul file display
-│       └── SecureStore.swift          # Keychain wrapper
-├── ThumosTests/               # XCTest unit tests
+│       ├── SoulFileScreen.swift         # 7-section soul file display
+│       └── SecureStore.swift            # Keychain wrapper
+├── ThumosTests/             # XCTest unit tests
 ├── tests/
-│   ├── unit/                # Domain logic tests (60 tests)
+│   ├── unit/                # Domain logic tests (75 tests)
 │   └── integration/         # Handler tests
 ├── VISION.md                # Product vision (human-only, immutable)
 ├── CLAUDE.md                # Claude Code operating rules
+├── ARCHITECTURE.md          # This file
 └── project.yml              # XcodeGen project definition
 ```
 
@@ -112,22 +119,15 @@ thumos/
 
 ## Database Schema
 
-### Soul Mirror
-
 ```
 users
-  │ id, device_id, display_name
+  │ id, device_id, display_name, last_active_at, reflection_note (JSONB)
   │
   ├──▶ device_sessions
   │      id, user_id, device_id, token_hash, expires_at
   │
-  ├──▶ soul_sessions
-  │      id, user_id, session_number, status, exchange_count
-  │      reflection_notes (JSONB)
-  │      status: in_session → extracting → synthesizing → complete | failed
-  │      │
-  │      └──▶ soul_messages
-  │             session_id, role (user/assistant), content
+  ├──▶ soul_messages
+  │      id, user_id, role (user/assistant), content, created_at
   │
   ├──▶ visible_soul_files (user-facing, "accurate and loving")
   │      user_id (PK), version, last_updated
@@ -145,27 +145,32 @@ users
          coreValues, voice, depthMap, analystNotes
 ```
 
+Messages belong directly to users — no session grouping. The conversation is continuous and unbounded.
+
 ---
 
 ## Design Principle: Sessions Are Invisible
 
 Sessions are an **implementation detail**, not a user-facing concept. The user should never see "Start Session", "End Session", session numbers, or cooldown timers. The conversation feels continuous and unbounded — like journaling, not a therapy appointment.
 
-- **No explicit session boundaries in the UI.** The backend creates/closes sessions silently.
+- **No explicit session boundaries in the UI.** The conversation is one continuous stream.
 - **AI suggests breaks.** When the conversation reaches a natural resting point, the AI gently suggests the user take a break ("That's a lot to sit with. Take your time — I'll be here."). The user can ignore this and keep going.
-- **Synthesis happens in the background.** Soul file updates happen periodically during conversation, not at a dramatic "session end" moment.
+- **Synthesis happens on demand.** Soul file updates are triggered by the user (via synthesize-soul-file), not at session boundaries.
 
 ---
 
-## Data Flow: Soul Mirror Session
+## Data Flow: Soul Conversation
 
 ```
 App opens → RootView → SoulMirrorTabView
   │
   ├─ .task { bootstrapSoul() }
   │    POST /bootstrap-soul {device_id}
-  │    → Returns: userId, token, visibleSoulFile, activeSession,
-  │               canStartSession, cooldownRemainingMs
+  │    → Returns: userId, token, visibleSoulFile, recent messages
+  │
+  ├─ If returning user with no active conversation:
+  │    POST /generate-reengagement
+  │    → Haiku-generated personalized question shown as AI's opening
   │
   ▼
 User types message → sendSoulMessage(text)
@@ -174,45 +179,37 @@ User types message → sendSoulMessage(text)
 POST /soul-converse (SSE streaming)
   │
   ├─ Auth: validate x-thumos-session token
-  ├─ Get or create active session
   ├─ Save user message to soul_messages
   │
   ├─ Build context:
-  │   {sessionNumber, exchangeCount, visibleSoulFile,
-  │    reflectionNotes, previousMessages}
+  │   {visibleSoulFile, hiddenSoulFile, reflectionNote,
+  │    recentMessages (last 10), steering (from depthMap)}
   │
   ├─ buildSoulSystemPrompt(context)
   │   "You are a mirror... notice contradictions...
   │    quote the user back... 2-4 sentences..."
+  │   Includes <<<MEMORY>>> section for inline reflection updates
   │
   ├─ streamClaude(prompt, messages)
-  │   │ Claude Opus 4, maxTokens: 512, temp: 0.8
+  │   │ Claude Opus 4, maxTokens: 1024, temp: 0.8
   │   │ Retry once on failure, then deterministic fallback
   │   ▼
   │   SSE events → iOS client:
   │     event: token    data: {"text": "..."}
   │     → soulStreamingText += token (real-time)
   │
-  ├─ Save assistant message, update exchange_count
+  ├─ Save assistant message
   │
-  └─ Every 8 exchanges (REFLECTION_INTERVAL):
-       runReflectionUpdate()
-       │
-       ├─ buildReflectionPrompt() → Haiku 4.5 (1024 tokens)
-       │   → ReflectionNote: factual anchors, tensions, themes, absences, arc
-       │
-       ├─ buildLightVisiblePrompt() → Haiku 4.5 (1024 tokens)
-       │   → Light update: portrait, crystallized moments, open threads
-       │
-       └─ mergeVisibleSoulFile(existing, update)
+  └─ If <<<MEMORY>>> marker found in response:
+       Parse reflection note → upsert to users.reflection_note
 ```
 
-### Session End: Full Synthesis
+### Full Synthesis (user-triggered)
 
 ```
-end-soul-session (called when session closes)
+POST /synthesize-soul-file
   │
-  ├─ Fetch all messages from session
+  ├─ Fetch ALL messages for user
   │
   ├─ buildSoulSynthesisPrompt() → Claude Opus 4 (8192 tokens)
   │   4-pass expert analysis:
@@ -253,13 +250,12 @@ AppModel
   ├─ @Published soulMessages: [SoulMessage]
   ├─ @Published soulStreamingText: String
   ├─ @Published isSoulStreaming: Bool
-  ├─ @Published canStartSoulSession: Bool
-  ├─ @Published activeSoulSession: SoulSessionInfo?
   ├─ @Published isLoading: Bool
   ├─ @Published errorMessage: String?
   │
   ├─ BackendClient      HTTP POST + SSE streaming + offline fallback
-  └─ SecureStore         Keychain (device ID, session token)
+  ├─ SecureStore         Keychain (device ID, session token)
+  └─ NotificationManager Local notification scheduling
 ```
 
 ### SSE Streaming
@@ -269,7 +265,6 @@ URLSession.shared.bytes(for: request)
   │ reads line-by-line ("event: <type>\ndata: <json>")
   │
   ├─ event: token              → soulStreamingText += text
-  ├─ event: soul_file_updated  → visibleSoulFile = updated
   ├─ event: error              → log error
   └─ stream ends               → finalize assistant message
 ```
@@ -296,28 +291,19 @@ Device-based anonymous auth:
 
 | Use Case | Provider | Model | Streaming | Tokens | Fallback |
 |----------|----------|-------|-----------|--------|----------|
-| Soul conversation | Claude | Opus 4 | SSE | 512 | Deterministic reflection prompts |
-| Periodic extraction | Claude | Haiku 4.5 | No | 1024 | Skip extraction |
-| Session synthesis | Claude | Opus 4 | No | 8192 | Skip synthesis |
+| Soul conversation | Claude | Opus 4 | SSE | 1024 | Deterministic reflection prompts |
+| Inline reflection | Claude | Opus 4 | SSE (hidden) | part of convo | Skip reflection |
+| Full synthesis | Claude | Opus 4 | No | 8192 | Skip synthesis |
+| Re-engagement | Claude | Haiku 4.5 | No | 256 | 12 fallback questions |
 
 All LLM calls have deterministic fallbacks. Tests pass without API keys.
-
----
-
-## Key Constants
-
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| REFLECTION_INTERVAL | 8 | Extract every N exchanges |
-| STALE_SESSION_HOURS | 72 | Auto-complete stale sessions |
-| SESSION_MAX_EXCHANGES | 15 | Synthesis trigger threshold |
 
 ---
 
 ## Testing
 
 ```bash
-# TypeScript (60 tests, no API keys needed)
+# TypeScript (75 tests, no API keys needed)
 npx vitest run
 
 # Type checking
@@ -325,32 +311,32 @@ npx tsc -p tsconfig.json --noEmit
 
 # iOS build
 xcodebuild build -scheme Thumos \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1'
 
 # iOS tests
 xcodebuild test -scheme Thumos \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.3'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1'
 ```
 
 ---
 
 ## Deployment
 
-### Edge Functions → Supabase
+### Workers → Cloudflare
 
 ```bash
-supabase functions deploy <function-name> --project-ref uuggqsywcpqmbqzwxdga
+cd workers && wrangler deploy
 ```
 
-Active functions: bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, ping
+Active endpoints: ping, version, bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, generate-reengagement, delete-account, get-debug-info
 
 ### Required Secrets
 
 | Secret | Used By |
 |--------|---------|
 | ANTHROPIC_API_KEY | claude.ts (Soul Mirror) |
-| Thumos_SESSION_SECRET | auth.ts (HMAC signing) |
-| SUPABASE_SERVICE_ROLE_KEY | db.ts (admin access) |
+| THUMOS_SESSION_SECRET | auth.ts (HMAC signing) |
+| DATABASE_URL | db.ts (Neon Postgres) |
 
 ### iOS → XcodeGen
 

@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct ThumosApp: App {
     @StateObject private var model: AppModel
+    @StateObject private var notificationManager = NotificationManager()
 
     init() {
         let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -13,6 +14,10 @@ struct ThumosApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(model)
+                .environmentObject(notificationManager)
+                .onAppear {
+                    model.notificationManager = notificationManager
+                }
         }
     }
 }

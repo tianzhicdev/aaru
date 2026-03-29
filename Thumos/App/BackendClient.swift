@@ -62,11 +62,8 @@ final class BackendClient {
                 userId: UUID(),
                 token: nil,
                 visibleSoulFile: nil,
-                activeSession: nil,
                 messages: nil,
-                canStartSession: true,
-                cooldownRemainingMs: 0,
-                nextSessionNumber: 1
+                hasMessages: false
             )
         }
         return try await post(
@@ -91,26 +88,9 @@ final class BackendClient {
         )
     }
 
-    func endSoulSession() async throws -> EndSoulSessionResponse {
-        guard endpoint(named: "end-soul-session") != nil else {
-            return EndSoulSessionResponse(
-                visibleSoulFile: .empty,
-                sessionCompleted: true,
-                synthesisSucceeded: false
-            )
-        }
-        return try await post(
-            "end-soul-session",
-            body: EmptyBody(),
-            retryOnServerError: true
-        )
-    }
-
     func soulConverseStream(
         message: String,
-        sessionID: UUID? = nil,
         onToken: @escaping (String) -> Void,
-        onVisibleSoulFileUpdated: @escaping (VisibleSoulFile) -> Void = { _ in },
         onError: @escaping (String) -> Void
     ) async throws {
         guard let url = endpoint(named: "soul-converse") else {
@@ -125,10 +105,7 @@ final class BackendClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 30
-        var body: [String: String] = ["message": message]
-        if let sessionID {
-            body["session_id"] = sessionID.uuidString
-        }
+        let body: [String: String] = ["message": message]
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
@@ -159,10 +136,6 @@ final class BackendClient {
             if let tokenEvent = try? decoder.decode(SSETokenEvent.self, from: jsonData),
                tokenEvent.text != nil {
                 onToken(tokenEvent.text!)
-            } else if let soulFileEvent = try? decoder.decode(SSESoulFileUpdatedEvent.self, from: jsonData) {
-                if let visible = soulFileEvent.visibleSoulFile {
-                    onVisibleSoulFileUpdated(visible)
-                }
             } else if let errorEvent = try? decoder.decode(SSEErrorEvent.self, from: jsonData),
                       errorEvent.message != nil {
                 onError(errorEvent.message!)
@@ -178,6 +151,17 @@ final class BackendClient {
         return try await post(
             "version",
             body: ["build_version": appVersion]
+        )
+    }
+
+    func generateReengagement() async throws -> ReengagementResponse {
+        guard endpoint(named: "generate-reengagement") != nil else {
+            return ReengagementResponse(question: "")
+        }
+        return try await post(
+            "generate-reengagement",
+            body: EmptyBody(),
+            retryOnServerError: true
         )
     }
 
@@ -267,16 +251,6 @@ private struct EmptyBody: Encodable {}
 
 private struct SSETokenEvent: Decodable {
     let text: String?
-}
-
-private struct SSESoulFileUpdatedEvent: Decodable {
-    let visibleSoulFile: VisibleSoulFile?
-    let exchangeCount: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case visibleSoulFile = "visible_soul_file"
-        case exchangeCount = "exchange_count"
-    }
 }
 
 private struct SSEErrorEvent: Decodable {

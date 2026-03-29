@@ -16,183 +16,82 @@ vi.mock("../../workers/src/db.ts", async (importOriginal) => {
 });
 
 import {
-  isSessionStale,
-  bootstrapSoulState,
-  autoCompleteStaleSession,
-  runReflectionUpdate,
+  getReflectionNote,
+  upsertReflectionNote,
+  getLastNMessages,
   runSoulSynthesis
 } from "../../workers/src/soulApp.ts";
 import { callClaude } from "../../workers/src/claude.ts";
-import { STALE_SESSION_HOURS } from "../../src/domain/constants.ts";
 
-function makeSession(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "session-1",
-    user_id: "user-1",
-    session_number: 1,
-    status: "in_session",
-    exchange_count: 8,
-    reflection_notes: null,
-    started_at: new Date().toISOString(),
-    completed_at: null,
-    next_available_at: null,
-    extraction_error: null,
-    created_at: new Date().toISOString(),
-    ...overrides
-  };
-}
-
-describe("bootstrapSoulState", () => {
+describe("getReflectionNote", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns empty state for new user with no data", async () => {
-    // getVisibleSoulFile → null, getActiveSession → null, getLatestSession → null
-    mockSQL
-      .mockResolvedValueOnce([]) // visible_soul_files
-      .mockResolvedValueOnce([]) // active soul_sessions
-      .mockResolvedValueOnce([]); // latest soul_sessions
+  it("returns null when no reflection note", async () => {
+    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
 
-    const state = await bootstrapSoulState(mockSQL, "new-user");
-
-    expect(state.visibleSoulFile).toBeNull();
-    expect(state.activeSession).toBeNull();
-    expect(state.canStartSession).toBe(true);
-    expect(state.cooldownRemainingMs).toBe(0);
-    expect(state.nextSessionNumber).toBe(1);
+    const note = await getReflectionNote(mockSQL, "user-1");
+    expect(note).toBeNull();
   });
 
-  it("returns existing soul file and active session", async () => {
-    const session = makeSession({ session_number: 2, exchange_count: 5 });
+  it("returns reflection note from users table", async () => {
+    const noteData = {
+      updatedAt: "2026-03-26",
+      factualAnchors: { job: "engineer" },
+      tensions: [],
+      recurringThemes: [],
+      notableAbsences: [],
+      emotionalArc: "",
+      domainCoverage: []
+    };
+    mockSQL.mockResolvedValueOnce([{ reflection_note: noteData }]);
 
-    mockSQL
-      .mockResolvedValueOnce([{
-        user_id: "user-1",
-        version: 2,
-        last_updated: "2026-03-26",
-        portrait: "A builder of worlds",
-        how_you_move: "Boldly",
-        how_you_think: "",
-        how_you_connect: "",
-        what_you_carry: "",
-        what_lights_you_up: "",
-        your_contradictions: "",
-        your_voice: "",
-        crystallized_moments: [],
-        open_threads: []
-      }]) // visible_soul_files
-      .mockResolvedValueOnce([session]) // active soul_sessions
-      .mockResolvedValueOnce([session]); // latest soul_sessions
-
-    const state = await bootstrapSoulState(mockSQL, "user-1");
-
-    expect(state.visibleSoulFile).not.toBeNull();
-    expect(state.visibleSoulFile!.portrait).toBe("A builder of worlds");
-    expect(state.activeSession).not.toBeNull();
-    expect(state.canStartSession).toBe(false);
-    expect(state.nextSessionNumber).toBe(2); // same as active
-  });
-
-  it("auto-completes stale active session", async () => {
-    const staleTime = new Date(
-      Date.now() - (STALE_SESSION_HOURS + 1) * 60 * 60 * 1000
-    ).toISOString();
-    const staleSession = makeSession({
-      started_at: staleTime,
-      created_at: staleTime
-    });
-
-    mockSQL
-      .mockResolvedValueOnce([]) // visible_soul_files
-      .mockResolvedValueOnce([staleSession]) // active session (stale)
-      .mockResolvedValue([]); // updateSoulSession calls + latest session
-
-    const state = await bootstrapSoulState(mockSQL, "user-1");
-
-    // stale session was completed, so no active session
-    expect(state.activeSession).toBeNull();
-    expect(state.canStartSession).toBe(true);
+    const note = await getReflectionNote(mockSQL, "user-1");
+    expect(note).not.toBeNull();
+    expect(note!.factualAnchors["job"]).toBe("engineer");
   });
 });
 
-describe("autoCompleteStaleSession", () => {
+describe("upsertReflectionNote", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("updates session to complete status", async () => {
-    mockSQL.mockResolvedValue([]); // All update calls return empty
+  it("updates users table with reflection note", async () => {
+    mockSQL.mockResolvedValueOnce([]);
 
-    const session = makeSession();
-    await autoCompleteStaleSession(mockSQL, session);
+    const note = {
+      updatedAt: "2026-03-26",
+      factualAnchors: { job: "engineer" },
+      tensions: [],
+      recurringThemes: [],
+      notableAbsences: [],
+      emotionalArc: "",
+      domainCoverage: []
+    };
+    await upsertReflectionNote(mockSQL, "user-1", note);
 
-    // Should have been called for status, completed_at, extraction_error updates
     expect(mockSQL).toHaveBeenCalled();
   });
 });
 
-describe("runReflectionUpdate", () => {
+describe("getLastNMessages", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("runs reflection + light extraction and returns results", async () => {
-    const session = makeSession({ exchange_count: 8, reflection_notes: [] });
+  it("returns messages in chronological order", async () => {
+    const messages = [
+      { id: "m2", user_id: "u1", role: "user", content: "second", created_at: "2026-03-26T00:01:00Z" },
+      { id: "m1", user_id: "u1", role: "assistant", content: "first", created_at: "2026-03-26T00:00:00Z" }
+    ];
+    mockSQL.mockResolvedValueOnce(messages);
 
-    // getSoulMessages
-    mockSQL.mockResolvedValueOnce([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "assistant", content: "Tell me about yourself.", created_at: "2026-03-26" },
-      { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
-    ]);
-    // getVisibleSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-
-    // callClaude for reflection → valid JSON note
-    vi.mocked(callClaude).mockResolvedValueOnce(JSON.stringify({
-      updatedAtExchange: 8,
-      factualAnchors: { identity: "builder" },
-      tensions: ["solitude vs connection"],
-      recurringThemes: ["walls"],
-      notableAbsences: ["family"],
-      emotionalArc: "Guarded"
-    }));
-
-    // updateSoulSession (save reflection note) - multiple SQL calls
-    mockSQL.mockResolvedValue([]);
-
-    // callClaude for light visible extraction
-    vi.mocked(callClaude).mockResolvedValueOnce(JSON.stringify({
-      portrait: "A builder of walls and worlds",
-      crystallizedMoments: [{ quote: "I build walls", reflection: "Protection as art" }],
-      openThreads: ["What's behind the walls?"]
-    }));
-
-    const result = await runReflectionUpdate(mockSQL, "test-api-key", session, "user-1");
-
-    expect(result.reflectionNote).not.toBeNull();
-    expect(result.reflectionNote!.factualAnchors["identity"]).toBe("builder");
-    expect(result.visibleSoulFile).not.toBeNull();
-    expect(result.visibleSoulFile!.portrait).toBe("A builder of walls and worlds");
-  });
-
-  it("returns null on Claude failure (non-fatal)", async () => {
-    const session = makeSession({ exchange_count: 8, reflection_notes: [] });
-
-    // getSoulMessages
-    mockSQL.mockResolvedValueOnce([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
-    ]);
-    // getVisibleSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-
-    // callClaude fails
-    vi.mocked(callClaude).mockRejectedValueOnce(new Error("ANTHROPIC_API_KEY not configured"));
-
-    const result = await runReflectionUpdate(mockSQL, "test-api-key", session, "user-1");
-
-    expect(result.reflectionNote).toBeNull();
-    expect(result.visibleSoulFile).toBeNull();
+    const result = await getLastNMessages(mockSQL, "u1", 10);
+    // Should be reversed to chronological order
+    expect(result[0].content).toBe("first");
+    expect(result[1].content).toBe("second");
   });
 });
 
@@ -201,20 +100,20 @@ describe("runSoulSynthesis", () => {
     vi.clearAllMocks();
   });
 
-  it("runs full 4-expert synthesis and returns merged files", async () => {
-    const session = makeSession({ exchange_count: 15, reflection_notes: [] });
-
-    // getSoulMessages
+  it("runs full synthesis using all messages and returns merged files", async () => {
+    // getAllSoulMessages
     mockSQL.mockResolvedValueOnce([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
-      { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
+      { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
+      { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
     ]);
     // getVisibleSoulFile
     mockSQL.mockResolvedValueOnce([]);
     // getHiddenSoulFile
     mockSQL.mockResolvedValueOnce([]);
+    // getReflectionNote
+    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
 
-    // updateSoulSession (status → synthesizing) - resolve all subsequent SQL calls
+    // upsertVisibleSoulFile + upsertHiddenSoulFile calls
     mockSQL.mockResolvedValue([]);
 
     const visible = {
@@ -223,7 +122,8 @@ describe("runSoulSynthesis", () => {
       portrait: "A synthesized soul",
       sections: { howYouMove: "Deliberately", howYouThink: "In systems", howYouConnect: "Cautiously", whatYouCarry: "Weight", whatLightsYouUp: "Flow", yourContradictions: "Many", yourVoice: "Measured" },
       crystallizedMoments: [{ quote: "I build walls", reflection: "Protection" }],
-      openThreads: ["Behind the walls"]
+      openThreads: ["Behind the walls"],
+      compassScores: {}
     };
     const hidden = {
       version: 1,
@@ -233,16 +133,15 @@ describe("runSoulSynthesis", () => {
       coreDrivers: [{ driver: "Autonomy", strength: 0.9, inferred: true, evidence: "walls" }],
       coreValues: ["independence"],
       voice: { register: "casual", density: "moderate", humorStyle: "dry", conflictStyle: "avoidant", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
-      depthMap: { safeEntryPoints: ["work"], unlockTopics: ["behind walls"], avoidEarly: ["family"], currentlyLiveTopics: ["identity"] },
+      depthMap: { safeEntryPoints: ["work"], unlockTopics: ["behind walls"], avoidEarly: ["family"], currentlyLiveTopics: ["identity"], domainCoverage: [] },
       analystNotes: ["Session 1 analysis"]
     };
 
-    // callClaude returns synthesis
     vi.mocked(callClaude).mockResolvedValueOnce(
       JSON.stringify(visible) + "\n<<<SPLIT>>>\n" + JSON.stringify(hidden)
     );
 
-    const result = await runSoulSynthesis(mockSQL, "test-api-key", session, "user-1");
+    const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
 
     expect(result.visible).not.toBeNull();
     expect(result.visible!.portrait).toBe("A synthesized soul");
@@ -251,25 +150,21 @@ describe("runSoulSynthesis", () => {
   });
 
   it("handles synthesis failure gracefully", async () => {
-    const session = makeSession({ exchange_count: 15, reflection_notes: [] });
-
-    // getSoulMessages
+    // getAllSoulMessages
     mockSQL.mockResolvedValueOnce([
-      { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
+      { id: "m1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
     ]);
     // getVisibleSoulFile
     mockSQL.mockResolvedValueOnce([]);
     // getHiddenSoulFile
     mockSQL.mockResolvedValueOnce([]);
-    // updateSoulSession calls
-    mockSQL.mockResolvedValue([]);
+    // getReflectionNote
+    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
 
-    // callClaude fails
     vi.mocked(callClaude).mockRejectedValueOnce(new Error("API error"));
 
-    const result = await runSoulSynthesis(mockSQL, "test-api-key", session, "user-1");
+    const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
 
-    // Falls back to existing (null in this case)
     expect(result.visible).toBeNull();
     expect(result.hidden).toBeNull();
   });

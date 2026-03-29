@@ -3,7 +3,7 @@ import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../db.ts";
-import { bootstrapSoulState, getCurrentSessionMessages } from "../soulApp.ts";
+import { getVisibleSoulFile, getLastNMessages, getReflectionNote } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { z } from "zod";
 
@@ -39,30 +39,22 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
     token = issued.token;
   }
 
-  const state = await bootstrapSoulState(sql, userId);
+  const visibleSoulFile = await getVisibleSoulFile(sql, userId);
 
-  // EGRESS FIX: Only load current session messages instead of all history
-  let messages: Array<{ role: string; content: string }> = [];
-  if (state.activeSession) {
-    const sessionMsgs = await getCurrentSessionMessages(sql, state.activeSession.id);
-    messages = sessionMsgs
-      .filter((m) => m.content !== "[begin]")
-      .map((m) => ({ role: m.role, content: m.content }));
-  }
+  // Load last 10 messages for UI display
+  const recentMessages = await getLastNMessages(sql, userId, 10);
+  const messages = recentMessages
+    .filter((m) => m.content !== "[begin]")
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  // Check if this is a returning user (has any messages at all)
+  const hasMessages = messages.length > 0 || visibleSoulFile !== null;
 
   return jsonResponse(200, {
     user_id: userId,
     ...(token ? { token } : {}),
-    visible_soul_file: state.visibleSoulFile ?? emptyVisibleSoulFile(),
-    active_session: state.activeSession ? {
-      id: state.activeSession.id,
-      session_number: state.activeSession.session_number,
-      exchange_count: state.activeSession.exchange_count,
-      status: state.activeSession.status
-    } : null,
+    visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
     ...(messages.length > 0 ? { messages } : {}),
-    can_start_session: state.canStartSession,
-    cooldown_remaining_ms: state.cooldownRemainingMs,
-    next_session_number: state.nextSessionNumber
+    has_messages: hasMessages
   });
 }

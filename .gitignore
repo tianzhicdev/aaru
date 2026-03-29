@@ -6,6 +6,7 @@ dist
 .build
 DerivedData
 .env
+.dev.vars
 tmp
 *.xcuserstate
 xcuserdata

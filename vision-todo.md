@@ -32,3 +32,9 @@ Date: 2026-03-27
 ### Polish
 - [x] Show "last updated" on soul file screen — `lastUpdated` exists in the model but is never displayed; gives users a sense of their soul file evolving over time
 - [x] Warm up the empty soul file message — "Your soul file is empty" is cold; replace with something inviting like "Your soul file will take shape as we talk"
+
+## Post-Launch
+
+### Cost optimization
+- [ ] Make LLM model configurable per endpoint — currently hardcoded in `claude.ts`; add a config layer so conversation/reflection/synthesis can each use different models (e.g. DeepSeek v3.2, Sonnet 4, Opus 4)
+- [ ] A/B test model quality — instrument which model served each conversation, compare soul file quality and user retention across models

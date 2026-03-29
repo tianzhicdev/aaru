@@ -16,14 +16,19 @@ export function handleVersion(payload: unknown) {
   const body = payload as Record<string, unknown>;
   const buildVersion = typeof body?.build_version === "string" ? body.build_version.trim() : "";
 
-  if (!buildVersion || !/^\d+\.\d+\.\d+$/.test(buildVersion)) {
+  if (!buildVersion || !/^\d+(\.\d+){0,2}$/.test(buildVersion)) {
     return jsonResponse(400, {
       code: 400,
       message: "Invalid or missing build_version (expected semver e.g. 1.0.0)"
     });
   }
 
-  if (compareSemver(buildVersion, MIN_SUPPORTED_VERSION) < 0) {
+  // Normalize to 3 components (e.g. "1.0" → "1.0.0")
+  const parts = buildVersion.split(".");
+  while (parts.length < 3) parts.push("0");
+  const normalizedVersion = parts.join(".");
+
+  if (compareSemver(normalizedVersion, MIN_SUPPORTED_VERSION) < 0) {
     return jsonResponse(200, {
       status: "unsupported",
       min_version: MIN_SUPPORTED_VERSION,

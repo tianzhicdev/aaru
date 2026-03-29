@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isSessionStale } from "../../supabase/functions/_shared/soulApp.ts";
-import { readBearerToken } from "../../supabase/functions/_shared/auth.ts";
+import { isSessionStale } from "../../workers/src/soulApp.ts";
+import { readBearerToken } from "../../workers/src/auth.ts";
 import { STALE_SESSION_HOURS } from "../../src/domain/constants.ts";
 
 // Minimal session row for isSessionStale tests

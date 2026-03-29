@@ -1,19 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock all shared modules before importing handlers
-vi.mock("../../supabase/functions/_shared/db.ts", () => ({
+vi.mock("../../workers/src/db.ts", () => ({
   getActiveSessionByTokenHash: vi.fn(),
   touchDeviceSession: vi.fn(),
   ensureUser: vi.fn(),
   createDeviceSession: vi.fn(),
-  revokeSessionsForDevice: vi.fn()
+  revokeSessionsForDevice: vi.fn(),
+  deleteUser: vi.fn(),
+  createSQL: vi.fn()
 }));
 
-vi.mock("../../supabase/functions/_shared/soulApp.ts", () => ({
+vi.mock("../../workers/src/soulApp.ts", () => ({
   bootstrapSoulState: vi.fn(),
   createSoulSession: vi.fn(),
   getSoulMessages: vi.fn(),
   getAllSoulMessages: vi.fn(),
+  getCurrentSessionMessages: vi.fn(),
+  getRecentMessages: vi.fn(),
   getActiveSession: vi.fn(),
   getLatestSession: vi.fn(),
   getVisibleSoulFile: vi.fn(),
@@ -23,23 +27,26 @@ vi.mock("../../supabase/functions/_shared/soulApp.ts", () => ({
   autoCompleteStaleSession: vi.fn()
 }));
 
-vi.mock("../../supabase/functions/_shared/auth.ts", () => ({
+vi.mock("../../workers/src/auth.ts", () => ({
   readBearerToken: vi.fn(),
   hashSessionToken: vi.fn(),
   issueSessionToken: vi.fn()
 }));
 
-import { handleBootstrapSoul } from "../../supabase/functions/bootstrap-soul/index.ts";
-import { handleGetSoulFile } from "../../supabase/functions/get-soul-file/index.ts";
-import { handleEndSoulSession } from "../../supabase/functions/end-soul-session/index.ts";
-import { handleSynthesizeSoulFile } from "../../supabase/functions/synthesize-soul-file/index.ts";
+import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
+import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
+import { handleEndSoulSession } from "../../workers/src/handlers/end-soul-session.ts";
+import { handleSynthesizeSoulFile } from "../../workers/src/handlers/synthesize-soul-file.ts";
 
-import { readBearerToken, hashSessionToken, issueSessionToken } from "../../supabase/functions/_shared/auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../supabase/functions/_shared/db.ts";
-import { bootstrapSoulState, getAllSoulMessages, getActiveSession, getLatestSession, getVisibleSoulFile, updateSoulSession, runSoulSynthesis } from "../../supabase/functions/_shared/soulApp.ts";
+import { readBearerToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
+import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../workers/src/db.ts";
+import { bootstrapSoulState, getAllSoulMessages, getCurrentSessionMessages, getActiveSession, getLatestSession, getVisibleSoulFile, updateSoulSession, runSoulSynthesis } from "../../workers/src/soulApp.ts";
+
+const mockSQL = vi.fn();
+const mockEnv = { DATABASE_URL: "mock", ANTHROPIC_API_KEY: "mock", THUMOS_SESSION_SECRET: "mock" };
 
 function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
-  return new Request("https://edge.supabase.co/test", {
+  return new Request("https://api.trythumos.com/test", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: body ? JSON.stringify(body) : undefined
@@ -73,10 +80,10 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
+    vi.mocked(getCurrentSessionMessages).mockResolvedValue([]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleBootstrapSoul({ device_id: "device-1" }, request);
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "user-1");
@@ -106,17 +113,16 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
 
     const request = makeRequest();
-    const response = await handleBootstrapSoul({ device_id: "new-device" }, request);
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "new-device" }, request);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "new-user");
     expect(response.body).toHaveProperty("token", "new-token");
   });
 
-  it("includes messages when user has conversation history", async () => {
+  it("includes messages when user has active session", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
@@ -140,13 +146,13 @@ describe("handleBootstrapSoul", () => {
       cooldownRemainingMs: 0,
       nextSessionNumber: 1
     });
-    vi.mocked(getAllSoulMessages).mockResolvedValue([
+    vi.mocked(getCurrentSessionMessages).mockResolvedValue([
       { id: "m1", session_id: "session-1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: new Date().toISOString() },
       { id: "m2", session_id: "session-1", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
     ]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleBootstrapSoul({ device_id: "device-1" }, request);
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("messages");
@@ -160,7 +166,7 @@ describe("handleBootstrapSoul", () => {
   it("rejects invalid device_id", async () => {
     const request = makeRequest();
     await expect(
-      handleBootstrapSoul({ device_id: "" }, request)
+      handleBootstrapSoul(mockSQL, mockEnv, { device_id: "" }, request)
     ).rejects.toThrow();
   });
 });
@@ -174,7 +180,7 @@ describe("handleGetSoulFile", () => {
     vi.mocked(readBearerToken).mockReturnValue(null);
 
     const request = makeRequest();
-    const response = await handleGetSoulFile({}, request);
+    const response = await handleGetSoulFile(mockSQL, {}, request);
 
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("message", "Missing device session");
@@ -189,7 +195,7 @@ describe("handleGetSoulFile", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "expired-token" });
-    const response = await handleGetSoulFile({}, request);
+    const response = await handleGetSoulFile(mockSQL, {}, request);
 
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("message", "Invalid device session");
@@ -218,7 +224,7 @@ describe("handleGetSoulFile", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleGetSoulFile({}, request);
+    const response = await handleGetSoulFile(mockSQL, {}, request);
 
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;
@@ -238,7 +244,7 @@ describe("handleEndSoulSession", () => {
     vi.mocked(readBearerToken).mockReturnValue(null);
 
     const request = makeRequest();
-    const response = await handleEndSoulSession({}, request);
+    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(401);
   });
@@ -251,7 +257,7 @@ describe("handleEndSoulSession", () => {
     vi.mocked(getActiveSession).mockResolvedValue(null);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleEndSoulSession({}, request);
+    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(404);
     expect(response.body).toHaveProperty("message", "No active soul session");
@@ -275,7 +281,6 @@ describe("handleEndSoulSession", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
-    // Provide 8+ user messages so synthesis threshold is met
     const msgs = Array.from({ length: 8 }, (_, i) => ({
       id: `m${i}`, session_id: "session-1", user_id: "user-1",
       role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
@@ -313,7 +318,7 @@ describe("handleEndSoulSession", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleEndSoulSession({}, request);
+    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;
@@ -333,7 +338,7 @@ describe("handleSynthesizeSoulFile", () => {
     vi.mocked(readBearerToken).mockReturnValue(null);
 
     const request = makeRequest();
-    const response = await handleSynthesizeSoulFile({}, request);
+    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(401);
   });
@@ -347,7 +352,7 @@ describe("handleSynthesizeSoulFile", () => {
     vi.mocked(getLatestSession).mockResolvedValue(null);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile({}, request);
+    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(404);
     expect(response.body).toHaveProperty("message", "No soul session found");
@@ -380,20 +385,18 @@ describe("handleSynthesizeSoulFile", () => {
       crystallizedMoments: [],
       openThreads: []
     });
-    // All messages are older than last soul file update
     vi.mocked(getAllSoulMessages).mockResolvedValue([
       { id: "m1", session_id: "session-1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() }
     ]);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile({}, request);
+    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;
     expect(body).toHaveProperty("synthesis_succeeded", true);
     const vsf = body.visible_soul_file as Record<string, unknown>;
     expect(vsf.portrait).toBe("Existing portrait");
-    // runSoulSynthesis should NOT have been called
     expect(runSoulSynthesis).not.toHaveBeenCalled();
   });
 
@@ -415,7 +418,6 @@ describe("handleSynthesizeSoulFile", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
-    // Has new messages since last soul file update (8+ user messages to meet threshold)
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     const synthMsgs = Array.from({ length: 8 }, (_, i) => ({
       id: `m${i}`, session_id: "session-1", user_id: "user-1",
@@ -443,7 +445,7 @@ describe("handleSynthesizeSoulFile", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile({}, request);
+    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;
@@ -471,7 +473,6 @@ describe("handleSynthesizeSoulFile", () => {
       extraction_error: null,
       created_at: new Date().toISOString()
     });
-    // Has new messages since last soul file update (8+ user messages to meet threshold)
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     const completedMsgs = Array.from({ length: 8 }, (_, i) => ({
       id: `m${i}`, session_id: "session-2", user_id: "user-1",
@@ -494,7 +495,7 @@ describe("handleSynthesizeSoulFile", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile({}, request);
+    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
 
     expect(response.status).toBe(200);
     const body = response.body as Record<string, unknown>;

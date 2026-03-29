@@ -1,23 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../supabase/functions/_shared/db.ts", () => ({
-  getActiveSessionByTokenHash: vi.fn()
+vi.mock("../../workers/src/db.ts", () => ({
+  getActiveSessionByTokenHash: vi.fn(),
+  deleteUser: vi.fn(),
+  createSQL: vi.fn()
 }));
 
-vi.mock("../../supabase/functions/_shared/auth.ts", () => ({
+vi.mock("../../workers/src/auth.ts", () => ({
   readBearerToken: vi.fn(),
   hashSessionToken: vi.fn()
 }));
 
-vi.mock("../../supabase/functions/_shared/env.ts", () => ({
-  supabaseUrl: vi.fn(() => "https://test.supabase.co"),
-  supabaseServiceRoleKey: vi.fn(() => "test-service-key"),
-  thumosSessionSecret: vi.fn(() => "test-secret")
-}));
+import { handleDeleteAccount } from "../../workers/src/handlers/delete-account.ts";
+import { readBearerToken, hashSessionToken } from "../../workers/src/auth.ts";
+import { getActiveSessionByTokenHash, deleteUser } from "../../workers/src/db.ts";
 
-import { handleDeleteAccount } from "../../supabase/functions/delete-account/index.ts";
-import { readBearerToken, hashSessionToken } from "../../supabase/functions/_shared/auth.ts";
-import { getActiveSessionByTokenHash } from "../../supabase/functions/_shared/db.ts";
+const mockSQL = vi.fn();
 
 const mockDeviceSession = {
   id: "ds-1",
@@ -30,7 +28,7 @@ const mockDeviceSession = {
 };
 
 function makeRequest(headers: Record<string, string> = {}): Request {
-  return new Request("https://edge.supabase.co/delete-account", {
+  return new Request("https://api.trythumos.com/delete-account", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers }
   });
@@ -39,14 +37,13 @@ function makeRequest(headers: Record<string, string> = {}): Request {
 describe("handleDeleteAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn());
   });
 
   it("returns 401 without bearer token", async () => {
     vi.mocked(readBearerToken).mockReturnValue(null);
 
     const request = makeRequest();
-    const response = await handleDeleteAccount({}, request);
+    const response = await handleDeleteAccount(mockSQL, {}, request);
 
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("message", "Missing device session");
@@ -61,7 +58,7 @@ describe("handleDeleteAccount", () => {
     });
 
     const request = makeRequest({ "x-thumos-session": "expired-token" });
-    const response = await handleDeleteAccount({}, request);
+    const response = await handleDeleteAccount(mockSQL, {}, request);
 
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("message", "Invalid device session");
@@ -71,16 +68,13 @@ describe("handleDeleteAccount", () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+    vi.mocked(deleteUser).mockResolvedValue(undefined);
 
     const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleDeleteAccount({}, request);
+    const response = await handleDeleteAccount(mockSQL, {}, request);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("deleted", true);
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("users?id=eq.user-1"),
-      expect.objectContaining({ method: "DELETE" })
-    );
+    expect(deleteUser).toHaveBeenCalledWith(mockSQL, "user-1");
   });
 });

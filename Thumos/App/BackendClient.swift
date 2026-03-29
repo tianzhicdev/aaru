@@ -3,13 +3,9 @@ import OSLog
 
 struct BackendConfiguration {
     var functionBaseURL: URL? = nil
-    var supabaseURL: URL? = nil
-    var supabaseAnonKey: String? = nil
 
     static let `default` = BackendConfiguration(
-        functionBaseURL: URL(string: "https://uuggqsywcpqmbqzwxdga.supabase.co/functions/v1/"),
-        supabaseURL: URL(string: "https://uuggqsywcpqmbqzwxdga.supabase.co"),
-        supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1Z2dxc3l3Y3BxbWJxend4ZGdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODk3NjIsImV4cCI6MjA4ODY2NTc2Mn0.zRFOTxQiwF7NJXhKTsnU0G1Zv9E8l_zByb8EZ04OWJ0"
+        functionBaseURL: URL(string: "https://api.trythumos.com/")
     )
 }
 
@@ -91,7 +87,6 @@ final class BackendClient {
         return try await post(
             "get-soul-file",
             body: EmptyBody(),
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
@@ -107,7 +102,6 @@ final class BackendClient {
         return try await post(
             "end-soul-session",
             body: EmptyBody(),
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
@@ -138,10 +132,6 @@ final class BackendClient {
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        if let anonKey = configuration.supabaseAnonKey {
-            request.setValue(anonKey, forHTTPHeaderField: "apikey")
-            request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
-        }
         if let sessionToken {
             request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
         }
@@ -197,8 +187,7 @@ final class BackendClient {
         }
         return try await post(
             "delete-account",
-            body: EmptyBody(),
-            requiresAuth: true
+            body: EmptyBody()
         )
     }
 
@@ -206,8 +195,7 @@ final class BackendClient {
     func getDebugInfo() async throws -> DebugInfoResponse {
         return try await post(
             "get-debug-info",
-            body: EmptyBody(),
-            requiresAuth: true
+            body: EmptyBody()
         )
     }
     #endif
@@ -222,7 +210,6 @@ final class BackendClient {
         return try await post(
             "synthesize-soul-file",
             body: EmptyBody(),
-            requiresAuth: true,
             retryOnServerError: true
         )
     }
@@ -234,7 +221,6 @@ final class BackendClient {
     private func post<ResponseType: Decodable, Body: Encodable>(
         _ name: String,
         body: Body,
-        requiresAuth: Bool = false,
         retryOnServerError: Bool = false
     ) async throws -> ResponseType {
         guard let url = endpoint(named: name) else {
@@ -245,11 +231,7 @@ final class BackendClient {
         request.httpMethod = "POST"
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let anonKey = configuration.supabaseAnonKey {
-            request.setValue(anonKey, forHTTPHeaderField: "apikey")
-            request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
-        }
-        if requiresAuth, let sessionToken {
+        if let sessionToken {
             request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
         }
 

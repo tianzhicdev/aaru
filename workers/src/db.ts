@@ -1,0 +1,84 @@
+import { neon } from "@neondatabase/serverless";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type NeonSQL = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
+
+export function createSQL(databaseUrl: string): NeonSQL {
+  return neon(databaseUrl) as NeonSQL;
+}
+
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+// ── User types ────────────────────────────────────────────────
+
+export interface UserRow {
+  id: string;
+  device_id: string;
+  display_name: string;
+}
+
+export interface DeviceSessionRow {
+  id: string;
+  user_id: string;
+  device_id: string;
+  token_hash: string;
+  expires_at: string;
+  last_seen_at: string;
+  revoked_at: string | null;
+}
+
+// ── User & Device Session CRUD ────────────────────────────────
+
+export async function ensureUser(sql: NeonSQL, deviceId: string): Promise<UserRow> {
+  const rows = await sql`
+    INSERT INTO users (device_id, display_name)
+    VALUES (${deviceId}, ${"Soul " + deviceId.slice(-4)})
+    ON CONFLICT (device_id) DO UPDATE SET device_id = EXCLUDED.device_id
+    RETURNING id, device_id, display_name
+  `;
+  return rows[0] as UserRow;
+}
+
+export async function createDeviceSession(
+  sql: NeonSQL,
+  userId: string,
+  deviceId: string,
+  tokenHash: string,
+  expiresAt: string
+): Promise<DeviceSessionRow> {
+  const rows = await sql`
+    INSERT INTO device_sessions (user_id, device_id, token_hash, expires_at)
+    VALUES (${userId}, ${deviceId}, ${tokenHash}, ${expiresAt})
+    RETURNING id, user_id, device_id, token_hash, expires_at, last_seen_at, revoked_at
+  `;
+  return rows[0] as DeviceSessionRow;
+}
+
+export async function revokeSessionsForDevice(sql: NeonSQL, userId: string, deviceId: string): Promise<void> {
+  await sql`
+    UPDATE device_sessions
+    SET revoked_at = NOW()
+    WHERE user_id = ${userId} AND device_id = ${deviceId} AND revoked_at IS NULL
+  `;
+}
+
+export async function getActiveSessionByTokenHash(sql: NeonSQL, tokenHash: string): Promise<DeviceSessionRow | null> {
+  const rows = await sql`
+    SELECT id, user_id, device_id, token_hash, expires_at, last_seen_at, revoked_at
+    FROM device_sessions
+    WHERE token_hash = ${tokenHash} AND revoked_at IS NULL
+  `;
+  return (rows[0] as DeviceSessionRow) ?? null;
+}
+
+export async function touchDeviceSession(sql: NeonSQL, sessionId: string): Promise<void> {
+  await sql`
+    UPDATE device_sessions SET last_seen_at = NOW() WHERE id = ${sessionId}
+  `;
+}
+
+// ── Delete user (CASCADE handles all dependent tables) ────────
+
+export async function deleteUser(sql: NeonSQL, userId: string): Promise<void> {
+  await sql`DELETE FROM users WHERE id = ${userId}`;
+}

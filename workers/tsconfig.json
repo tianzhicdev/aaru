@@ -1,32 +1,25 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
-    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "declaration": false,
     "noEmit": true,
     "types": [
-      "node",
-      "vitest/globals"
+      "@cloudflare/workers-types"
     ],
-    "baseUrl": ".",
     "paths": {
-      "@thumos/*": [
-        "src/*"
-      ]
+      "@thumos/*": ["../src/*"]
     }
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts",
-    "workers/src/**/*.ts",
-    "supabase/functions/**/*.ts",
-    "vitest.config.ts"
+    "../src/domain/**/*.ts",
+    "../src/lib/**/*.ts"
   ]
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { handleVersion } from "../../supabase/functions/version/index.ts";
+import { handleVersion } from "../../workers/src/handlers/version.ts";
 
 describe("handleVersion", () => {
   it("returns ok for current version", () => {

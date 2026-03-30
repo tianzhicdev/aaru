@@ -9,27 +9,10 @@ struct SoulFileScreen: View {
             Theme.backgroundGradient.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 32) {
-                    headerSection
-
-                    // Bordered soul file content
-                    VStack(spacing: 28) {
-                        portraitSection
-                        compassSection
-                        soulSections
-                        crystallizedMomentsSection
-                        openThreadsSection
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Theme.divider, lineWidth: 0.5)
-                    )
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 40)
-                .padding(.bottom, 40)
+                soulFileFrame
+                    .padding(.horizontal, 24)
+                    .padding(.top, 40)
+                    .padding(.bottom, 40)
             }
         }
         .sheet(isPresented: $showPrivacy) {
@@ -37,28 +20,98 @@ struct SoulFileScreen: View {
         }
     }
 
-    // MARK: - Header
-
-    private var headerSection: some View {
-        HStack(spacing: 6) {
-            Text("Thumos")
-                .font(Theme.sans(14, weight: .medium))
-                .foregroundStyle(Theme.accent)
-                .textCase(.uppercase)
-                .tracking(2)
+    private var soulFileFrame: some View {
+        VStack(spacing: 28) {
+            titleSection
 
             if model.isSoulFileUpdating {
-                ProgressView()
-                    .scaleEffect(0.6)
-                    .tint(Theme.accentBright)
+                loadingNotice
             }
+
+            portraitSection
+            compassSection
+            soulSections
+            crystallizedMomentsSection
+            openThreadsSection
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 36)
+        .padding(.bottom, 24)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Theme.divider, lineWidth: 0.5)
+        )
+        .overlay(alignment: .top) {
+            borderLock
+                .padding(.horizontal, 28)
+                .offset(y: -1)
+        }
+    }
+
+    // MARK: - Border Lock
+
+    private var borderLock: some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(Theme.divider)
+                .frame(height: 0.5)
 
             Button { showPrivacy = true } label: {
                 Image(systemName: "lock.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.textTertiary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Theme.backgroundGradient)
             }
+            .buttonStyle(.plain)
+
+            Rectangle()
+                .fill(Theme.divider)
+                .frame(height: 0.5)
         }
+    }
+
+    // MARK: - Title
+
+    private var titleSection: some View {
+        VStack(spacing: 8) {
+            Text("Soul File")
+                .font(Theme.sans(12, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .textCase(.uppercase)
+                .tracking(1.8)
+
+            Text("A living portrait that deepens as you talk.")
+                .font(Theme.sans(14, weight: .light))
+                .foregroundStyle(Theme.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    // MARK: - Loading Notice
+
+    private var loadingNotice: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .scaleEffect(0.75)
+                .tint(Theme.accentBright)
+
+            Text("Your soul file is updating.")
+                .font(Theme.sans(15, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
+
+            Text("This can take a few minutes after a deeper conversation.")
+                .font(Theme.sans(14, weight: .light))
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Privacy Sheet
@@ -78,7 +131,7 @@ struct SoulFileScreen: View {
                     .font(Theme.serif(24, weight: .light))
                     .foregroundStyle(Theme.textPrimary)
 
-                Text("Only you see your soul file. It's tied to your device, not your name or email. No account is needed, and you can delete everything anytime from Settings.")
+                Text("Only you can see your soul file. Nothing here is shared with anyone else, and you can delete everything anytime from Settings.")
                     .font(Theme.sans(15, weight: .light))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)

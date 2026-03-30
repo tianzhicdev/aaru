@@ -12,12 +12,19 @@ export interface SteeringContext {
 export type SteeringSource = "none" | "reflection_snapshot";
 export type OpeningKind = "first_ever" | "assistant_turn" | "resume_after_gap";
 
+export interface XaiNewsItem {
+  topic: string;
+  headline: string;
+  summary: string;
+}
+
 export interface SoulConversationContext {
   visibleSoulFile: VisibleSoulFile | null;
   reflectionNote: ReflectionNote | null;
   steering: SteeringContext | null;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   openingKind?: OpeningKind | null;
+  xaiNews?: XaiNewsItem[];
 }
 
 const DOMAIN_DEPTH_PRIORITY: Record<DomainCoverageEntry["depth"], number> = {
@@ -275,6 +282,10 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
 
   const openingSection = buildOpeningSection(context);
 
+  const currentEventsSection = context.xaiNews && context.xaiNews.length > 0
+    ? `\nCURRENT CONTEXT (use naturally, don't force):\nRecent developments in areas relevant to this person:\n${context.xaiNews.map(n => `- ${n.topic}: "${n.headline}" — ${n.summary}`).join("\n")}`
+    : "";
+
   return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are through reflection. You are a mirror, not a therapist.
 
 CONVERSATION PRINCIPLES:
@@ -292,6 +303,7 @@ THEIR SOUL FILE:
 ${soulFileSection}
 ${memorySection}
 ${steeringSection}
+${currentEventsSection}
 ${openingSection}
 
 PACING:

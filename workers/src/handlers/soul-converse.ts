@@ -19,10 +19,12 @@ import {
   type OpeningKind,
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
-import { DOMAIN_LABELS } from "../../../src/domain/schemas.ts";
+import { DOMAIN_LABELS, LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
 import { streamClaude } from "../claude.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
+import { fetchInterestNews } from "../xai.ts";
+import type { XaiNewsItem } from "../../../src/domain/soul.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { z } from "zod";
 
@@ -151,23 +153,50 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   ]);
 
   const { steering } = deriveConversationSteering(reflectionNote);
-  const preferredDomain = pickLeastCoveredDomain(
-    steering?.domainCoverage ?? reflectionNote?.domainCoverage
-  );
-  const preferredDomainLabel = preferredDomain ? DOMAIN_LABELS[preferredDomain] : null;
   const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
+
+  // For first_ever, randomize the domain — all are untouched, so "least covered" is arbitrary
+  let preferredDomainLabel: string | null = null;
+  if (openingKind === "first_ever") {
+    const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
+    preferredDomainLabel = DOMAIN_LABELS[randomDomain];
+  } else {
+    const preferredDomain = pickLeastCoveredDomain(
+      steering?.domainCoverage ?? reflectionNote?.domainCoverage
+    );
+    preferredDomainLabel = preferredDomain ? DOMAIN_LABELS[preferredDomain] : null;
+  }
 
   const transcriptMessages = allMessages.map((message) => ({
     role: message.role,
     content: message.content
   }));
 
+  let xaiNews: XaiNewsItem[] = [];
+  if (body.mode === "opening" && env.XAI_TOKEN) {
+    const topics: string[] = [];
+    if (visibleSoulFile?.openThreads) {
+      topics.push(...visibleSoulFile.openThreads);
+    }
+    if (reflectionNote?.recurringThemes) {
+      topics.push(...reflectionNote.recurringThemes);
+    }
+    if (topics.length > 0) {
+      try {
+        xaiNews = await fetchInterestNews(topics.slice(0, 5), env.XAI_TOKEN);
+      } catch (err) {
+        console.warn("xAI news fetch failed, proceeding without:", err);
+      }
+    }
+  }
+
   const context: SoulConversationContext = {
     visibleSoulFile,
     reflectionNote,
     steering,
     messages: transcriptMessages,
-    openingKind
+    openingKind,
+    xaiNews
   };
 
   const systemPrompt = buildSoulSystemPrompt(context);

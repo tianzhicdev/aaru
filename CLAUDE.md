@@ -13,7 +13,7 @@ Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
 | Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (src/domain/), Zod validation |
-| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (reflection snapshots) |
+| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (reflection snapshots), xAI Grok 4 (web search for current events) |
 | Tests | Vitest (TS), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
@@ -57,7 +57,8 @@ xcodebuild build -scheme Thumos \
 
 ### Cloudflare Workers (workers/src/)
 - `workers/src/index.ts` — Raw fetch() router
-- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET)
+- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET, XAI_TOKEN)
+- `workers/src/xai.ts` — xAI Grok web search client for current events in opening mode
 - `workers/src/db.ts` — Neon serverless driver + user/session CRUD
 - `workers/src/auth.ts` — HMAC SHA-256 session tokens
 - `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
@@ -88,7 +89,7 @@ xcodebuild build -scheme Thumos \
 - `ThumosTests/` — XCTest unit tests
 
 ### Tests (tests/)
-- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, debugTraces, version)
+- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, debugTraces, version, xai)
 - `tests/integration/` — Handler integration tests (soulMirrorHandlers, deleteAccount)
 
 ## Code Style Conventions
@@ -125,7 +126,8 @@ A task is complete when ALL of the following are true:
 - **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
 - **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
-- **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow.
+- **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow. Opening mode fetches current events via xAI web search (Grok 4) for topics from openThreads + recurringThemes, injected as optional "CURRENT CONTEXT" in the system prompt.
+- **xAI integration** — Optional (`XAI_TOKEN` env). Uses `grok-4-fast-non-reasoning` with `web_search` tool. Graceful degradation: returns empty on any failure. Only fires in opening mode when topics exist.
 - **Reflection snapshots** — Reflection notes are async snapshots generated from all persisted messages every 10 total messages and stored in `reflection_snapshots`.
 - **Conversation steering** — Live conversation can include the latest ready reflection snapshot as advisory context, but raw messages remain authoritative.
 - **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
@@ -143,6 +145,7 @@ cd workers && wrangler deploy
 wrangler secret put DATABASE_URL
 wrangler secret put ANTHROPIC_API_KEY
 wrangler secret put THUMOS_SESSION_SECRET
+wrangler secret put XAI_TOKEN
 ```
 
 Wrangler deploys require Cloudflare auth, typically via `CLOUDFLARE_API_TOKEN`.

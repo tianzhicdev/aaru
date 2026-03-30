@@ -105,6 +105,29 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("Ask for stories, not self-assessments");
     expect(prompt).toContain("Avoids repeated questions");
   });
+
+  it("includes current events when xaiNews is provided", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      xaiNews: [
+        { topic: "AI safety", headline: "New regulations proposed", summary: "The EU proposed new AI safety regulations." },
+        { topic: "space", headline: "Mars mission update", summary: "NASA's rover found evidence of water." }
+      ]
+    }));
+    expect(prompt).toContain("CURRENT CONTEXT");
+    expect(prompt).toContain("AI safety");
+    expect(prompt).toContain("New regulations proposed");
+    expect(prompt).toContain("Mars mission update");
+  });
+
+  it("omits current events section when xaiNews is empty", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({ xaiNews: [] }));
+    expect(prompt).not.toContain("CURRENT CONTEXT");
+  });
+
+  it("omits current events section when xaiNews is undefined", () => {
+    const prompt = buildSoulSystemPrompt(makeContext());
+    expect(prompt).not.toContain("CURRENT CONTEXT");
+  });
 });
 
 describe("buildSoulFallbackResponse", () => {

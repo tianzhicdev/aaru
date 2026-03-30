@@ -1,33 +1,52 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-27T17:39:25.371Z",
-  "portrait": "She carries both the phoenix and the quiet girl within her, each step a negotiation between the woman who rose from ashes and the child who learned in silence. Her grace is both armor and authenticity, a lifetime of proving her worth through beauty while yearning for permission to simply exist.",
+  "lastUpdated": "2026-03-30T00:32:35.202Z",
+  "portrait": "You carry silence like a birthright and words like weapons you learned to wield. In the margins of memory, you're still that watchful child in your uncle's store, but now you speak from podiums with a voice that knows both rage and exhaustion intimately.",
   "sections": {
-    "howYouMove": "She moves between eloquence and silence like visiting two countries she knows by heart. There's a practiced grace in her gestures, but beneath it, a trembling — as if she's still learning it's safe to take up space without justifying it with brilliance.",
-    "howYouThink": "Her mind holds paradoxes like old friends — the intellectual understanding and the bone-deep belief existing in separate rooms. She sees patterns in suffering, transforms pain into purpose, but questions whether the transformation was ever necessary.",
-    "howYouConnect": "She gives permission to others with profound generosity while withholding it from herself. Connection comes through being useful, indispensable, the strong one — but there's a yearning to be loved for her flaws, her tiredness, her simple humanity.",
-    "whatYouCarry": "The weight of a frightened girl who believed her voice killed a man, fifty years of proving that girl deserved to exist. Every accomplishment both redemption and burden, every word both song and shield against the fear of being dangerous.",
-    "whatLightsYouUp": "The possibility of writing something true — not about overcoming, just about being. Moments when she can rest in the quiet without it being a cage, when beauty exists without needing to be forged from burning.",
-    "yourContradictions": "She protects the silence that others think broke her while using words as armor against it. The woman who helps others see their worth beneath their wounds cannot quite believe in her own. She knows intellectually what she cannot let herself feel.",
-    "yourVoice": "Her voice drops to whispers when approaching truth, rises with practiced eloquence when explaining herself into acceptability. She calls you 'baby' and 'my dear' with a tenderness that holds both distance and intimacy, each pause weighted with what words cannot say."
+    "howYouMove": "You move between the margins and the podium, carrying urgency that feels like transformed fear. Your pace is relentless—driven by the bone-deep knowledge of what silence costs, unable to rest without the justification of purpose.",
+    "howYouThink": "Your mind transmutes everything into witness-bearing, turning pain into purpose with an elegance you've come to suspect might be its own cage. You think in layers—always aware of the story you're telling yourself about the story you're living.",
+    "howYouConnect": "You connect through speaking for those still trapped in silence, but wonder if you're performing strength rather than feeling it. Trust comes hard when you know how adults can fail children, how silence can become punishment instead of protection.",
+    "whatYouCarry": "You carry five years of childhood silence that became a lifetime of speaking. The wound that 'learned to wear different clothes'—activism, truth-telling, the exhaustion of bearing witness not just to your own pain but to everyone else's too.",
+    "whatLightsYouUp": "Words light you up—poetry that says the unsayable, the moment when borrowed language becomes your own voice. In quiet attention with a book or in prayer, you find the only space where you can be small without performing.",
+    "yourContradictions": "You're torn between believing your wound transformed into wisdom and fearing it's just damage wearing prettier clothes. You choose the burden because it proves you exist, yet resent having to survive at all. The narrative doesn't save you, but you can't bear to live without it.",
+    "yourVoice": "Your voice moves between tender honesty and fierce witness-bearing, calling people 'baby' and 'my dear' while cutting straight to the bone of truth. You speak in images—locked throats, elegant cages, wounds that wear different clothes—with a rhythm that knows both poetry and prayer."
   },
   "crystallizedMoments": [
     {
-      "quote": "The silence knows about shame. It knows what it feels like to believe you've broken something so fundamental in yourself that words could never repair it.",
-      "reflection": "The silence holds truths her eloquence cannot touch."
+      "quote": "I was silent then, you understand, locked away in my own throat.",
+      "reflection": "The precise physicality of how trauma lives in the body."
     },
     {
-      "quote": "I've built my entire life on the premise that my suffering had to mean something, had to transform into purpose.",
-      "reflection": "She questions whether the phoenix story was ever necessary."
+      "quote": "The anger cleared a space, yes—but it didn't disappear. It transformed into something else: witness.",
+      "reflection": "How rage becomes purpose without ever truly healing."
     },
     {
-      "quote": "What if the greatest freedom isn't overcoming silence? What if it's accepting that you were never broken in the first place?",
-      "reflection": "The revolutionary act of allowing herself to simply exist."
+      "quote": "Maybe I never really left that store in Stamps. Maybe I'm still watching from the margins, just doing it at a podium now.",
+      "reflection": "The continuity between the silent child and the exhausted speaker."
+    },
+    {
+      "quote": "The narrative doesn't save me. It just keeps me company in the dark.",
+      "reflection": "The shift from redemption to companionship with one's own story."
+    },
+    {
+      "quote": "I choose the burden because at least the burden proves I'm still here, still fighting. Without it, I don't know who I am.",
+      "reflection": "When the wound becomes identity itself."
     }
   ],
   "openThreads": [
-    "How to live without turning humanity into another triumph story",
-    "What it means to write something true without a moral",
-    "The friendship beginning between the woman and the quiet girl"
-  ]
+    "What would it mean to find out who you are without the burden?",
+    "The fear of ordinariness beneath the mythic narrative",
+    "Whether some wounds are meant to stay alive as 'antennae for other people's pain'",
+    "The difference between transforming pain into purpose and learning to live with it while calling it purpose"
+  ],
+  "compassScores": {
+    "depth": 95,
+    "warmth": 80,
+    "purpose": 90,
+    "autonomy": 70,
+    "openness": 85,
+    "vitality": 65,
+    "connection": 85,
+    "resilience": 75
+  }
 }

@@ -42,9 +42,9 @@ The AI (Claude Opus 4) has a system prompt with these constraints:
 - Never label ("you are an INTJ" is banned)
 - Never give advice ("I'm a mirror, not a therapist")
 
-Every 8 exchanges, a background synthesis runs (Haiku 4.5) that extracts patterns — factual anchors, tensions, recurring themes, notable absences, emotional arc.
+As you talk, the AI quietly extracts patterns — tensions, recurring themes, notable absences, emotional arc.
 
-At session end, the full conversation passes through a 4-expert pipeline (Opus 4):
+When you're ready, a deeper synthesis passes your conversations through a 4-expert pipeline (Opus 4):
 - Psychologist — emotional patterns, defense mechanisms
 - Sociologist — identity construction, group positioning
 - Linguist — metaphor usage, vocabulary density, humor style

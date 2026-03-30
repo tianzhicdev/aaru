@@ -52,5 +52,8 @@ targets:
     platform: iOS
     sources:
       - path: ThumosTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Thumos

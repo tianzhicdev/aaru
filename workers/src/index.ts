@@ -1,19 +1,22 @@
 import type { Env } from "./env.ts";
 import { createSQL } from "./db.ts";
+import type { BackgroundJob, QueueBatch } from "./backgroundJobsQueue.ts";
+import { processBackgroundJobsBatch } from "./backgroundJobsQueue.ts";
+
+interface ExecutionContext {}
 import { withErrorHandling, optionsResponse, toEdgeResponse } from "./edge.ts";
 import { handlePing } from "./handlers/ping.ts";
 import { handleVersion } from "./handlers/version.ts";
 import { handleBootstrapSoul } from "./handlers/bootstrap-soul.ts";
+import { handleSyncMessages } from "./handlers/sync-messages.ts";
 import { handleSoulConverse } from "./handlers/soul-converse.ts";
 import { handleGetSoulFile } from "./handlers/get-soul-file.ts";
-import { handleEndSoulSession } from "./handlers/end-soul-session.ts";
-import { handleSynthesizeSoulFile } from "./handlers/synthesize-soul-file.ts";
 import { handleDeleteAccount } from "./handlers/delete-account.ts";
 import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
-import { handleGenerateReengagement } from "./handlers/generate-reengagement.ts";
+import { handleDebugDump } from "./handlers/debug-dump.ts";
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/+|\/+$/g, "");
 
@@ -35,22 +38,17 @@ export default {
           handleBootstrapSoul(sql, env, payload, req)
         );
 
+      case "sync-messages":
+        return withErrorHandling(request, (payload, req) =>
+          handleSyncMessages(sql, env, payload, req)
+        );
+
       case "soul-converse":
         return handleSoulConverse(sql, env, request);
 
       case "get-soul-file":
         return withErrorHandling(request, (payload, req) =>
-          handleGetSoulFile(sql, payload, req)
-        );
-
-      case "end-soul-session":
-        return withErrorHandling(request, (payload, req) =>
-          handleEndSoulSession(sql, env, payload, req)
-        );
-
-      case "synthesize-soul-file":
-        return withErrorHandling(request, (payload, req) =>
-          handleSynthesizeSoulFile(sql, env, payload, req)
+          handleGetSoulFile(sql, env, payload, req)
         );
 
       case "delete-account":
@@ -63,9 +61,9 @@ export default {
           handleGetDebugInfo(sql, payload, req)
         );
 
-      case "generate-reengagement":
+      case "debug-dump":
         return withErrorHandling(request, (payload, req) =>
-          handleGenerateReengagement(sql, env, payload, req)
+          handleDebugDump(sql, payload, req)
         );
 
       default:
@@ -74,5 +72,10 @@ export default {
           headers: { "Content-Type": "application/json" }
         });
     }
+  },
+
+  async queue(batch: QueueBatch<BackgroundJob>, env: Env): Promise<void> {
+    const sql = createSQL(env.DATABASE_URL);
+    await processBackgroundJobsBatch(sql, env, batch);
   }
 };

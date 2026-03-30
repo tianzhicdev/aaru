@@ -1,110 +1,163 @@
 {
-  "user_id": "17a751ed-a055-4200-9af5-fbb084286848",
   "version": 2,
-  "last_updated": "2026-03-27T17:33:03.09+00:00",
-  "confidence": "low",
-  "expert_reflections": {
-    "linguist": [
-      "Extensive use of musical metaphors indicates primary processing through auditory/kinesthetic channels",
-      "Hedging increases dramatically around core wounds ('I think,' 'maybe,' 'perhaps')"
+  "lastUpdated": "2026-03-30T00:28:46.698Z",
+  "confidence": "high",
+  "expertReflections": {
+    "psychologist": [
+      "Classic anxious-avoidant attachment pattern - desperately needs connection but withdraws to protect from rejection",
+      "Childhood obesity trauma created core belief of being fundamentally unacceptable, requiring constant management",
+      "Uses withdrawal/coldness as punishment when needs aren't met - passive-aggressive expression of suppressed anger",
+      "Piano represents only safe space for authentic self-expression without fear of judgment",
+      "Ministry role serves as socially acceptable container for managing perceived dangerous parts of self"
     ],
     "sociologist": [
-      "Positions self as wounded healer archetype - legitimizing presence through service to others",
-      "Strong identification with outsider/misfit children reflects own childhood isolation"
+      "Chose minister identity as ultimate 'safe' social position - beyond reproach, inherently gentle",
+      "Grandfather provided alternative model of belonging but not of being necessary/valued",
+      "Constructs identity around service to others to avoid facing own needs",
+      "Television work mentioned briefly - suggests public persona adds another layer of performance"
     ],
-    "psychologist": [
-      "Profound grief work emerging - transforming purpose from defense mechanism to authentic expression",
-      "Attachment wound from grandfather's loss drives compulsive helping behavior",
-      "Self-soothing through piano reveals sophisticated emotional regulation alongside avoidance patterns"
+    "linguist": [
+      "Heavy use of hedging: 'I think', 'maybe', 'if I'm being honest' - constant self-monitoring",
+      "Sophisticated metaphorical thinking: 'container', 'shrinking', 'managing' - intellectualizes emotion",
+      "Long, complex sentences with multiple qualifications - mirrors his layered self-protection",
+      "Shifts between past and present tense when discussing ongoing patterns - unresolved issues"
     ],
     "narrativeAnalyst": [
-      "Arc moves from helper/teacher role to vulnerable student discovering own unmet needs",
-      "Breakthrough moment: recognizing the boy as companion rather than problem to solve"
+      "Constructs narrative of transformation (shy boy to minister) that's actually sophisticated stasis",
+      "Positions self as both victim and potential perpetrator - deep identification with those who hurt him",
+      "Story arc leads to recognition of pattern but stops before action - insight without change",
+      "Wife emerges as potential resolution figure but fear prevents testing the possibility"
     ]
   },
-  "core_drivers": [
+  "coreDrivers": [
     {
-      "driver": "Earning belonging through service",
-      "evidence": "if it's just loneliness with no purpose... then what was it all for?",
+      "driver": "Need to matter/be necessary",
+      "strength": 0.95,
       "inferred": false,
-      "strength": 0.9
+      "evidence": "I need to matter to you too"
     },
     {
-      "driver": "Transforming pain into meaning",
-      "evidence": "I'm not sure I know how to be still with that boy without trying to fix him, without turning him into something good and useful",
+      "driver": "Fear of being truly seen",
+      "strength": 0.9,
       "inferred": false,
-      "strength": 0.85
+      "evidence": "I'm afraid that if I ask directly, I'll find out that I don't matter as much as I thought"
     },
     {
-      "driver": "Protecting others from loneliness",
-      "evidence": "I've spent my whole life trying to give other children what he gave me",
+      "driver": "Protecting others from his 'dangerous' self",
+      "strength": 0.85,
       "inferred": false,
-      "strength": 0.8
+      "evidence": "I realized in that moment that the thing I was most afraid of — that hard person inside me — was real"
     },
     {
-      "driver": "Fear of purposeless suffering",
-      "evidence": "Because if it's just pain, if it's just loneliness with no purpose... then what was it all for?",
+      "driver": "Creating safety for others",
+      "strength": 0.8,
       "inferred": false,
-      "strength": 0.75
+      "evidence": "I've spent so much time trying to help children feel accepted"
+    },
+    {
+      "driver": "Avoiding direct expression of needs",
+      "strength": 0.9,
+      "inferred": false,
+      "evidence": "asking directly feels too dangerous"
     }
   ],
-  "core_values": [
-    "Genuine presence",
-    "Unconditional acceptance",
-    "Patient witness",
-    "Emotional honesty",
-    "Gentle transformation"
+  "coreValues": [
+    "Gentleness/non-harm",
+    "Making others feel accepted",
+    "Service to others",
+    "Emotional safety",
+    "Authenticity (conflicted)"
   ],
   "voice": {
-    "density": "moderate",
     "register": "formal",
-    "humorStyle": "Absent in vulnerable states; likely gentle and self-deprecating when present",
-    "conflictStyle": "Internal processing through music; transforms anger into patience; avoids direct confrontation",
-    "voiceExamples": [
-      {
-        "trigger": "When touching grief",
-        "response": "Voice cracks, becomes whispered, needs physical distance (stands, walks to window)"
-      },
-      {
-        "trigger": "When recognized/seen",
-        "response": "Genuine gratitude mixed with surprise: 'That's... that changes something'"
-      }
-    ],
+    "density": "dense",
+    "humorStyle": "Self-deprecating, used to deflect from vulnerability",
+    "conflictStyle": "Withdrawal and coldness rather than direct confrontation",
     "disclosureRate": "gradual",
     "signaturePatterns": [
-      "Physical grounding gestures when emotional",
-      "Musical/auditory metaphors for emotional states",
-      "Circular return to core questions",
-      "Voice quieting near vulnerability"
+      "Qualifying statements: 'if that makes sense', 'if I'm being honest'",
+      "Complex metaphors for emotional states",
+      "Building to insight then pulling back: 'I'm not sure I can...'",
+      "Past-present tense shifts when discussing ongoing issues"
+    ],
+    "voiceExamples": [
+      {
+        "trigger": "When feeling unseen",
+        "response": "Withdraws, becomes cold, makes others feel punished through absence"
+      },
+      {
+        "trigger": "When asked about vulnerability",
+        "response": "Intellectualizes, explains the pattern but resists actual vulnerability"
+      },
+      {
+        "trigger": "When discussing his work/ministry",
+        "response": "Becomes more confident, speaks of purpose and meaning"
+      }
     ]
   },
-  "depth_map": {
-    "avoidEarly": [
-      "Direct questions about self-worth",
-      "Challenging the value of his life's work",
-      "His own unmet childhood needs"
-    ],
-    "unlockTopics": [
-      "His grandfather's influence",
-      "The relationship between loneliness and anger",
-      "What it means to be 'enough'"
-    ],
+  "depthMap": {
     "safeEntryPoints": [
       "His work with children",
-      "The role of music in his life",
-      "The concept of patience and how he developed it"
+      "Music and the piano",
+      "His grandfather's influence"
+    ],
+    "unlockTopics": [
+      "The contrast between exhaustion and aliveness",
+      "What 'home' means to him",
+      "The cost of constant vigilance"
+    ],
+    "avoidEarly": [
+      "Direct questions about his marriage",
+      "Challenging his ministry as avoidance",
+      "His weight/body image directly"
     ],
     "currentlyLiveTopics": [
-      "Learning to be with grief without transforming it",
-      "The boy as companion vs. problem",
-      "What happens if he stops proving he's enough"
+      "Whether to be vulnerable with his wife",
+      "The cost of never testing if he's lovable as he is",
+      "The difference between managing and transcending"
+    ],
+    "domainCoverage": [
+      {
+        "domain": "origins",
+        "depth": "deep",
+        "evidence": "Detailed discussion of grandfather's house, childhood obesity, school bullying"
+      },
+      {
+        "domain": "relationships",
+        "depth": "deep",
+        "evidence": "Complex discussion of marriage, fear of vulnerability with wife, pattern of withdrawal"
+      },
+      {
+        "domain": "work_and_purpose",
+        "depth": "explored",
+        "evidence": "Ministry as container for dangerous self, work with children, brief mention of television"
+      },
+      {
+        "domain": "values_and_beliefs",
+        "depth": "deep",
+        "evidence": "Extensive discussion of acceptance, being enough, creating safety for others"
+      },
+      {
+        "domain": "emotional_life",
+        "depth": "deep",
+        "evidence": "Detailed exploration of anger, coldness, withdrawal, exhaustion vs aliveness"
+      },
+      {
+        "domain": "growth_and_change",
+        "depth": "explored",
+        "evidence": "Recognition of patterns but resistance to change, fear of who he'd be without his story"
+      },
+      {
+        "domain": "aspirations",
+        "depth": "mentioned",
+        "evidence": "Implicit desire to live more like he does at piano, to be known and loved"
+      }
     ]
   },
-  "analyst_notes": [
-    "Subject shows exceptional capacity for insight once safe container established",
-    "Physical gestures (cardigan, piano) serve as transitional objects for emotional regulation",
-    "Breakthrough in session suggests readiness for deeper grief work",
-    "Meta-awareness of own patterns emerging - particularly around purpose as avoidance"
-  ],
-  "created_at": "2026-03-27T17:33:03.396414+00:00"
+  "analystNotes": [
+    "Extremely high psychological sophistication - can analyze his patterns with clarity but uses insight as defense against change",
+    "The conversation itself models his pattern - deep vulnerability with a 'safe' mirror that can't leave him",
+    "Strong therapeutic alliance despite (or because of) the AI context - uses safety to go deeper than usual",
+    "Ministry work appears to be both genuine calling and sophisticated avoidance strategy"
+  ]
 }

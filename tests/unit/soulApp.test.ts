@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock Claude module
 vi.mock("../../workers/src/claude.ts", () => ({
-  callClaude: vi.fn()
+  callClaude: vi.fn(),
+  streamClaude: vi.fn()
 }));
 
-// Mock db module to provide a mock sql function
 const mockSQL = vi.fn();
 vi.mock("../../workers/src/db.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../workers/src/db.ts")>();
@@ -16,105 +15,177 @@ vi.mock("../../workers/src/db.ts", async (importOriginal) => {
 });
 
 import {
-  getReflectionNote,
-  upsertReflectionNote,
-  getLastNMessages,
+  checkReflectionSnapshotNeeded,
+  checkSynthesisNeeded,
+  getHiddenSoulFile,
+  getLatestReflectionSnapshot,
+  getVisibleSoulFile,
+  markReflectionSnapshotPending,
+  markSynthesisFailed,
+  markSynthesisPending,
+  runReflectionSnapshot,
   runSoulSynthesis
 } from "../../workers/src/soulApp.ts";
-import { callClaude } from "../../workers/src/claude.ts";
+import { callClaude, streamClaude } from "../../workers/src/claude.ts";
 
-describe("getReflectionNote", () => {
+describe("reflection snapshots", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns null when no reflection note", async () => {
-    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
-
-    const note = await getReflectionNote(mockSQL, "user-1");
+  it("returns null when no snapshot exists", async () => {
+    mockSQL.mockResolvedValueOnce([]);
+    const note = await getLatestReflectionSnapshot(mockSQL, "user-1");
     expect(note).toBeNull();
   });
 
-  it("returns reflection note from users table", async () => {
-    const noteData = {
-      updatedAt: "2026-03-26",
-      factualAnchors: { job: "engineer" },
-      tensions: [],
-      recurringThemes: [],
-      notableAbsences: [],
-      emotionalArc: "",
-      domainCoverage: []
-    };
-    mockSQL.mockResolvedValueOnce([{ reflection_note: noteData }]);
+  it("parses the latest ready snapshot", async () => {
+    mockSQL.mockResolvedValueOnce([{
+      note: {
+        updatedAt: "2026-03-26",
+        factualAnchors: { job: "engineer" },
+        tensions: [],
+        recurringThemes: [],
+        notableAbsences: [],
+        emotionalArc: "",
+        domainCoverage: [],
+        recentAssistantQuestions: ["What are you avoiding?"],
+        openLoops: ["The job decision"]
+      }
+    }]);
 
-    const note = await getReflectionNote(mockSQL, "user-1");
-    expect(note).not.toBeNull();
-    expect(note!.factualAnchors["job"]).toBe("engineer");
-  });
-});
-
-describe("upsertReflectionNote", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const note = await getLatestReflectionSnapshot(mockSQL, "user-1");
+    expect(note?.factualAnchors.job).toBe("engineer");
+    expect(note?.recentAssistantQuestions).toContain("What are you avoiding?");
   });
 
-  it("updates users table with reflection note", async () => {
-    mockSQL.mockResolvedValueOnce([]);
+  it("flags snapshot work when transcript crossed a new 10-message block", async () => {
+    mockSQL.mockResolvedValueOnce([{ cnt: 23, last_created_at: "2026-03-29T20:00:00Z" }]);
+    mockSQL.mockResolvedValueOnce([{ status: "ready", through_message_count: 10, started_at: null }]);
 
-    const note = {
-      updatedAt: "2026-03-26",
-      factualAnchors: { job: "engineer" },
-      tensions: [],
-      recurringThemes: [],
-      notableAbsences: [],
-      emotionalArc: "",
-      domainCoverage: []
-    };
-    await upsertReflectionNote(mockSQL, "user-1", note);
+    const result = await checkReflectionSnapshotNeeded(mockSQL, "user-1");
+    expect(result.needed).toBe(true);
+    expect(result.pending).toBe(false);
+    expect(result.totalMessageCount).toBe(23);
+  });
 
+  it("marks reflection snapshot rows as pending", async () => {
+    mockSQL.mockResolvedValueOnce([{ user_id: "user-1" }]);
+    const claimed = await markReflectionSnapshotPending(
+      mockSQL,
+      "user-1",
+      20,
+      "2026-03-29T20:00:00Z"
+    );
+    expect(claimed).toBe(true);
     expect(mockSQL).toHaveBeenCalled();
   });
+
+  it("runs a reflection snapshot from all persisted messages", async () => {
+    mockSQL
+      .mockResolvedValueOnce([
+        { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26T00:00:00Z" },
+        { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26T00:01:00Z" },
+        { id: "m3", user_id: "user-1", role: "assistant", content: "What are the walls protecting?", created_at: "2026-03-26T00:02:00Z" },
+        { id: "m4", user_id: "user-1", role: "user", content: "My time.", created_at: "2026-03-26T00:03:00Z" },
+        { id: "m5", user_id: "user-1", role: "assistant", content: "What does losing time mean for you?", created_at: "2026-03-26T00:04:00Z" },
+        { id: "m6", user_id: "user-1", role: "user", content: "Being swallowed.", created_at: "2026-03-26T00:05:00Z" },
+        { id: "m7", user_id: "user-1", role: "assistant", content: "Where do you still feel free?", created_at: "2026-03-26T00:06:00Z" },
+        { id: "m8", user_id: "user-1", role: "user", content: "When I paint.", created_at: "2026-03-26T00:07:00Z" },
+        { id: "m9", user_id: "user-1", role: "assistant", content: "Why did you stop?", created_at: "2026-03-26T00:08:00Z" },
+        { id: "m10", user_id: "user-1", role: "user", content: "I got scared.", created_at: "2026-03-26T00:09:00Z" }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    vi.mocked(callClaude).mockResolvedValueOnce(JSON.stringify({
+      updatedAt: "2026-03-26T00:10:00Z",
+      factualAnchors: { art: "When I paint." },
+      tensions: ["Wants freedom but protects time with walls"],
+      recurringThemes: ["walls", "painting"],
+      notableAbsences: ["family"],
+      emotionalArc: "Guarded, then more direct",
+      domainCoverage: [],
+      recentAssistantQuestions: ["Why did you stop?"],
+      openLoops: ["Why painting feels dangerous now"]
+    }));
+
+    const note = await runReflectionSnapshot(mockSQL, "test-api-key", "user-1");
+    expect(note).not.toBeNull();
+    expect(note?.openLoops).toContain("Why painting feels dangerous now");
+  });
 });
 
-describe("getLastNMessages", () => {
+describe("visible/hidden soul files", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns messages in chronological order", async () => {
-    const messages = [
-      { id: "m2", user_id: "u1", role: "user", content: "second", created_at: "2026-03-26T00:01:00Z" },
-      { id: "m1", user_id: "u1", role: "assistant", content: "first", created_at: "2026-03-26T00:00:00Z" }
-    ];
-    mockSQL.mockResolvedValueOnce(messages);
+  it("normalizes hidden soul file timestamps and partial depth maps", async () => {
+    const timestamp = new Date("2026-03-29T20:00:00.000Z");
+    mockSQL.mockResolvedValueOnce([{
+      user_id: "user-1",
+      version: 1,
+      last_updated: timestamp,
+      confidence: "low",
+      expert_reflections: {},
+      core_drivers: [],
+      core_values: [],
+      voice: {},
+      depth_map: {
+        safeEntryPoints: ["work"],
+        unlockTopics: ["family distance"]
+      },
+      analyst_notes: []
+    }]);
 
-    const result = await getLastNMessages(mockSQL, "u1", 10);
-    // Should be reversed to chronological order
-    expect(result[0].content).toBe("first");
-    expect(result[1].content).toBe("second");
+    const file = await getHiddenSoulFile(mockSQL, "user-1");
+    expect(file?.lastUpdated).toBe(timestamp.toISOString());
+    expect(file?.depthMap.safeEntryPoints).toEqual(["work"]);
+    expect(file?.depthMap.currentlyLiveTopics).toEqual([]);
+  });
+
+  it("normalizes visible soul file timestamps", async () => {
+    const timestamp = new Date("2026-03-29T20:00:00.000Z");
+    mockSQL.mockResolvedValueOnce([{
+      user_id: "user-1",
+      version: 1,
+      last_updated: timestamp,
+      portrait: "Test",
+      how_you_move: "",
+      how_you_think: "",
+      how_you_connect: "",
+      what_you_carry: "",
+      what_lights_you_up: "",
+      your_contradictions: "",
+      your_voice: "",
+      crystallized_moments: [],
+      open_threads: [],
+      compass_scores: {}
+    }]);
+
+    const file = await getVisibleSoulFile(mockSQL, "user-1");
+    expect(file?.lastUpdated).toBe(timestamp.toISOString());
   });
 });
 
-describe("runSoulSynthesis", () => {
+describe("soul synthesis", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("runs full synthesis using all messages and returns merged files", async () => {
-    // getAllSoulMessages
-    mockSQL.mockResolvedValueOnce([
-      { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
-      { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
-    ]);
-    // getVisibleSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-    // getHiddenSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-    // getReflectionNote
-    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
-
-    // upsertVisibleSoulFile + upsertHiddenSoulFile calls
-    mockSQL.mockResolvedValue([]);
+  it("runs full synthesis using all messages and latest reflection snapshot", async () => {
+    mockSQL
+      .mockResolvedValueOnce([
+        { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
+        { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ note: null }])
+      .mockResolvedValue([])
+      .mockResolvedValue([]);
 
     const visible = {
       version: 1,
@@ -137,35 +208,55 @@ describe("runSoulSynthesis", () => {
       analystNotes: ["Session 1 analysis"]
     };
 
-    vi.mocked(callClaude).mockResolvedValueOnce(
-      JSON.stringify(visible) + "\n<<<SPLIT>>>\n" + JSON.stringify(hidden)
-    );
+    const synthesisOutput = JSON.stringify(visible) + "\n<<<SPLIT>>>\n" + JSON.stringify(hidden);
+    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+      yield synthesisOutput;
+    })());
 
     const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
 
-    expect(result.visible).not.toBeNull();
-    expect(result.visible!.portrait).toBe("A synthesized soul");
-    expect(result.hidden).not.toBeNull();
-    expect(result.hidden!.expertReflections.psychologist).toContain("Avoidant");
+    expect(result.visible?.portrait).toBe("A synthesized soul");
+    expect(result.hidden?.expertReflections.psychologist).toContain("Avoidant");
   });
 
   it("handles synthesis failure gracefully", async () => {
-    // getAllSoulMessages
-    mockSQL.mockResolvedValueOnce([
-      { id: "m1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
-    ]);
-    // getVisibleSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-    // getHiddenSoulFile
-    mockSQL.mockResolvedValueOnce([]);
-    // getReflectionNote
-    mockSQL.mockResolvedValueOnce([{ reflection_note: null }]);
+    mockSQL
+      .mockResolvedValueOnce([
+        { id: "m1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
-    vi.mocked(callClaude).mockRejectedValueOnce(new Error("API error"));
+    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+      throw new Error("API error");
+    })());
 
     const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
-
     expect(result.visible).toBeNull();
     expect(result.hidden).toBeNull();
+  });
+});
+
+describe("synthesis status helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns pending true when a non-stale pending synthesis exists", async () => {
+    mockSQL.mockResolvedValueOnce([{ synthesis_started_at: new Date().toISOString() }]);
+    const result = await checkSynthesisNeeded(mockSQL, "user-1");
+    expect(result.needed).toBe(false);
+    expect(result.pending).toBe(true);
+  });
+
+  it("marks synthesis rows pending and failed", async () => {
+    mockSQL.mockResolvedValueOnce([{ user_id: "user-1" }]);
+    const claimed = await markSynthesisPending(mockSQL, "user-1");
+    expect(claimed).toBe(true);
+
+    mockSQL.mockResolvedValueOnce([]);
+    await markSynthesisFailed(mockSQL, "user-1");
+    expect(mockSQL).toHaveBeenCalled();
   });
 });

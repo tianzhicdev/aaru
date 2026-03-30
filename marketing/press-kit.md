@@ -24,8 +24,8 @@ Thumos is not therapy, not a chatbot companion, and not a personality test. It's
 - **Platform**: iOS 17+
 - **Price**: Free
 - **AI**: Claude by Anthropic (Opus 4 + Haiku 4.5)
-- **Website**: trythumos.com/thumos
-- **Contact**: [support email]
+- **Website**: trythumos.com
+- **Contact**: support@trythumos.com
 
 ## Positioning
 | What Thumos is | What Thumos is NOT |

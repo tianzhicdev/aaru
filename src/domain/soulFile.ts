@@ -72,41 +72,46 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
 }
 
 
-// ── Reflection Prompt (runs mid-conversation at REFLECTION_INTERVAL) ──
+// ── Reflection Prompt (runs async from the full transcript) ──
 
 export function buildReflectionPrompt(
   messages: Array<{ role: string; content: string }>,
   existingNote: ReflectionNote | null,
-  exchangeCount: number
+  messageCount: number
 ): string {
   const transcript = messages
     .map((m) => `${m.role === "assistant" ? "Thumos" : "User"}: ${m.content}`)
     .join("\n");
 
   const existingContext = existingNote
-    ? `\nPrevious reflection note:\n${JSON.stringify(existingNote, null, 2)}`
+    ? `\nPrevious reflection snapshot:\n${JSON.stringify(existingNote, null, 2)}`
     : "\nNo previous reflection note — this is the first reflection.";
 
-  return `You are analyzing a soul mirror conversation in progress. Create a running synthesis of what you've observed so far.
+  return `You are analyzing the full transcript of a soul mirror conversation history. Create a concise reflection snapshot grounded in the raw transcript. The transcript is the source of truth.
 
-Current exchange count: ${exchangeCount}
+Current message count: ${messageCount}
 ${existingContext}
 
 Transcript:
 ${transcript}
 
 Output a JSON object with these fields:
-- "updatedAtExchange": ${exchangeCount}
+- "updatedAt": "${new Date().toISOString()}"
 - "factualAnchors": object of key→verbatim quote pairs. Things they stated as facts about themselves (job, location, relationships, experiences). Use their exact words as values.
 - "tensions": array of strings. Observed contradictions or pulls in different directions. E.g. "Says they love solitude but their happiest memory involves a crowd."
 - "recurringThemes": array of strings. Topics or patterns that keep resurfacing.
 - "notableAbsences": array of strings. Things a person like this would usually mention but hasn't. Significant silences.
 - "emotionalArc": string. How their emotional state has shifted across the conversation so far. One or two sentences.
+- "domainCoverage": array with ALL 7 domains, each including domain, depth, and evidence.
+- "recentAssistantQuestions": array of the last few distinct reflective questions Thumos has already asked. Keep them concise and deduplicated.
+- "openLoops": array of unresolved threads that would make sense to revisit without repeating yourself.
 
 Rules:
-- If updating an existing note, EVOLVE it — don't start over. Add new anchors, note new tensions, track theme evolution.
+- If updating an existing note, EVOLVE it, but correct it whenever the transcript shows it is wrong.
 - Keep factualAnchors to verbatim quotes, not paraphrases.
 - Maximum 5 tensions, 5 themes, 3 absences.
+- Maximum 6 recentAssistantQuestions and 6 openLoops.
+- Do not invent facts that are not in the transcript.
 - Respond with ONLY valid JSON, no markdown, no explanation.`;
 }
 
@@ -413,7 +418,9 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
       recurringThemes: [],
       notableAbsences: [],
       emotionalArc: "",
-      domainCoverage: []
+      domainCoverage: [],
+      recentAssistantQuestions: [],
+      openLoops: []
     };
 
     if (typeof parsed.factualAnchors === "object" && parsed.factualAnchors !== null && !Array.isArray(parsed.factualAnchors)) {
@@ -450,6 +457,20 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
     }
 
     note.domainCoverage = parseDomainCoverage(parsed.domainCoverage);
+
+    if (Array.isArray(parsed.recentAssistantQuestions)) {
+      note.recentAssistantQuestions = parsed.recentAssistantQuestions
+        .filter((q: unknown) => typeof q === "string")
+        .slice(0, 6)
+        .map((q: string) => q.slice(0, 300));
+    }
+
+    if (Array.isArray(parsed.openLoops)) {
+      note.openLoops = parsed.openLoops
+        .filter((q: unknown) => typeof q === "string")
+        .slice(0, 6)
+        .map((q: string) => q.slice(0, 300));
+    }
 
     return note;
   } catch {

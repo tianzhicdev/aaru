@@ -30,22 +30,25 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 │  │   Route Handlers     │  │   Neon Postgres     │ │
 │  │                      │  │                     │ │
 │  │  bootstrap-soul      │  │  users              │ │
-│  │  soul-converse (SSE) │  │  device_sessions    │ │
-│  │  get-soul-file       │  │  soul_messages      │ │
-│  │  end-soul-session*   │  │  visible_soul_files │ │
-│  │  synthesize-soul-file│  │  hidden_soul_files  │ │
-│  │  generate-reengagement│ │                     │ │
-│  │  delete-account      │  │                     │ │
-│  └──────────┬───────────┘  └────────────────────┘ │
+│  │  sync-messages       │  │  device_sessions    │ │
+│  │  soul-converse (SSE) │  │  soul_messages      │ │
+│  │  get-soul-file       │  │  reflection_snapshots│ │
+│  │  debug-dump          │  │  visible_soul_files │ │
+│  │  delete-account      │  │  hidden_soul_files  │ │
+│  └──────────┬───────────┘  │  claude_debug_traces│ │
+│             │              └────────────────────┘ │
+│             ▼                                      │
+│       Cloudflare Queue                             │
+│   (reflection snapshots + synthesis)              │
 └─────────────┼────────────────────────────────────────┘
-              │              * deprecated no-op
+              │
     ┌─────────┴──────────┐
     ▼                    ▼
 ┌────────┐        ┌───────────┐
 │ Claude │        │  Claude   │
 │ Opus 4 │        │ Haiku 4.5 │
 │(convo, │        │(reflection│
-│ synth) │        │ re-engage)│
+│ synth) │        │ snapshots)│
 └────────┘        └───────────┘
 ```
 
@@ -57,8 +60,8 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 | Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (`src/domain/`), Zod validation |
 | Soul Mirror LLM | Claude Opus 4 (conversation + synthesis) |
-| Extraction LLM | Claude Haiku 4.5 (reflection + re-engagement) |
-| Tests | Vitest (75 TS tests), XCTest (Swift) |
+| Extraction LLM | Claude Haiku 4.5 (reflection snapshots) |
+| Tests | Vitest (88 TS tests), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
 ---
@@ -68,35 +71,36 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 ```
 thumos/
 ├── src/domain/              # Pure TypeScript domain logic
-│   ├── constants.ts         # SOFT_SESSION_GAP_MS
 │   ├── schemas.ts           # Zod validation schemas
-│   ├── soul.ts              # Soul Mirror prompts + conversation logic
-│   ├── soulFile.ts          # Soul file extraction, 4-expert synthesis, merging
-│   └── reengagement.ts      # Personalized re-engagement question generation
-├── src/lib/                 # Utilities (env, http)
+│   ├── soul.ts              # Soul Mirror prompts + opening flow + steering
+│   └── soulFile.ts          # Reflection prompt + soul file synthesis + merging
+├── src/lib/                 # Utilities (http)
+├── db/                      # Neon schema + SQL migrations
+│   ├── schema.sql           # Current schema snapshot
+│   └── migrations/          # Ordered schema changes
 ├── workers/src/             # Cloudflare Workers API
 │   ├── index.ts             # Raw fetch() router
 │   ├── env.ts               # Env interface
 │   ├── db.ts                # Neon serverless driver + user/session CRUD
 │   ├── auth.ts              # HMAC SHA-256 session tokens
 │   ├── claude.ts            # Anthropic API wrapper (streaming + completion)
-│   ├── soulApp.ts           # Soul message CRUD + synthesis logic
+│   ├── soulApp.ts           # Soul message CRUD + reflection/synthesis logic
+│   ├── backgroundJobsQueue.ts # Queue producer/consumer helpers
+│   ├── debugTraces.ts       # Last-3 Claude traces per user/kind
 │   ├── edge.ts              # CORS + SSE headers + error handling
 │   └── handlers/
 │       ├── bootstrap-soul.ts       # User bootstrap + device session creation
-│       ├── soul-converse.ts        # SSE streaming soul conversations
-│       ├── get-soul-file.ts        # Fetch visible soul file
-│       ├── end-soul-session.ts     # Deprecated no-op (backward compat)
-│       ├── synthesize-soul-file.ts # Full 4-expert soul file synthesis
-│       ├── generate-reengagement.ts # On-demand Haiku re-engagement question
+│       ├── sync-messages.ts        # Full canonical transcript sync
+│       ├── soul-converse.ts        # SSE streaming soul conversations + opening mode
+│       ├── get-soul-file.ts        # Fetch soul file + trigger async synthesis
+│       ├── debug-dump.ts           # Raw debug state + latest Claude traces
 │       ├── delete-account.ts       # Cascade delete user
 │       ├── get-debug-info.ts       # Debug endpoint
 │       └── ping.ts, version.ts     # Health check + version gate
-├── supabase/migrations/     # Postgres migration SQL (run manually against Neon)
 ├── Thumos/                  # iOS client
 │   └── App/
 │       ├── ThumosApp.swift              # Entry point
-│       ├── AppModel.swift               # @MainActor state manager + reengagement
+│       ├── AppModel.swift               # @MainActor state manager + transcript sync
 │       ├── Models.swift                 # Codable data types
 │       ├── BackendClient.swift          # HTTP + SSE client + fallback mode
 │       ├── NotificationManager.swift    # Local notification scheduling
@@ -107,7 +111,7 @@ thumos/
 │       └── SecureStore.swift            # Keychain wrapper
 ├── ThumosTests/             # XCTest unit tests
 ├── tests/
-│   ├── unit/                # Domain logic tests (75 tests)
+│   ├── unit/                # Domain logic tests (88 tests)
 │   └── integration/         # Handler tests
 ├── VISION.md                # Product vision (human-only, immutable)
 ├── CLAUDE.md                # Claude Code operating rules
@@ -121,7 +125,7 @@ thumos/
 
 ```
 users
-  │ id, device_id, display_name, last_active_at, reflection_note (JSONB)
+  │ id, device_id, display_name, last_active_at
   │
   ├──▶ device_sessions
   │      id, user_id, device_id, token_hash, expires_at
@@ -129,20 +133,31 @@ users
   ├──▶ soul_messages
   │      id, user_id, role (user/assistant), content, created_at
   │
+  ├──▶ reflection_snapshots
+  │      user_id (PK), through_message_count, through_last_message_created_at
+  │      note (JSONB), status (ready|pending|failed), started_at, last_error
+  │
   ├──▶ visible_soul_files (user-facing, "accurate and loving")
   │      user_id (PK), version, last_updated
+  │      status (ready|pending|failed), synthesis_started_at
   │      portrait (2-4 sentence novel-like description)
   │      sections: {howYouMove, howYouThink, howYouConnect,
   │                 whatYouCarry, whatLightsYouUp, yourContradictions, yourVoice}
   │      crystallized_moments: [{quote, reflection}]
   │      open_threads: [string]
+  │      compass_scores: {axis: score|null}
   │
   └──▶ hidden_soul_files (agent-facing, clinical)
          user_id (PK), version, last_updated
+         status (ready|pending|failed), synthesis_started_at
          confidence (low|medium|high)
          expert_reflections: {psychologist, sociologist, linguist, narrativeAnalyst}
-         coreDrivers: [{name, strength 0-1, inferred, evidence}]
+         coreDrivers: [{driver, strength 0-1, inferred, evidence}]
          coreValues, voice, depthMap, analystNotes
+  │
+  └──▶ claude_debug_traces
+         id, user_id, trace_kind (conversation|synthesis|reflection)
+         model, system_prompt, input_messages, raw_response, meta, created_at
 ```
 
 Messages belong directly to users — no session grouping. The conversation is continuous and unbounded.
@@ -155,7 +170,7 @@ Sessions are an **implementation detail**, not a user-facing concept. The user s
 
 - **No explicit session boundaries in the UI.** The conversation is one continuous stream.
 - **AI suggests breaks.** When the conversation reaches a natural resting point, the AI gently suggests the user take a break ("That's a lot to sit with. Take your time — I'll be here."). The user can ignore this and keep going.
-- **Synthesis happens on demand.** Soul file updates are triggered by the user (via synthesize-soul-file), not at session boundaries.
+- **Synthesis is async.** When `/get-soul-file` detects new messages, it atomically claims pending synthesis, enqueues a Cloudflare Queue job, and returns the existing soul file immediately. The next poll picks up the result.
 
 ---
 
@@ -166,11 +181,14 @@ App opens → RootView → SoulMirrorTabView
   │
   ├─ .task { bootstrapSoul() }
   │    POST /bootstrap-soul {device_id}
-  │    → Returns: userId, token, visibleSoulFile, recent messages
+  │    → Returns: userId, token, visibleSoulFile, hasMessages
   │
-  ├─ If returning user with no active conversation:
-  │    POST /generate-reengagement
-  │    → Haiku-generated personalized question shown as AI's opening
+  ├─ POST /sync-messages
+  │    → Returns full canonical transcript from soul_messages
+  │
+  ├─ If conversation should resume:
+  │    POST /soul-converse {"mode":"opening"}
+  │    → Server generates and persists the assistant opener
   │
   ▼
 User types message → sendSoulMessage(text)
@@ -179,16 +197,20 @@ User types message → sendSoulMessage(text)
 POST /soul-converse (SSE streaming)
   │
   ├─ Auth: validate x-thumos-session token
-  ├─ Save user message to soul_messages
+  ├─ For `mode: "reply"`: save user message to soul_messages
+  ├─ For `mode: "opening"`:
+  │    - first ever opener if no messages exist
+  │    - resume-after-gap opener if last message is older than 1 hour
+  │    - otherwise continue the existing thread naturally
   │
   ├─ Build context:
-  │   {visibleSoulFile, hiddenSoulFile, reflectionNote,
-  │    recentMessages (last 10), steering (from depthMap)}
+  │   {visibleSoulFile, latestReflectionSnapshot, allPersistedMessages, steering}
   │
   ├─ buildSoulSystemPrompt(context)
-  │   "You are a mirror... notice contradictions...
-  │    quote the user back... 2-4 sentences..."
-  │   Includes <<<MEMORY>>> section for inline reflection updates
+  │   - full transcript is authoritative
+  │   - latest reflection snapshot is optional advisory context
+  │   - explicit anti-repeat rules
+  │   - opening instructions when applicable
   │
   ├─ streamClaude(prompt, messages)
   │   │ Claude Opus 4, maxTokens: 1024, temp: 0.8
@@ -199,32 +221,52 @@ POST /soul-converse (SSE streaming)
   │     → soulStreamingText += token (real-time)
   │
   ├─ Save assistant message
-  │
-  └─ If <<<MEMORY>>> marker found in response:
-       Parse reflection note → upsert to users.reflection_note
+  ├─ Record latest conversation Claude trace
+  └─ If transcript crossed a 10-message boundary:
+       enqueue async reflection snapshot job
+
+Prompt files to inspect directly:
+- `src/domain/soul.ts` — main conversation system prompt, opening flow, steering logic, anti-repeat rules
+- `src/domain/soulFile.ts` — reflection snapshot prompt + full soul file synthesis prompt
 ```
 
-### Full Synthesis (user-triggered)
+### Background Jobs (queue-backed)
 
 ```
-POST /synthesize-soul-file
+GET /get-soul-file
   │
-  ├─ Fetch ALL messages for user
+  ├─ Return existing visible soul file immediately
   │
-  ├─ buildSoulSynthesisPrompt() → Claude Opus 4 (8192 tokens)
-  │   4-pass expert analysis:
-  │     1. Psychologist — attachment patterns, defense mechanisms, growth edges
-  │     2. Sociologist — social positioning, identity signals, cultural context
-  │     3. Linguist — speech patterns, vocabulary density, hedging/humor
-  │     4. Narrative Analyst — story arcs, metaphors, what's unsaid
+  ├─ checkSynthesisNeeded() — are there new messages since last synthesis?
+  │   Also checks: ≥3 user messages, no stale pending (>15 min = failed)
   │
-  ├─ Output: VisibleSoulFile + HiddenSoulFile separated by <<<SPLIT>>>
+  ├─ If needed: markSynthesisPending() + enqueue background job
+  │   Response includes synthesis_pending: true
   │
-  ├─ mergeVisibleSoulFile() — user-facing, "accurate and loving"
-  ├─ mergeHiddenSoulFile() — agent-facing, clinical
-  │
-  └─ Upsert both to database
+  └─ Queue consumer:
+       ├─ Reflection snapshot jobs:
+       │   ├─ Fetch ALL messages for user
+       │   ├─ Every 10 total messages, buildReflectionPrompt()
+       │   ├─ Claude Haiku 4.5
+       │   └─ Upsert reflection_snapshots.note with status = 'ready'
+       │
+       └─ Soul synthesis jobs:
+           ├─ Fetch ALL messages for user
+           ├─ Load latest ready reflection snapshot
+           ├─ buildSoulSynthesisPrompt() → Claude Opus 4 (8192 tokens)
+       │   4-pass expert analysis:
+       │     1. Psychologist — attachment patterns, defense mechanisms, growth edges
+       │     2. Sociologist — social positioning, identity signals, cultural context
+       │     3. Linguist — speech patterns, vocabulary density, hedging/humor
+       │     4. Narrative Analyst — story arcs, metaphors, what's unsaid
+       │
+           ├─ Output: VisibleSoulFile + HiddenSoulFile separated by <<<SPLIT>>>
+           ├─ mergeVisibleSoulFile() — user-facing, "accurate and loving"
+           ├─ mergeHiddenSoulFile() — agent-facing, clinical
+           └─ Upsert both to database with status = 'ready'
 ```
+
+iOS polls `/get-soul-file` every 60s on the Soul File tab. The soul file "appears" when ready — no timeout, no blocking.
 
 ---
 
@@ -291,10 +333,9 @@ Device-based anonymous auth:
 
 | Use Case | Provider | Model | Streaming | Tokens | Fallback |
 |----------|----------|-------|-----------|--------|----------|
-| Soul conversation | Claude | Opus 4 | SSE | 1024 | Deterministic reflection prompts |
-| Inline reflection | Claude | Opus 4 | SSE (hidden) | part of convo | Skip reflection |
+| Soul conversation | Claude | Opus 4 | SSE | 1024 | Deterministic reflective fallback |
+| Reflection snapshot | Claude | Haiku 4.5 | No | 1400 | Skip snapshot |
 | Full synthesis | Claude | Opus 4 | No | 8192 | Skip synthesis |
-| Re-engagement | Claude | Haiku 4.5 | No | 256 | 12 fallback questions |
 
 All LLM calls have deterministic fallbacks. Tests pass without API keys.
 
@@ -303,7 +344,7 @@ All LLM calls have deterministic fallbacks. Tests pass without API keys.
 ## Testing
 
 ```bash
-# TypeScript (75 tests, no API keys needed)
+# TypeScript (88 tests, no API keys needed)
 npx vitest run
 
 # Type checking
@@ -328,7 +369,7 @@ xcodebuild test -scheme Thumos \
 cd workers && wrangler deploy
 ```
 
-Active endpoints: ping, version, bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, generate-reengagement, delete-account, get-debug-info
+Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, delete-account, get-debug-info, debug-dump
 
 ### Required Secrets
 

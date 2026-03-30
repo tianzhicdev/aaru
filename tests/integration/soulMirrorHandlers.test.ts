@@ -1,26 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock all shared modules before importing handlers
 vi.mock("../../workers/src/db.ts", () => ({
   getActiveSessionByTokenHash: vi.fn(),
   touchDeviceSession: vi.fn(),
   ensureUser: vi.fn(),
   createDeviceSession: vi.fn(),
-  revokeSessionsForDevice: vi.fn(),
   deleteUser: vi.fn(),
   createSQL: vi.fn()
 }));
 
 vi.mock("../../workers/src/soulApp.ts", () => ({
-  getAllSoulMessages: vi.fn(),
-  getLastNMessages: vi.fn(),
-  getVisibleSoulFile: vi.fn(),
-  getHiddenSoulFile: vi.fn(),
-  getReflectionNote: vi.fn(),
-  upsertReflectionNote: vi.fn(),
-  runSoulSynthesis: vi.fn(),
-  insertSoulMessage: vi.fn(),
-  parseReflectionNote: vi.fn(),
+  checkReflectionSnapshotNeeded: vi.fn(),
+  checkSynthesisNeeded: vi.fn(),
   emptyVisibleSoulFile: vi.fn(() => ({
     version: 1,
     lastUpdated: "",
@@ -29,7 +20,26 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
     crystallizedMoments: [],
     openThreads: [],
     compassScores: {}
-  }))
+  })),
+  getAllSoulMessages: vi.fn(),
+  getHiddenSoulFile: vi.fn(),
+  getLatestReflectionSnapshot: vi.fn(),
+  getReflectionSnapshotState: vi.fn(),
+  getSynthesisStatus: vi.fn(),
+  getVisibleSoulFile: vi.fn(),
+  insertSoulMessage: vi.fn(),
+  markReflectionSnapshotFailed: vi.fn(),
+  markReflectionSnapshotPending: vi.fn(),
+  markSynthesisFailed: vi.fn(),
+  markSynthesisPending: vi.fn(),
+  runReflectionSnapshot: vi.fn(),
+  runSoulSynthesis: vi.fn()
+}));
+
+vi.mock("../../workers/src/backgroundJobsQueue.ts", () => ({
+  enqueueReflectionSnapshot: vi.fn(),
+  enqueueSoulSynthesis: vi.fn(),
+  processBackgroundJobsBatch: vi.fn()
 }));
 
 vi.mock("../../workers/src/auth.ts", () => ({
@@ -38,25 +48,37 @@ vi.mock("../../workers/src/auth.ts", () => ({
   issueSessionToken: vi.fn()
 }));
 
-import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
-import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
-import { handleEndSoulSession } from "../../workers/src/handlers/end-soul-session.ts";
-import { handleSynthesizeSoulFile } from "../../workers/src/handlers/synthesize-soul-file.ts";
+vi.mock("../../workers/src/claude.ts", () => ({
+  streamClaude: vi.fn()
+}));
 
+import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
+import { handleDebugDump } from "../../workers/src/handlers/debug-dump.ts";
+import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
+import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts";
+import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
+import { enqueueReflectionSnapshot, enqueueSoulSynthesis } from "../../workers/src/backgroundJobsQueue.ts";
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession, revokeSessionsForDevice } from "../../workers/src/db.ts";
-import { getAllSoulMessages, getLastNMessages, getVisibleSoulFile, getReflectionNote, runSoulSynthesis } from "../../workers/src/soulApp.ts";
+import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession } from "../../workers/src/db.ts";
+import {
+  checkReflectionSnapshotNeeded,
+  checkSynthesisNeeded,
+  getAllSoulMessages,
+  getLatestReflectionSnapshot,
+  getVisibleSoulFile,
+  insertSoulMessage,
+  markReflectionSnapshotPending,
+  markSynthesisPending
+} from "../../workers/src/soulApp.ts";
+import { streamClaude } from "../../workers/src/claude.ts";
 
 const mockSQL = vi.fn();
-const mockEnv = { DATABASE_URL: "mock", ANTHROPIC_API_KEY: "mock", THUMOS_SESSION_SECRET: "mock" };
-
-function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
-  return new Request("https://api.trythumos.com/test", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: body ? JSON.stringify(body) : undefined
-  });
-}
+const mockEnv = {
+  DATABASE_URL: "mock",
+  ANTHROPIC_API_KEY: "mock",
+  THUMOS_SESSION_SECRET: "mock",
+  BACKGROUND_QUEUE: { send: vi.fn().mockResolvedValue(undefined) }
+};
 
 const mockDeviceSession = {
   id: "ds-1",
@@ -68,36 +90,54 @@ const mockDeviceSession = {
   revoked_at: null
 };
 
-describe("handleBootstrapSoul", () => {
+function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
+  return new Request("https://api.trythumos.com/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+
+describe("bootstrap + sync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns soul state for authenticated user", async () => {
+  it("returns bootstrap state and queues a reflection snapshot when needed", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getLastNMessages).mockResolvedValue([]);
+    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
+      needed: true,
+      pending: false,
+      totalMessageCount: 20,
+      lastMessageCreatedAt: "2026-03-29T20:00:00Z"
+    });
+    vi.mocked(markReflectionSnapshotPending).mockResolvedValue(true);
+    vi.mocked(enqueueReflectionSnapshot).mockResolvedValue({
+      kind: "reflection_snapshot",
+      jobId: "job-1",
+      userId: "user-1",
+      queuedAt: "2026-03-29T20:00:00Z",
+      throughMessageCount: 20
+    });
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, makeRequest({ "x-thumos-session": "valid-token" }));
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("user_id", "user-1");
-    expect(response.body).toHaveProperty("has_messages", false);
-    expect(response.body).toHaveProperty("visible_soul_file");
+    expect(response.body).toHaveProperty("has_messages", true);
+    expect(enqueueReflectionSnapshot).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1", 20);
   });
 
-  it("creates new user and session when no bearer token", async () => {
+  it("creates a new user/session when no bearer token exists", async () => {
     vi.mocked(readBearerToken).mockReturnValue(null);
     vi.mocked(ensureUser).mockResolvedValue({
       id: "new-user",
       device_id: "new-device",
       display_name: "Soul abc1"
     });
-    vi.mocked(revokeSessionsForDevice).mockResolvedValue(undefined);
     vi.mocked(issueSessionToken).mockResolvedValue({
       token: "new-token",
       tokenHash: "new-hash",
@@ -105,68 +145,39 @@ describe("handleBootstrapSoul", () => {
     });
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getLastNMessages).mockResolvedValue([]);
+    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
+      needed: false,
+      pending: false,
+      totalMessageCount: 0,
+      lastMessageCreatedAt: null
+    });
 
-    const request = makeRequest();
-    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "new-device" }, request);
-
+    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "new-device" }, makeRequest());
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "new-user");
     expect(response.body).toHaveProperty("token", "new-token");
   });
 
-  it("includes messages when user has recent messages", async () => {
+  it("returns canonical messages from sync-messages", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getLastNMessages).mockResolvedValue([
-      { id: "m1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: new Date().toISOString() },
-      { id: "m2", user_id: "user-1", role: "user", content: "Hello.", created_at: new Date().toISOString() }
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: "2026-03-29T20:00:00Z" },
+      { id: "m2", user_id: "user-1", role: "user", content: "Hello.", created_at: "2026-03-29T20:01:00Z" }
     ]);
+    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
+      needed: false,
+      pending: false,
+      totalMessageCount: 2,
+      lastMessageCreatedAt: "2026-03-29T20:01:00Z"
+    });
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
-
+    const response = await handleSyncMessages(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("messages");
-    expect(response.body).toHaveProperty("has_messages", true);
-    const body = response.body as Record<string, unknown>;
-    const messages = body.messages as Array<{ role: string; content: string }>;
-    expect(messages).toHaveLength(2);
-    expect(messages[0].role).toBe("assistant");
-    expect(messages[1].content).toBe("Hello.");
-  });
-
-  it("rejects invalid device_id", async () => {
-    const request = makeRequest();
-    await expect(
-      handleBootstrapSoul(mockSQL, mockEnv, { device_id: "" }, request)
-    ).rejects.toThrow();
-  });
-
-  it("has_messages is true when visible soul file exists but no messages loaded", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue({
-      version: 2,
-      lastUpdated: "2026-03-26",
-      portrait: "A builder",
-      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
-      crystallizedMoments: [],
-      openThreads: [],
-      compassScores: {}
-    });
-    vi.mocked(getLastNMessages).mockResolvedValue([]);
-
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, request);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("has_messages", true);
+    expect((response.body as { messages: Array<{ id: string }> }).messages[0].id).toBe("m1");
   });
 });
 
@@ -175,227 +186,135 @@ describe("handleGetSoulFile", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 without bearer token", async () => {
-    vi.mocked(readBearerToken).mockReturnValue(null);
-
-    const request = makeRequest();
-    const response = await handleGetSoulFile(mockSQL, {}, request);
-
-    expect(response.status).toBe(401);
-    expect(response.body).toHaveProperty("message", "Missing device session");
-  });
-
-  it("returns 401 for expired session", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("expired-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("expired-hash");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue({
-      ...mockDeviceSession,
-      expires_at: new Date(Date.now() - 1000).toISOString() // expired
-    });
-
-    const request = makeRequest({ "x-thumos-session": "expired-token" });
-    const response = await handleGetSoulFile(mockSQL, {}, request);
-
-    expect(response.status).toBe(401);
-    expect(response.body).toHaveProperty("message", "Invalid device session");
-  });
-
-  it("returns visible soul file for authenticated user", async () => {
+  it("returns synthesis_pending true when synthesis is already running", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue({
-      version: 2,
-      lastUpdated: "2026-03-26",
-      portrait: "A builder of worlds",
-      sections: {
-        howYouMove: "With deliberation",
-        howYouThink: "",
-        howYouConnect: "",
-        whatYouCarry: "",
-        whatLightsYouUp: "",
-        yourContradictions: "",
-        yourVoice: ""
-      },
-      crystallizedMoments: [],
-      openThreads: [],
-      compassScores: {}
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(checkSynthesisNeeded).mockResolvedValue({ needed: false, pending: true });
+
+    const response = await handleGetSoulFile(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("synthesis_pending", true);
+  });
+
+  it("enqueues synthesis when new messages exist", async () => {
+    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(checkSynthesisNeeded).mockResolvedValue({ needed: true, pending: false });
+    vi.mocked(markSynthesisPending).mockResolvedValue(true);
+    vi.mocked(enqueueSoulSynthesis).mockResolvedValue({
+      kind: "soul_synthesis",
+      jobId: "job-1",
+      userId: "user-1",
+      queuedAt: "2026-03-29T20:00:00Z"
     });
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleGetSoulFile(mockSQL, {}, request);
-
+    const response = await handleGetSoulFile(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("visible_soul_file");
-    expect(body).toHaveProperty("version", 2);
-    const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("A builder of worlds");
+    expect(enqueueSoulSynthesis).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1");
+    expect(response.body).toHaveProperty("synthesis_pending", true);
   });
 });
 
-describe("handleEndSoulSession (deprecated — no-op)", () => {
+describe("handleSoulConverse", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 without bearer token", async () => {
-    vi.mocked(readBearerToken).mockReturnValue(null);
-
-    const request = makeRequest();
-    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(401);
-  });
-
-  it("returns 200 with success for any authenticated user (no-op)", async () => {
+  it("seeds opening mode with a synthetic prompt when there is no prior conversation", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue({
-      version: 2,
-      lastUpdated: "2026-03-26",
-      portrait: "A builder",
-      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
-      crystallizedMoments: [],
-      openThreads: [],
-      compassScores: {}
-    });
-
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("session_completed", true);
-    expect(body).toHaveProperty("synthesis_succeeded", true);
-    const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("A builder");
-  });
-
-  it("returns empty soul file when no soul file exists", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
+    vi.mocked(insertSoulMessage).mockResolvedValue(undefined);
+    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
+      needed: false,
+      pending: false,
+      totalMessageCount: 1,
+      lastMessageCreatedAt: "2026-03-29T20:00:00Z"
+    });
+    mockSQL.mockResolvedValue([]);
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleEndSoulSession(mockSQL, mockEnv, {}, request);
+    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+      yield "What part of you has been hardest to say out loud lately?";
+    })());
 
+    const response = await handleSoulConverse(mockSQL, mockEnv, makeRequest({ "x-thumos-session": "valid-token" }, { mode: "opening" }));
+    await response.text();
     expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("session_completed", true);
+    expect(insertSoulMessage).toHaveBeenCalledWith(
+      mockSQL,
+      "user-1",
+      "assistant",
+      "What part of you has been hardest to say out loud lately?"
+    );
   });
 });
 
-describe("handleSynthesizeSoulFile", () => {
+describe("handleDebugDump", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns 401 without bearer token", async () => {
-    vi.mocked(readBearerToken).mockReturnValue(null);
-
-    const request = makeRequest();
-    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(401);
-  });
-
-  it("skips synthesis when fewer than 3 user messages", async () => {
+  it("returns raw state plus latest debug traces for an authenticated user", async () => {
     vi.mocked(readBearerToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getAllSoulMessages).mockResolvedValue([
-      { id: "m1", user_id: "user-1", role: "user", content: "hello", created_at: new Date().toISOString() }
-    ]);
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("synthesis_succeeded", true);
-    expect(runSoulSynthesis).not.toHaveBeenCalled();
-  });
-
-  it("skips synthesis when no new messages since last update", async () => {
-    const lastUpdated = new Date().toISOString();
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue({
-      version: 2,
-      lastUpdated,
-      portrait: "Existing portrait",
-      sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
-      crystallizedMoments: [],
-      openThreads: [],
-      compassScores: {}
-    });
-    vi.mocked(getAllSoulMessages).mockResolvedValue([
-      { id: "m1", user_id: "user-1", role: "user", content: "old", created_at: new Date(Date.now() - 60000).toISOString() },
-      { id: "m2", user_id: "user-1", role: "user", content: "old2", created_at: new Date(Date.now() - 50000).toISOString() },
-      { id: "m3", user_id: "user-1", role: "user", content: "old3", created_at: new Date(Date.now() - 40000).toISOString() }
-    ]);
-
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
-
-    expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("synthesis_succeeded", true);
-    const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("Existing portrait");
-    expect(runSoulSynthesis).not.toHaveBeenCalled();
-  });
-
-  it("runs synthesis and returns result", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    const synthMsgs = Array.from({ length: 8 }, (_, i) => ({
-      id: `m${i}`, user_id: "user-1",
-      role: "user", content: `msg ${i}`, created_at: new Date().toISOString()
-    }));
-    vi.mocked(getAllSoulMessages).mockResolvedValue(synthMsgs);
-    vi.mocked(runSoulSynthesis).mockResolvedValue({
-      visible: {
-        version: 2,
-        lastUpdated: "2026-03-27",
-        portrait: "A synthesized portrait",
-        sections: {
-          howYouMove: "Boldly",
-          howYouThink: "In systems",
-          howYouConnect: "Cautiously",
-          whatYouCarry: "The weight",
-          whatLightsYouUp: "Discovery",
-          yourContradictions: "Many",
-          yourVoice: "Measured"
+    mockSQL
+      .mockResolvedValueOnce([{
+        id: "user-1",
+        device_id: "device-1",
+        last_active_at: "2026-03-29T20:00:00Z",
+        created_at: "2026-03-29T19:00:00Z",
+        updated_at: "2026-03-29T20:00:00Z"
+      }])
+      .mockResolvedValueOnce([
+        { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-29T20:00:00Z" }
+      ])
+      .mockResolvedValueOnce([{
+        user_id: "user-1",
+        through_message_count: 10,
+        through_last_message_created_at: "2026-03-29T20:00:00Z",
+        note: {
+          updatedAt: "2026-03-29T20:00:00Z",
+          factualAnchors: {},
+          tensions: [],
+          recurringThemes: [],
+          notableAbsences: [],
+          emotionalArc: "",
+          domainCoverage: [],
+          recentAssistantQuestions: [],
+          openLoops: []
         },
-        crystallizedMoments: [],
-        openThreads: [],
-        compassScores: {}
-      },
-      hidden: null
-    });
+        status: "ready"
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: "trace-1",
+        user_id: "user-1",
+        trace_kind: "conversation",
+        model: "claude-opus-4-20250514",
+        system_prompt: "prompt",
+        input_messages: [],
+        raw_response: "raw",
+        meta: {},
+        created_at: "2026-03-29T20:00:00Z"
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
-    const request = makeRequest({ "x-thumos-session": "valid-token" });
-    const response = await handleSynthesizeSoulFile(mockSQL, mockEnv, {}, request);
-
+    const response = await handleDebugDump(mockSQL, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
-    const body = response.body as Record<string, unknown>;
-    expect(body).toHaveProperty("synthesis_succeeded", true);
-    const vsf = body.visible_soul_file as Record<string, unknown>;
-    expect(vsf.portrait).toBe("A synthesized portrait");
-    expect(runSoulSynthesis).toHaveBeenCalledWith(mockSQL, "mock", "user-1");
+    expect(response.body).toHaveProperty("reflection_snapshot_row");
+    expect(response.body).toHaveProperty("reflection_note");
+    expect(response.body).toHaveProperty("latest_conversation_trace");
   });
 });

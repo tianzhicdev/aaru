@@ -39,7 +39,7 @@ Plus "Crystallized Moments" — your own words, preserved as mirrors. And "Open 
 HOW IT WORKS
 
 1. Talk — Have a real conversation. No prompts to fill out. No boxes to check.
-2. Reflect — Every few exchanges, Thumos synthesizes what it heard into your soul file.
+2. Reflect — As you talk, Thumos quietly extracts patterns, tensions, and the parts you keep circling back to.
 3. Discover — Your portrait evolves with every conversation. It gets more accurate and more surprising.
 
 NOT A THERAPIST
@@ -63,9 +63,8 @@ Demo instructions for Apple reviewer:
 2. The app generates an anonymous device ID automatically
 3. Tap "Begin" on the welcome screen
 4. Have a conversation (3-5 messages) — the AI will ask reflective questions
-5. After ~8 exchanges, the soul file tab will begin populating
-6. Switch to the "Soul File" tab to see the generated portrait
-7. The soul file evolves with continued conversation
+5. After a few conversations, tap the "Soul File" tab to trigger synthesis
+6. The soul file evolves with continued conversation
 
 Notes:
 - All AI conversations are powered by Claude (Anthropic) — disclosed in the AI consent modal on first launch

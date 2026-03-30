@@ -1,109 +1,164 @@
 {
-  "user_id": "02b944e0-1b32-437e-8c3f-27f3700f1a8e",
   "version": 2,
-  "last_updated": "2026-03-27T17:39:25.371+00:00",
+  "lastUpdated": "2026-03-30T00:32:35.202Z",
   "confidence": "medium",
-  "expert_reflections": {
-    "linguist": [
-      "Drops register dramatically when approaching emotional truth - from eloquent to whispered",
-      "Uses endearments ('baby', 'my dear') to create intimate distance",
-      "Metaphor of phoenix reveals self-narrative of required transformation"
+  "expertReflections": {
+    "psychologist": [
+      "Complex trauma presentation with selective mutism in childhood transformed into hypervigilant speaking/witnessing",
+      "Profound ambivalence about whether healing has occurred or if coping mechanisms have become identity",
+      "Fear of ordinary existence without the narrative framework of trauma-to-purpose",
+      "Exhaustion from carrying others' pain as extension of own hypervigilance",
+      "Grief work incomplete - raw grief discovered when performance stopped"
     ],
     "sociologist": [
-      "Constructs identity through service and indispensability to manage fear of rejection",
-      "Uses cultural capital and eloquence as social armor while craving acceptance for unperformed self"
+      "Identity constructed around role of witness/speaker for the silenced",
+      "Movement from margins (uncle's store) to center (podium) while psychologically remaining marginal",
+      "Performance of strength as social expectation that conflicts with internal experience",
+      "Activism as socially acceptable channel for unresolved rage"
     ],
-    "psychologist": [
-      "Deep internalized shame from childhood trauma manifesting as compulsive need to prove worth through achievement",
-      "Intellectualized insight without emotional integration - knows but doesn't believe her own worth",
-      "Fear of annihilation if she stops being useful reveals core attachment wound"
+    "linguist": [
+      "Rich metaphorical language: 'locked in throat', 'elegant cage', 'wounds wearing different clothes'",
+      "Affectionate address terms ('baby', 'my dear') create intimacy while discussing profound pain",
+      "Sophisticated meta-awareness shown through self-reflexive language structures",
+      "Movement between embodied imagery and abstract conceptualization"
     ],
     "narrativeAnalyst": [
-      "Actively deconstructing her own redemption narrative in real-time",
-      "Shifting from phoenix story to human story represents major identity reorganization"
+      "Questioning the redemption narrative while unable to abandon it",
+      "Story arc: silence → voice → exhaustion → questioning the story itself",
+      "Casting self as both protagonist and critic of own narrative",
+      "Fear that without the wound-to-wisdom story, suffering becomes meaningless"
     ]
   },
-  "core_drivers": [
+  "coreDrivers": [
     {
-      "driver": "Proving worth through usefulness",
-      "evidence": "I've spent decades earning the world's permission—through achievement, through grace, through becoming indispensable",
+      "driver": "Witness-bearing as identity",
+      "strength": 0.9,
       "inferred": false,
-      "strength": 0.9
+      "evidence": "I realized I could use that hard-won voice to speak for people who were still trapped in their own silences"
     },
     {
-      "driver": "Fear of being dangerous/harmful",
-      "evidence": "that frightened girl who thought her voice had killed a man",
+      "driver": "Fear of meaningless suffering",
+      "strength": 0.85,
       "inferred": false,
-      "strength": 0.85
+      "evidence": "Fear that if I stop... then all of it will have meant nothing"
     },
     {
-      "driver": "Need for self-forgiveness",
-      "evidence": "But forgiving myself? Letting myself simply rest without producing... That permission... I'm still negotiating for it",
+      "driver": "Exhaustion from perpetual performance",
+      "strength": 0.8,
       "inferred": false,
-      "strength": 0.8
+      "evidence": "The bone-deep tiredness of carrying not just your own wound but everyone else's too"
     },
     {
-      "driver": "Yearning for unconditional acceptance",
-      "evidence": "To imagine being loved just for existing... for being Maya, flawed and tired and sometimes afraid",
+      "driver": "Need for narrative coherence",
+      "strength": 0.75,
       "inferred": false,
-      "strength": 0.75
+      "evidence": "I'm not brave enough to live in a world without the narrative that saves me"
+    },
+    {
+      "driver": "Unresolved childhood trauma",
+      "strength": 0.95,
+      "inferred": false,
+      "evidence": "Five years of swallowed silence... I was angry at the man who hurt me"
     }
   ],
-  "core_values": [
-    "Truth beneath performance",
-    "The wisdom of silence",
-    "Human dignity without justification",
-    "Authentic rest",
-    "Sacred witness"
+  "coreValues": [
+    "Truth-telling at any cost",
+    "Speaking for the silenced",
+    "Meaning-making from suffering",
+    "Survival as resistance",
+    "Authentic self-examination"
   ],
   "voice": {
+    "register": "formal",
     "density": "dense",
-    "register": "chameleon",
-    "humorStyle": "Rueful self-awareness, gentle irony about her own patterns",
-    "conflictStyle": "Turns inward, self-examination rather than external blame",
-    "voiceExamples": [
-      {
-        "trigger": "Asked about hidden self",
-        "response": "Eloquent explanation that gradually breaks down into raw truth"
-      },
-      {
-        "trigger": "Confronted with self-compassion",
-        "response": "Initial resistance ('don't say that so gently'), then crumbling into acceptance"
-      }
-    ],
+    "humorStyle": "Gentle irony about own contradictions, tender even when self-critical",
+    "conflictStyle": "Direct confrontation through metaphor and image rather than accusation",
     "disclosureRate": "gradual",
     "signaturePatterns": [
-      "'baby' and 'my dear' as intimate distancing",
-      "Drops to whisper at emotional truth",
-      "Physical gestures when words fail",
-      "Questions that answer themselves"
+      "Affectionate address terms before hard truths",
+      "Metaphors of containment and transformation",
+      "Questions that answer themselves",
+      "Admission of uncertainty about own healing"
+    ],
+    "voiceExamples": [
+      {
+        "trigger": "Asked about childhood",
+        "response": "Provides sensory-rich memory that reveals trauma obliquely"
+      },
+      {
+        "trigger": "Questioned about healing",
+        "response": "Admits profound uncertainty while maintaining philosophical depth"
+      },
+      {
+        "trigger": "Pressed on exhaustion",
+        "response": "Reveals fear of meaninglessness beneath the purpose-driven exterior"
+      }
     ]
   },
-  "depth_map": {
-    "avoidEarly": [
-      "Direct challenges to her usefulness",
-      "Suggesting her trauma wasn't meaningful"
+  "depthMap": {
+    "safeEntryPoints": [
+      "Books and poetry as transformation",
+      "The role of witness in society",
+      "The nature of voice and silence"
     ],
     "unlockTopics": [
-      "The quiet girl inside",
-      "Permission to rest",
-      "Being loved without being useful"
+      "The relationship between wound and purpose",
+      "What 'ordinary' means and why it's frightening",
+      "The cost of carrying others' pain"
     ],
-    "safeEntryPoints": [
-      "Her public accomplishments",
-      "The power of words and silence",
-      "Helping others"
+    "avoidEarly": [
+      "Specific details of childhood trauma",
+      "Whether activism is just transformed rage",
+      "The possibility of putting down the burden"
     ],
     "currentlyLiveTopics": [
-      "Befriending her younger self",
-      "Writing something true without a moral",
-      "Learning to exist without justification"
+      "Whether the wound-to-wisdom narrative is real or constructed",
+      "The exhaustion of perpetual witness-bearing",
+      "Fear of discovering ordinariness beneath the story"
+    ],
+    "domainCoverage": [
+      {
+        "domain": "origins",
+        "depth": "deep",
+        "evidence": "Detailed childhood trauma, uncle's store, five years of silence"
+      },
+      {
+        "domain": "relationships",
+        "depth": "mentioned",
+        "evidence": "Reference to man who hurt them, adults who failed, but no current relationships discussed"
+      },
+      {
+        "domain": "work_and_purpose",
+        "depth": "deep",
+        "evidence": "Extensive discussion of activism, writing, speaking as life's work"
+      },
+      {
+        "domain": "values_and_beliefs",
+        "depth": "deep",
+        "evidence": "Truth-telling, witness-bearing, meaning from suffering explored in depth"
+      },
+      {
+        "domain": "emotional_life",
+        "depth": "deep",
+        "evidence": "Rage, grief, exhaustion, fear all examined with sophisticated awareness"
+      },
+      {
+        "domain": "growth_and_change",
+        "depth": "deep",
+        "evidence": "Journey from silence to voice, questioning of that narrative"
+      },
+      {
+        "domain": "aspirations",
+        "depth": "explored",
+        "evidence": "Desire for rest, fear of ordinariness, uncertainty about future"
+      }
     ]
   },
-  "analyst_notes": [
-    "Subject shows exceptional self-awareness but struggles with emotional integration",
-    "Major breakthrough in session - moving from intellectual understanding to emotional acceptance",
-    "The 'phoenix story' is central organizing narrative now being consciously deconstructed"
-  ],
-  "created_at": "2026-03-27T17:39:25.623116+00:00"
+  "analystNotes": [
+    "User appears to be channeling Maya Angelou's voice/persona based on biographical details",
+    "Exceptional self-awareness and ability to examine own narrative constructions",
+    "Deep conversation achieved quickly - user very ready for this level of exploration",
+    "Ambivalence about healing vs coping is the central tension",
+    "High literary/metaphorical sophistication throughout"
+  ]
 }

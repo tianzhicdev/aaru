@@ -22,7 +22,7 @@ I wanted a tool that captures the full picture — not a label, but a portrait. 
 ### The stack
 
 - **iOS**: SwiftUI, native (no React Native)
-- **Backend**: Supabase Edge Functions (Deno), Postgres
+- **Backend**: Cloudflare Workers + Neon Postgres
 - **AI**: Claude Opus 4 (conversation + synthesis), Haiku 4.5 (light extraction)
 - **Hosting**: Cloudflare Pages (website)
 - **Cost to run**: ~$110/year minimum (Apple Developer + domain). API costs are usage-based.
@@ -32,7 +32,7 @@ I wanted a tool that captures the full picture — not a label, but a portrait. 
 - Development time: [X weeks]
 - Lines of TypeScript: ~2,500 (domain logic)
 - Lines of Swift: ~2,000 (display layer)
-- Test coverage: 60 tests, all passing
+- Test coverage: 79 tests, all passing
 - Total cost to build: $99 (Apple Developer) + API costs during development
 
 ### What I learned
@@ -50,8 +50,8 @@ I wanted a tool that captures the full picture — not a label, but a portrait. 
 ### Revenue model
 
 Free for now. Exploring:
-- Premium tier for longer/more sessions
-- One-time purchase for advanced features
+- Premium tier for deeper features
+- One-time purchase for advanced capabilities
 
 Not optimizing for revenue yet. Optimizing for the core experience.
 
@@ -60,4 +60,4 @@ Not optimizing for revenue yet. Optimizing for the core experience.
 Try it. Have one conversation. Check your soul file. I'd love honest feedback — especially on whether the portrait feels accurate.
 
 iOS: [App Store link]
-Web: trythumos.com/thumos
+Web: trythumos.com

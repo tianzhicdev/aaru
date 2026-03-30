@@ -43,7 +43,9 @@ export const reflectionNoteSchema = z.object({
   recurringThemes: z.array(z.string()).default([]),
   notableAbsences: z.array(z.string()).default([]),
   emotionalArc: z.string().default(""),
-  domainCoverage: z.array(domainCoverageEntrySchema).default([])
+  domainCoverage: z.array(domainCoverageEntrySchema).default([]),
+  recentAssistantQuestions: z.array(z.string()).default([]),
+  openLoops: z.array(z.string()).default([])
 });
 
 export type ReflectionNote = z.infer<typeof reflectionNoteSchema>;
@@ -137,11 +139,11 @@ export type HiddenSoulFile = z.infer<typeof hiddenSoulFileSchema>;
 // ── Soul Message ──────────────────────────────────────────────
 
 export const soulMessageSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().uuid(),
   user_id: z.string().uuid(),
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1),
-  created_at: z.string().datetime({ offset: true }).optional()
+  created_at: z.string().datetime({ offset: true })
 });
 
 export type SoulMessage = z.infer<typeof soulMessageSchema>;

@@ -26,7 +26,7 @@ to publish this site at `https://trythumos.com/`.
 1. Confirm the App Store URL in:
    - `web/index.html`
 2. Confirm the support email:
-   - `info@trythumos.com`
+   - `support@trythumos.com`
 3. Push this repository to GitHub.
 
 ## Option A: Recommended
@@ -106,7 +106,7 @@ yourself. It is not the simple Pages-only path.
 If you prefer direct uploads, Cloudflare also supports Wrangler:
 
 ```bash
-npx wrangler pages deploy web --project-name=thumos-site
+npx wrangler pages deploy web --project-name=thumos-web
 ```
 
 You will need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environment.
@@ -115,5 +115,5 @@ You will need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in your environ
 
 - The site uses root-relative links so navigation stays correct on the apex domain.
 - Let Cloudflare Pages clean URLs serve `privacy.html` at `/privacy` and `support.html` at `/support`.
-- If you have not created `info@trythumos.com` yet, either set up Cloudflare Email Routing
+- If you have not created `support@trythumos.com` yet, either set up Cloudflare Email Routing
   for that address or replace the email in the HTML files before launch.

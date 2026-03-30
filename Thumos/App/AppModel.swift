@@ -23,8 +23,8 @@ final class AppModel: ObservableObject {
     @Published var isSoulFileUpdating = false
     @Published var isDeletingAccount = false
     private var lastSoulFileSynthesisRequest: Date?
-    /// Re-engagement question fetched on-demand, used as AI's opening message.
-    @Published var pendingReengagementQuestion: String?
+    private var isBootstrapping = false
+    private let iso8601Formatter = ISO8601DateFormatter()
     private var hasCompletedFirstSession: Bool {
         UserDefaults.standard.bool(forKey: "has_completed_first_session")
     }
@@ -66,6 +66,10 @@ final class AppModel: ObservableObject {
     }
 
     func bootstrap() async {
+        guard !isBootstrapping else { return }
+        isBootstrapping = true
+        defer { isBootstrapping = false }
+
         logger.info("Bootstrapping device \(self.deviceID, privacy: .public)")
         await checkVersion()
         guard !appUpdateRequired else { return }
@@ -157,25 +161,6 @@ final class AppModel: ObservableObject {
         await nm.scheduleWeeklyNotification()
     }
 
-    // MARK: - Reengagement
-
-    /// Check if user is eligible for a re-engagement question and fetch one.
-    /// Eligible: returning user with no recent messages loaded.
-    private func checkReengagementEligibility() async {
-        // Only fetch if user has had messages before but none are loaded
-        guard hasMessages, soulMessages.isEmpty else { return }
-
-        do {
-            let response = try await backend.generateReengagement()
-            if !response.question.isEmpty {
-                pendingReengagementQuestion = response.question
-                logger.info("Fetched re-engagement question")
-            }
-        } catch {
-            logger.error("Reengagement fetch failed: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
     // MARK: - Soul Mirror
 
     func bootstrapSoul() async {
@@ -203,24 +188,15 @@ final class AppModel: ObservableObject {
             }
             visibleSoulFile = response.visibleSoulFile ?? .empty
             hasMessages = response.hasMessages ?? false
-
-            if let payloads = response.messages, !payloads.isEmpty {
-                soulMessages = payloads.map { msg in
-                    SoulMessage(id: UUID(), role: msg.role, content: msg.content)
-                }
-                cacheSoulMessages(soulMessages)
-            }
-
             cacheVisibleSoulFile(visibleSoulFile)
+            await syncSoulMessages()
+            await maybeRequestOpeningIfNeeded()
 
             logger.info("Soul bootstrap complete: hasMessages=\(self.hasMessages)")
 
-            // Post-bootstrap: schedule local notification + check reengagement
+            // Post-bootstrap: schedule local notification
             Task {
                 await scheduleLocalNotificationIfEligible()
-            }
-            Task {
-                await checkReengagementEligibility()
             }
         } catch {
             // Cached data already loaded above — keep it visible
@@ -232,72 +208,49 @@ final class AppModel: ObservableObject {
     /// Called when app returns to foreground — silently retries bootstrap if needed
     func handleForeground() {
         guard hasAgreedToAI, !appUpdateRequired else { return }
-
-        // If there's an error from a previous bootstrap, retry silently
-        if errorMessage != nil {
-            Task { await bootstrap() }
-            return
-        }
-
-        // If we have an active session but no messages loaded, re-bootstrap
-        if soulMessages.isEmpty && !isLoading {
-            Task { await bootstrap() }
-        }
+        Task { await bootstrap() }
     }
 
     func refreshSoulFile() async {
         do {
-            let response = try await backend.synthesizeSoulFile()
-            if response.synthesisSucceeded {
-                visibleSoulFile = response.visibleSoulFile
+            let response = try await backend.getSoulFile()
+            let file = response.visibleSoulFile
+            if !file.isEmpty {
+                visibleSoulFile = file
                 cacheVisibleSoulFile(visibleSoulFile)
                 markFirstSessionCompleted()
-                logger.info("Soul file synthesis succeeded")
-            } else {
-                // Synthesis didn't succeed — fall back to fetching current file
-                let fileResponse = try await backend.getSoulFile()
-                visibleSoulFile = fileResponse.visibleSoulFile
-                cacheVisibleSoulFile(visibleSoulFile)
             }
+            isSoulFileUpdating = response.synthesisPending ?? false
         } catch {
             logger.error("Soul file refresh failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
     func requestSoulFileUpdateIfNeeded() async {
-        // Don't re-request within 60 seconds
+        // Throttle: don't re-request within 60 seconds
         if let last = lastSoulFileSynthesisRequest,
            Date().timeIntervalSince(last) < 60 { return }
 
         lastSoulFileSynthesisRequest = Date()
-        isSoulFileUpdating = true
         await refreshSoulFile()
-        isSoulFileUpdating = false
     }
 
     func beginSoulConversation() async {
         guard !isSoulStreaming else { return }
         logger.info("Beginning soul conversation")
 
-        // If we have a re-engagement question, use it as the AI's opening
-        if let reengagementQuestion = pendingReengagementQuestion {
-            pendingReengagementQuestion = nil
-            let aiMessage = SoulMessage(id: UUID(), role: "assistant", content: reengagementQuestion)
-            soulMessages.append(aiMessage)
-            cacheSoulMessages(soulMessages)
-            return
-        }
-
         // Send a first message to get the AI's opening question
         isSoulStreaming = true
         soulStreamingText = ""
 
         do {
-            try await performSoulConverse(message: "[begin]")
+            try await performSoulConverse(mode: .opening)
+            await syncSoulMessages()
         } catch let error as BackendError where error.isAuthFailure {
             await bootstrapSoul()
             do {
-                try await performSoulConverse(message: "[begin]")
+                try await performSoulConverse(mode: .opening)
+                await syncSoulMessages()
             } catch {
                 appendErrorMessage(for: error)
             }
@@ -315,18 +268,26 @@ final class AppModel: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isSoulStreaming else { return }
 
-        let userMessage = SoulMessage(id: UUID(), role: "user", content: trimmed)
+        let userMessage = SoulMessage(
+            id: "local-\(UUID().uuidString)",
+            role: "user",
+            content: trimmed,
+            createdAt: iso8601Formatter.string(from: Date())
+        )
         soulMessages.append(userMessage)
+        cacheSoulMessages(soulMessages)
         isSoulStreaming = true
         soulStreamingText = ""
 
         do {
-            try await performSoulConverse(message: trimmed)
+            try await performSoulConverse(message: trimmed, mode: .reply)
+            await syncSoulMessages()
         } catch let error as BackendError where error.isAuthFailure {
             logger.info("Auth failure during soul converse, refreshing session and retrying")
             await bootstrapSoul()
             do {
-                try await performSoulConverse(message: trimmed)
+                try await performSoulConverse(message: trimmed, mode: .reply)
+                await syncSoulMessages()
             } catch {
                 appendErrorMessage(for: error)
             }
@@ -353,8 +314,9 @@ final class AppModel: ObservableObject {
         await sendSoulMessage(lastUserMessage.content)
     }
 
-    private func performSoulConverse(message: String) async throws {
+    private func performSoulConverse(message: String? = nil, mode: SoulConverseMode) async throws {
         try await backend.soulConverseStream(
+            mode: mode,
             message: message,
             onToken: { [weak self] token in
                 Task { @MainActor in
@@ -370,11 +332,13 @@ final class AppModel: ObservableObject {
 
         if !soulStreamingText.isEmpty {
             let assistantMessage = SoulMessage(
-                id: UUID(),
+                id: "local-\(UUID().uuidString)",
                 role: "assistant",
-                content: soulStreamingText
+                content: soulStreamingText,
+                createdAt: iso8601Formatter.string(from: Date())
             )
             soulMessages.append(assistantMessage)
+            cacheSoulMessages(soulMessages)
         }
     }
 
@@ -389,7 +353,7 @@ final class AppModel: ObservableObject {
     }
 
     private func appendErrorMessage(userFacing message: String) {
-        let errorMsg = SoulMessage(id: UUID(), role: "system", content: message, isError: true)
+        let errorMsg = SoulMessage(id: "error-\(UUID().uuidString)", role: "system", content: message, createdAt: nil, isError: true)
         soulMessages.append(errorMsg)
     }
 
@@ -405,7 +369,16 @@ final class AppModel: ObservableObject {
     }
 
     private func cacheSoulMessages(_ messages: [SoulMessage]) {
-        let payloads = messages.map { SoulMessagePayload(role: $0.role, content: $0.content) }
+        let payloads = messages
+            .filter { !$0.isError && ($0.role == "user" || $0.role == "assistant") }
+            .map {
+                SoulMessagePayload(
+                    id: $0.id,
+                    role: $0.role,
+                    content: $0.content,
+                    createdAt: $0.createdAt ?? iso8601Formatter.string(from: Date())
+                )
+            }
         if let data = try? JSONEncoder().encode(payloads) {
             UserDefaults.standard.set(data, forKey: "cached_soul_messages")
         }
@@ -414,7 +387,48 @@ final class AppModel: ObservableObject {
     private func loadCachedSoulMessages() -> [SoulMessage]? {
         guard let data = UserDefaults.standard.data(forKey: "cached_soul_messages") else { return nil }
         guard let payloads = try? JSONDecoder().decode([SoulMessagePayload].self, from: data) else { return nil }
-        return payloads.map { SoulMessage(id: UUID(), role: $0.role, content: $0.content) }
+        return payloads.map {
+            SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
+        }
+    }
+
+    private func syncSoulMessages() async {
+        do {
+            let response = try await backend.syncMessages()
+            soulMessages = response.messages.map {
+                SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
+            }
+            hasMessages = !soulMessages.isEmpty || !visibleSoulFile.isEmpty
+            cacheSoulMessages(soulMessages)
+        } catch {
+            logger.error("Message sync failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func shouldAutoRequestOpening(now: Date = Date()) -> Bool {
+        guard !isSoulStreaming else { return false }
+        guard let lastMessage = soulMessages.last(where: { $0.role == "user" || $0.role == "assistant" }) else {
+            return false
+        }
+
+        if lastMessage.role == "user" {
+            return true
+        }
+
+        guard
+            let createdAt = lastMessage.createdAt,
+            let lastDate = iso8601Formatter.date(from: createdAt)
+        else {
+            return false
+        }
+
+        return now.timeIntervalSince(lastDate) >= 3600
+    }
+
+    private func maybeRequestOpeningIfNeeded() async {
+        guard hasMessages else { return }
+        guard shouldAutoRequestOpening() else { return }
+        await beginSoulConversation()
     }
 
     // MARK: - Debug

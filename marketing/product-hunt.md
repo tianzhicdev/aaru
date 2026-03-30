@@ -27,7 +27,7 @@ Not "you're an INTJ." More like:
 **Built with:**
 - Claude Opus 4 (Anthropic) for conversation + synthesis
 - SwiftUI native iOS app
-- Supabase + Edge Functions backend
+- Cloudflare Workers + Neon Postgres backend
 - 4-expert synthesis pipeline (psychologist, sociologist, linguist, narrative analyst)
 
 Free. No account needed. Your conversations are private.

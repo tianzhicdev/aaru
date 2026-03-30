@@ -5,3 +5,11 @@ account_id = "8dec2b1d93b5b5be6cbbacb723b74fc3"
 
 [observability]
 enabled = true
+
+[[queues.producers]]
+binding = "BACKGROUND_QUEUE"
+queue = "thumos-soul-synthesis"
+
+[[queues.consumers]]
+queue = "thumos-soul-synthesis"
+max_batch_size = 1

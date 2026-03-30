@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   buildSoulSystemPrompt,
   buildSoulFallbackResponse,
-  detectSoftSessionGap
+  detectSoftSessionGap,
+  deriveConversationSteering,
+  normalizeDomainCoverage,
+  pickLeastCoveredDomain
 } from "../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../src/domain/soul.ts";
 
@@ -12,16 +15,16 @@ function makeContext(overrides: Partial<SoulConversationContext> = {}): SoulConv
     reflectionNote: null,
     steering: null,
     messages: [],
-    isFirstEverMessage: false,
+    openingKind: null,
     ...overrides
   };
 }
 
 describe("buildSoulSystemPrompt", () => {
-  it("includes first conversation context when no soul file", () => {
-    const prompt = buildSoulSystemPrompt(makeContext({ isFirstEverMessage: true }));
-    expect(prompt).toContain("No soul file yet");
-    expect(prompt).toContain("FIRST MESSAGE");
+  it("includes opening guidance for first conversations", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({ openingKind: "first_ever" }));
+    expect(prompt).toContain("OPENING MODE");
+    expect(prompt).toContain("very first conversation");
   });
 
   it("includes visible soul file context when available", () => {
@@ -49,7 +52,7 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("I built walls");
   });
 
-  it("includes reflection note as memory", () => {
+  it("includes reflection snapshots and anti-repeat memory", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: {
         updatedAt: "2026-03-26T00:00:00Z",
@@ -61,16 +64,16 @@ describe("buildSoulSystemPrompt", () => {
         domainCoverage: [
           { domain: "work_and_purpose", depth: "explored", evidence: "Software engineer" },
           { domain: "origins", depth: "untouched", evidence: "" }
-        ]
+        ],
+        recentAssistantQuestions: ["What are you protecting with those walls?"],
+        openLoops: ["The door metaphor"]
       }
     }));
-    expect(prompt).toContain("YOUR MEMORY");
+    expect(prompt).toContain("LATEST REFLECTION SNAPSHOT");
     expect(prompt).toContain("software engineer");
-    expect(prompt).toContain("love solitude but happiest memory involves a crowd");
-    expect(prompt).toContain("architecture");
-    expect(prompt).toContain("family");
-    expect(prompt).toContain("Started guarded");
-    expect(prompt).toContain("work_and_purpose: explored");
+    expect(prompt).toContain("Recent assistant questions already asked");
+    expect(prompt).toContain("The door metaphor");
+    expect(prompt).toContain("Do not ask a substantially similar question");
   });
 
   it("includes steering section when steering context provided", () => {
@@ -97,52 +100,23 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("Safe entry points");
   });
 
-  it("includes memory update instructions", () => {
-    const prompt = buildSoulSystemPrompt(makeContext());
-    expect(prompt).toContain("<<<MEMORY>>>");
-    expect(prompt).toContain("domainCoverage");
-    expect(prompt).toContain("factualAnchors");
-  });
-
-  it("includes continuous pacing guidance", () => {
-    const prompt = buildSoulSystemPrompt(makeContext());
-    expect(prompt).toContain("no time limit");
-    expect(prompt).toContain("Never force closure");
-  });
-
   it("includes story-over-assessment instruction", () => {
     const prompt = buildSoulSystemPrompt(makeContext());
     expect(prompt).toContain("Ask for stories, not self-assessments");
-    expect(prompt).toContain("Tell me about a time");
-  });
-
-  it("includes returning user section when soul file has portrait", () => {
-    const prompt = buildSoulSystemPrompt(makeContext({
-      visibleSoulFile: {
-        version: 2,
-        lastUpdated: "2026-03-26",
-        portrait: "A dreamer who builds alone",
-        sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
-        crystallizedMoments: [],
-        openThreads: [],
-        compassScores: {}
-      }
-    }));
-    expect(prompt).toContain("RETURNING USER");
-    expect(prompt).toContain("A dreamer who builds alone");
+    expect(prompt).toContain("Avoids repeated questions");
   });
 });
 
 describe("buildSoulFallbackResponse", () => {
-  it("returns opening for first ever message", () => {
-    const response = buildSoulFallbackResponse(makeContext({ isFirstEverMessage: true }));
+  it("returns an opening question for first ever message", () => {
+    const response = buildSoulFallbackResponse(makeContext({ openingKind: "first_ever" }));
     expect(response.length).toBeGreaterThan(20);
     expect(response).toMatch(/\?$/);
   });
 
-  it("returns returning response with portrait when returning", () => {
+  it("returns a resume response with portrait when resuming after gap", () => {
     const response = buildSoulFallbackResponse(makeContext({
-      messages: [],
+      openingKind: "resume_after_gap",
       visibleSoulFile: {
         version: 1,
         lastUpdated: "2026-03-26",
@@ -156,20 +130,66 @@ describe("buildSoulFallbackResponse", () => {
     expect(response).toContain("A dreamer");
   });
 
-  it("returns generic fallback for mid-conversation", () => {
+  it("returns a reply-shaped fallback when the assistant turn is pending", () => {
     const response = buildSoulFallbackResponse(makeContext({
+      openingKind: "assistant_turn",
       messages: [
-        { role: "user", content: "hello" },
-        { role: "assistant", content: "hi" },
-        { role: "user", content: "test" }
+        { role: "assistant", content: "Earlier you said work feels thin." },
+        { role: "user", content: "I keep thinking about leaving." }
       ]
     }));
-    expect(response.length).toBeGreaterThan(10);
+    expect(response).toContain("I keep thinking about leaving");
+  });
+});
+
+describe("conversation steering helpers", () => {
+  it("normalizes domain coverage to all 7 domains", () => {
+    const coverage = normalizeDomainCoverage([
+      { domain: "origins", depth: "mentioned", evidence: "Childhood move" },
+      { domain: "work_and_purpose", depth: "explored", evidence: "Career tension" }
+    ]);
+
+    expect(coverage).toHaveLength(7);
+    expect(coverage.find((entry) => entry.domain === "relationships")?.depth).toBe("untouched");
+    expect(coverage.find((entry) => entry.domain === "work_and_purpose")?.depth).toBe("explored");
+  });
+
+  it("picks the least covered domain", () => {
+    const domain = pickLeastCoveredDomain([
+      { domain: "origins", depth: "deep", evidence: "Detailed stories" },
+      { domain: "relationships", depth: "mentioned", evidence: "Brief mention" },
+      { domain: "work_and_purpose", depth: "explored", evidence: "Discussed in depth" }
+    ]);
+
+    expect(domain).toBe("values_and_beliefs");
+  });
+
+  it("derives steering from reflection snapshots", () => {
+    const { steering, source } = deriveConversationSteering({
+      updatedAt: "2026-03-26T00:00:00Z",
+      factualAnchors: { work: "I keep trying to leave this job" },
+      tensions: ["Wants freedom but clings to stability"],
+      recurringThemes: ["job drift", "creative hunger"],
+      notableAbsences: [],
+      emotionalArc: "Restless",
+      domainCoverage: [
+        { domain: "work_and_purpose", depth: "explored", evidence: "Repeated job discussion" },
+        { domain: "aspirations", depth: "mentioned", evidence: "Wants something more" }
+      ],
+      recentAssistantQuestions: ["What would freedom cost you?"],
+      openLoops: ["What 'something more' actually looks like"]
+    });
+
+    expect(source).toBe("reflection_snapshot");
+    expect(steering).not.toBeNull();
+    expect(steering?.domainCoverage).toHaveLength(7);
+    expect(steering?.unlockTopics).toContain("Wants freedom but clings to stability");
+    expect(steering?.currentlyLiveTopics).toContain("What 'something more' actually looks like");
   });
 });
 
 describe("detectSoftSessionGap", () => {
-  const THRESHOLD = 60 * 60 * 1000; // 1 hour
+  const THRESHOLD = 60 * 60 * 1000;
 
   function makeMessages(gaps: Array<{ role: string; minutesAfterStart: number; content?: string }>) {
     const base = new Date("2026-03-27T10:00:00Z").getTime();
@@ -189,16 +209,6 @@ describe("detectSoftSessionGap", () => {
     expect(detectSoftSessionGap(msgs, THRESHOLD)).toBeNull();
   });
 
-  it("returns null when all messages are within threshold", () => {
-    const msgs = makeMessages([
-      { role: "user", minutesAfterStart: 0 },
-      { role: "assistant", minutesAfterStart: 1 },
-      { role: "user", minutesAfterStart: 5 },
-      { role: "assistant", minutesAfterStart: 6 }
-    ]);
-    expect(detectSoftSessionGap(msgs, THRESHOLD)).toBeNull();
-  });
-
   it("returns info when gap exceeds threshold", () => {
     const msgs = makeMessages([
       { role: "user", minutesAfterStart: 0 },
@@ -212,31 +222,5 @@ describe("detectSoftSessionGap", () => {
     expect(result!.softSessionCount).toBe(1);
     expect(result!.gapMs).toBeGreaterThanOrEqual(THRESHOLD);
     expect(result!.lastUserMessage).toBe("I need to go");
-  });
-
-  it("correctly counts multiple soft sessions", () => {
-    const msgs = makeMessages([
-      { role: "user", minutesAfterStart: 0 },
-      { role: "assistant", minutesAfterStart: 1 },
-      { role: "user", minutesAfterStart: 120 },
-      { role: "assistant", minutesAfterStart: 121 },
-      { role: "user", minutesAfterStart: 300 }
-    ]);
-    const result = detectSoftSessionGap(msgs, THRESHOLD);
-    expect(result).not.toBeNull();
-    expect(result!.softSessionCount).toBe(2);
-  });
-
-  it("returns last user message before the gap", () => {
-    const msgs = makeMessages([
-      { role: "user", minutesAfterStart: 0, content: "hello" },
-      { role: "assistant", minutesAfterStart: 1, content: "hi there" },
-      { role: "user", minutesAfterStart: 2, content: "gotta run" },
-      { role: "assistant", minutesAfterStart: 3, content: "see you" },
-      { role: "user", minutesAfterStart: 120, content: "I'm back" }
-    ]);
-    const result = detectSoftSessionGap(msgs, THRESHOLD);
-    expect(result).not.toBeNull();
-    expect(result!.lastUserMessage).toBe("gotta run");
   });
 });

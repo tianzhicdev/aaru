@@ -17,8 +17,7 @@ export async function handleDeleteAccount(sql: NeonSQL, _payload: unknown, reque
 
   const userId = session.user_id;
 
-  // CASCADE handles device_sessions, soul_sessions, soul_messages,
-  // visible_soul_files, hidden_soul_files
+  // CASCADE handles device_sessions, soul_messages, visible_soul_files, hidden_soul_files.
   await deleteUser(sql, userId);
 
   return jsonResponse(200, { deleted: true });

@@ -1,6 +1,6 @@
 AI is never allow to modify this file
 
-Thumos is the field of reeds where people live happily in the virtual world
+Thumos is a virtual world where people create a soul file by talking with AI. It has a social feature where we help them to find soulmates.
 
 This App has 2 main parts 
 
@@ -42,13 +42,10 @@ Phase 1: we focus on the soul file creation process.
 this is pretty much complete and I'm quite happy with the experience.
 We should ship the first version without social feauture to the ios store to collect early feadback.
 things we need before shipping:
-1. i think we want to make the soul dashboard more dashboardy; we might want to INTP estimates or something there; having some sort of graph is perhaps a good idea. 
-4. do we need a website for SEO? nice to have i think, ideally this can be done cheaply using claudflare? 
-5. we need to do a checklist to see what we need before lauching. and the best place to start marketing. 
-6. we need to harden the soul creation process. i think what we can do is to create at least 10 sould files by using AI to pretend to be user to talk to AI. 
-then we will review the soul file, and the conversation to ensure that human can review the quality. 
-my idea is that we create a dry-run-soul-files.sh --file characters.json where  characters.json list ~ 10 or so diverse characters for which we have abundant online resources to know their child experience or personality to mimic a soul. 
-
+1. i think we want to make the soul dashboard more dashboardy -- we have a spider graph
+2. a web app for SEO 
+3. we have a process to similate sould creation process by using cli instead of ios against the server deployemnt; the server should treat it the same as ios. dry-run-soul-files.sh --file characters.json where  characters.json list ~ 10 or so diverse characters for which we have abundant online resources to know their child experience or personality to mimic a soul. 
+4. we have 7 domians that the AI should actively seek to cover. 
 
 
 phase 2: we focus on the social feature. 

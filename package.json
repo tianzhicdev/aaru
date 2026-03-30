@@ -8,12 +8,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "db:migrate": "node scripts/apply-db-migrations.mjs",
+    "verify:live": "node scripts/verify-live-refactor.mjs",
     "ios:generate": "xcodegen generate",
     "ios:list": "xcodebuild -list -project Thumos.xcodeproj",
-    "supabase:start": "npx supabase start",
-    "supabase:stop": "npx supabase stop",
-    "supabase:status": "npx supabase status",
-    "supabase:link": "sh scripts/supabase-link.sh"
+    "workers:dev": "pnpm --dir workers run dev",
+    "workers:deploy": "pnpm --dir workers run deploy"
   },
   "devDependencies": {
     "@neondatabase/serverless": "^1.0.2",

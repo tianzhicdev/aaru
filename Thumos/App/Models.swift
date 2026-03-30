@@ -70,52 +70,56 @@ struct VisibleSoulFile: Codable, Equatable {
 // MARK: - Soul Messages
 
 struct SoulMessagePayload: Codable, Equatable {
+    let id: String
     let role: String
     let content: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case role
+        case content
+        case createdAt = "created_at"
+    }
 }
 
 struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
     let visibleSoulFile: VisibleSoulFile?
-    let messages: [SoulMessagePayload]?
     let hasMessages: Bool?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case token
         case visibleSoulFile = "visible_soul_file"
-        case messages
         case hasMessages = "has_messages"
     }
+}
+
+struct SyncMessagesResponse: Codable {
+    let messages: [SoulMessagePayload]
 }
 
 struct SoulFileResponse: Codable {
     let visibleSoulFile: VisibleSoulFile
     let version: Int
     let lastUpdated: String?
+    let synthesisPending: Bool?
 
     enum CodingKeys: String, CodingKey {
         case visibleSoulFile = "visible_soul_file"
         case version
         case lastUpdated = "last_updated"
-    }
-}
-
-struct SynthesizeSoulFileResponse: Codable {
-    let visibleSoulFile: VisibleSoulFile
-    let synthesisSucceeded: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case visibleSoulFile = "visible_soul_file"
-        case synthesisSucceeded = "synthesis_succeeded"
+        case synthesisPending = "synthesis_pending"
     }
 }
 
 struct SoulMessage: Identifiable, Equatable {
-    let id: UUID
+    let id: String
     let role: String  // "user", "assistant", "system"
     let content: String
+    let createdAt: String?
     var isError: Bool = false
 }
 
@@ -133,12 +137,6 @@ struct VersionCheckResponse: Codable {
     }
 }
 
-// MARK: - Reengagement
-
-struct ReengagementResponse: Codable {
-    let question: String
-}
-
 // MARK: - Delete Account
 
 struct DeleteAccountResponse: Codable {
@@ -148,6 +146,24 @@ struct DeleteAccountResponse: Codable {
 // MARK: - Debug (stripped from Release builds)
 
 #if DEBUG
+struct DomainCoverageEntry: Codable {
+    let domain: String
+    let depth: String
+    let evidence: String
+}
+
+struct ReflectionNote: Codable {
+    let updatedAt: String
+    let factualAnchors: [String: String]
+    let tensions: [String]
+    let recurringThemes: [String]
+    let notableAbsences: [String]
+    let emotionalArc: String
+    let domainCoverage: [DomainCoverageEntry]
+    let recentAssistantQuestions: [String]
+    let openLoops: [String]
+}
+
 struct CoreDriver: Codable {
     let driver: String
     let strength: Double
@@ -175,6 +191,7 @@ struct DepthMap: Codable {
     let unlockTopics: [String]
     let avoidEarly: [String]
     let currentlyLiveTopics: [String]
+    let domainCoverage: [DomainCoverageEntry]
 }
 
 struct ExpertReflections: Codable {
@@ -196,17 +213,31 @@ struct HiddenSoulFile: Codable {
     let analystNotes: [String]
 }
 
+struct SteeringPreview: Codable {
+    let domainCoverage: [DomainCoverageEntry]
+    let safeEntryPoints: [String]
+    let unlockTopics: [String]
+    let avoidEarly: [String]
+    let currentlyLiveTopics: [String]
+}
+
 struct DebugInfoResponse: Codable {
     let userId: String
     let deviceId: String
     let hiddenSoulFile: HiddenSoulFile?
     let visibleSoulFile: VisibleSoulFile?
+    let reflectionNote: ReflectionNote?
+    let steeringPreview: SteeringPreview?
+    let steeringSource: String
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case deviceId = "device_id"
         case hiddenSoulFile = "hidden_soul_file"
         case visibleSoulFile = "visible_soul_file"
+        case reflectionNote = "reflection_note"
+        case steeringPreview = "steering_preview"
+        case steeringSource = "steering_source"
     }
 }
 #endif

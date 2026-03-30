@@ -1,23 +1,24 @@
 import type { NeonSQL } from "./db.ts";
 import type { VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
+import { hiddenSoulFileSchema, reflectionNoteSchema } from "../../src/domain/schemas.ts";
 import {
-  emptyVisibleSoulFile,
+  buildReflectionPrompt,
   buildSoulSynthesisPrompt,
-  parseReflectionNote,
-  parseSoulSynthesis,
+  emptyVisibleSoulFile,
+  mergeHiddenSoulFile,
   mergeVisibleSoulFile,
-  mergeHiddenSoulFile
+  parseReflectionNote,
+  parseSoulSynthesis
 } from "../../src/domain/soulFile.ts";
-import { callClaude } from "./claude.ts";
+import { callClaude, streamClaude } from "./claude.ts";
+import { recordClaudeDebugTrace } from "./debugTraces.ts";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
-
-// ── Row types ────────────────────────────────────────────────
 
 interface VisibleSoulFileRow {
   user_id: string;
   version: number;
-  last_updated: string;
+  last_updated: string | Date;
   portrait: string | null;
   how_you_move: string;
   how_you_think: string;
@@ -34,7 +35,7 @@ interface VisibleSoulFileRow {
 interface HiddenSoulFileRow {
   user_id: string;
   version: number;
-  last_updated: string;
+  last_updated: string | Date;
   confidence: string;
   expert_reflections: Json;
   core_drivers: Json;
@@ -44,20 +45,47 @@ interface HiddenSoulFileRow {
   analyst_notes: Json;
 }
 
+interface ReflectionSnapshotRow {
+  user_id: string;
+  through_message_count: number | string;
+  through_last_message_created_at: string | Date | null;
+  note: Json | null;
+  status: ReflectionSnapshotStatus;
+  started_at: string | Date | null;
+  last_error: string | null;
+}
+
+function normalizeTimestamp(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return typeof value === "string" ? value : "";
+}
+
 export interface SoulMessageRow {
   id: string;
   user_id: string;
-  role: string;
+  role: "user" | "assistant";
   content: string;
   created_at: string;
 }
 
-// ── Visible Soul File CRUD ───────────────────────────────────
+export interface ReflectionSnapshotState {
+  status: ReflectionSnapshotStatus;
+  throughMessageCount: number;
+  startedAt: string | null;
+}
+
+const SYNTHESIS_STALE_PENDING_MS = 15 * 60 * 1000;
+const REFLECTION_STALE_PENDING_MS = 10 * 60 * 1000;
+
+export type SynthesisStatus = "ready" | "pending" | "failed";
+export type ReflectionSnapshotStatus = "ready" | "pending" | "failed";
 
 function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
   return {
     version: row.version,
-    lastUpdated: row.last_updated,
+    lastUpdated: normalizeTimestamp(row.last_updated),
     portrait: row.portrait,
     sections: {
       howYouMove: row.how_you_move ?? "",
@@ -74,6 +102,59 @@ function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
   };
 }
 
+function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
+  const parsed = hiddenSoulFileSchema.safeParse({
+    version: row.version,
+    lastUpdated: normalizeTimestamp(row.last_updated),
+    confidence: row.confidence as HiddenSoulFile["confidence"],
+    expertReflections: (row.expert_reflections as HiddenSoulFile["expertReflections"]) ?? { psychologist: [], sociologist: [], linguist: [], narrativeAnalyst: [] },
+    coreDrivers: (row.core_drivers as HiddenSoulFile["coreDrivers"]) ?? [],
+    coreValues: (row.core_values as string[]) ?? [],
+    voice: (row.voice as HiddenSoulFile["voice"]) ?? { register: "casual", density: "moderate", humorStyle: "", conflictStyle: "", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
+    depthMap: (row.depth_map as HiddenSoulFile["depthMap"]) ?? { safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: [] },
+    analystNotes: (row.analyst_notes as string[]) ?? []
+  });
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  return hiddenSoulFileSchema.parse({
+    version: row.version,
+    lastUpdated: normalizeTimestamp(row.last_updated),
+    confidence: row.confidence,
+    expertReflections: {},
+    coreDrivers: [],
+    coreValues: [],
+    voice: {},
+    depthMap: row.depth_map ?? {},
+    analystNotes: row.analyst_notes ?? []
+  });
+}
+
+function parseReflectionSnapshotNote(note: unknown): ReflectionNote | null {
+  const parsed = reflectionNoteSchema.safeParse(note);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  if (note == null) {
+    return null;
+  }
+
+  return reflectionNoteSchema.parse({
+    updatedAt: "",
+    factualAnchors: {},
+    tensions: [],
+    recurringThemes: [],
+    notableAbsences: [],
+    emotionalArc: "",
+    domainCoverage: [],
+    recentAssistantQuestions: [],
+    openLoops: []
+  });
+}
+
 export async function getVisibleSoulFile(sql: NeonSQL, userId: string): Promise<VisibleSoulFile | null> {
   const rows = await sql`
     SELECT * FROM visible_soul_files WHERE user_id = ${userId}
@@ -88,7 +169,8 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       user_id, version, last_updated, portrait,
       how_you_move, how_you_think, how_you_connect, what_you_carry,
       what_lights_you_up, your_contradictions, your_voice,
-      crystallized_moments, open_threads, compass_scores
+      crystallized_moments, open_threads, compass_scores,
+      status, synthesis_started_at
     ) VALUES (
       ${userId}, ${file.version}, ${file.lastUpdated}, ${file.portrait},
       ${file.sections.howYouMove}, ${file.sections.howYouThink},
@@ -96,7 +178,8 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       ${file.sections.whatLightsYouUp}, ${file.sections.yourContradictions},
       ${file.sections.yourVoice},
       ${JSON.stringify(file.crystallizedMoments)}, ${JSON.stringify(file.openThreads)},
-      ${JSON.stringify(file.compassScores ?? {})}
+      ${JSON.stringify(file.compassScores ?? {})},
+      'ready', NULL
     )
     ON CONFLICT (user_id) DO UPDATE SET
       version = EXCLUDED.version,
@@ -111,24 +194,10 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       your_voice = EXCLUDED.your_voice,
       crystallized_moments = EXCLUDED.crystallized_moments,
       open_threads = EXCLUDED.open_threads,
-      compass_scores = EXCLUDED.compass_scores
+      compass_scores = EXCLUDED.compass_scores,
+      status = 'ready',
+      synthesis_started_at = NULL
   `;
-}
-
-// ── Hidden Soul File CRUD ────────────────────────────────────
-
-function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
-  return {
-    version: row.version,
-    lastUpdated: row.last_updated,
-    confidence: row.confidence as HiddenSoulFile["confidence"],
-    expertReflections: (row.expert_reflections as HiddenSoulFile["expertReflections"]) ?? { psychologist: [], sociologist: [], linguist: [], narrativeAnalyst: [] },
-    coreDrivers: (row.core_drivers as HiddenSoulFile["coreDrivers"]) ?? [],
-    coreValues: (row.core_values as string[]) ?? [],
-    voice: (row.voice as HiddenSoulFile["voice"]) ?? { register: "casual", density: "moderate", humorStyle: "", conflictStyle: "", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
-    depthMap: (row.depth_map as HiddenSoulFile["depthMap"]) ?? { safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: [] },
-    analystNotes: (row.analyst_notes as string[]) ?? []
-  };
 }
 
 export async function getHiddenSoulFile(sql: NeonSQL, userId: string): Promise<HiddenSoulFile | null> {
@@ -164,43 +233,164 @@ export async function upsertHiddenSoulFile(sql: NeonSQL, userId: string, file: H
   `;
 }
 
-// ── Reflection Note (stored on users table) ──────────────────
+export async function getLatestReflectionSnapshot(sql: NeonSQL, userId: string): Promise<ReflectionNote | null> {
+  const rows = await sql`
+    SELECT note
+    FROM reflection_snapshots
+    WHERE user_id = ${userId} AND status = 'ready'
+    LIMIT 1
+  `;
 
-export async function getReflectionNote(sql: NeonSQL, userId: string): Promise<ReflectionNote | null> {
-  const rows = await sql`SELECT reflection_note FROM users WHERE id = ${userId}`;
-  if (!rows[0]?.reflection_note) return null;
-  return rows[0].reflection_note as ReflectionNote;
+  return parseReflectionSnapshotNote(rows[0]?.note);
 }
 
-export async function upsertReflectionNote(sql: NeonSQL, userId: string, note: ReflectionNote): Promise<void> {
-  await sql`UPDATE users SET reflection_note = ${JSON.stringify(note)} WHERE id = ${userId}`;
+export async function getReflectionSnapshotState(
+  sql: NeonSQL,
+  userId: string
+): Promise<ReflectionSnapshotState | null> {
+  const rows = await sql`
+    SELECT status, through_message_count, started_at
+    FROM reflection_snapshots
+    WHERE user_id = ${userId}
+    LIMIT 1
+  `;
+
+  if (!rows[0]) return null;
+
+  return {
+    status: rows[0].status as ReflectionSnapshotStatus,
+    throughMessageCount: Number(rows[0].through_message_count ?? 0),
+    startedAt: normalizeTimestamp(rows[0].started_at)
+  };
 }
 
-// ── Soul Messages CRUD ───────────────────────────────────────
+export async function checkReflectionSnapshotNeeded(
+  sql: NeonSQL,
+  userId: string
+): Promise<{ needed: boolean; pending: boolean; totalMessageCount: number; lastMessageCreatedAt: string | null }> {
+  const countRows = await sql`
+    SELECT COUNT(*)::int AS cnt, MAX(created_at) AS last_created_at
+    FROM soul_messages
+    WHERE user_id = ${userId}
+  `;
 
-/**
- * Get ALL messages for a user (for synthesis).
- */
+  const totalMessageCount = Number(countRows[0]?.cnt ?? 0);
+  const lastMessageCreatedAt = normalizeTimestamp(countRows[0]?.last_created_at);
+
+  if (totalMessageCount < 10) {
+    return { needed: false, pending: false, totalMessageCount, lastMessageCreatedAt: lastMessageCreatedAt || null };
+  }
+
+  const state = await getReflectionSnapshotState(sql, userId);
+  if (state?.status === "pending" && state.startedAt) {
+    const isStale = Date.now() - new Date(state.startedAt).getTime() > REFLECTION_STALE_PENDING_MS;
+    if (!isStale) {
+      return { needed: false, pending: true, totalMessageCount, lastMessageCreatedAt: lastMessageCreatedAt || null };
+    }
+
+    await markReflectionSnapshotFailed(sql, userId, "Reflection snapshot timed out");
+  }
+
+  const throughMessageCount = state?.throughMessageCount ?? 0;
+  const needed = Math.floor(totalMessageCount / 10) > Math.floor(throughMessageCount / 10);
+  return { needed, pending: false, totalMessageCount, lastMessageCreatedAt: lastMessageCreatedAt || null };
+}
+
+export async function markReflectionSnapshotPending(
+  sql: NeonSQL,
+  userId: string,
+  throughMessageCount: number,
+  throughLastMessageCreatedAt: string | null
+): Promise<boolean> {
+  const rows = await sql`
+    INSERT INTO reflection_snapshots (
+      user_id,
+      through_message_count,
+      through_last_message_created_at,
+      note,
+      status,
+      started_at,
+      last_error
+    ) VALUES (
+      ${userId},
+      ${throughMessageCount},
+      ${throughLastMessageCreatedAt},
+      NULL,
+      'pending',
+      NOW(),
+      NULL
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+      through_message_count = EXCLUDED.through_message_count,
+      through_last_message_created_at = EXCLUDED.through_last_message_created_at,
+      status = 'pending',
+      started_at = NOW(),
+      last_error = NULL
+    WHERE reflection_snapshots.status IS DISTINCT FROM 'pending'
+       OR reflection_snapshots.through_message_count < EXCLUDED.through_message_count
+    RETURNING user_id
+  `;
+
+  return rows.length > 0;
+}
+
+export async function markReflectionSnapshotFailed(
+  sql: NeonSQL,
+  userId: string,
+  lastError?: string
+): Promise<void> {
+  await sql`
+    UPDATE reflection_snapshots
+    SET status = 'failed',
+        started_at = NULL,
+        last_error = ${lastError ?? null}
+    WHERE user_id = ${userId}
+  `;
+}
+
+async function upsertReflectionSnapshot(
+  sql: NeonSQL,
+  userId: string,
+  note: ReflectionNote,
+  throughMessageCount: number,
+  throughLastMessageCreatedAt: string | null
+): Promise<void> {
+  await sql`
+    INSERT INTO reflection_snapshots (
+      user_id,
+      through_message_count,
+      through_last_message_created_at,
+      note,
+      status,
+      started_at,
+      last_error
+    ) VALUES (
+      ${userId},
+      ${throughMessageCount},
+      ${throughLastMessageCreatedAt},
+      ${JSON.stringify(note)},
+      'ready',
+      NULL,
+      NULL
+    )
+    ON CONFLICT (user_id) DO UPDATE SET
+      through_message_count = EXCLUDED.through_message_count,
+      through_last_message_created_at = EXCLUDED.through_last_message_created_at,
+      note = EXCLUDED.note,
+      status = 'ready',
+      started_at = NULL,
+      last_error = NULL
+  `;
+}
+
 export async function getAllSoulMessages(sql: NeonSQL, userId: string): Promise<SoulMessageRow[]> {
   const rows = await sql`
-    SELECT * FROM soul_messages
+    SELECT id, user_id, role, content, created_at
+    FROM soul_messages
     WHERE user_id = ${userId}
-    ORDER BY created_at ASC
+    ORDER BY created_at ASC, id ASC
   `;
   return rows as unknown as SoulMessageRow[];
-}
-
-/**
- * Get the last N messages for a user (for conversation context).
- */
-export async function getLastNMessages(sql: NeonSQL, userId: string, n: number): Promise<SoulMessageRow[]> {
-  const rows = await sql`
-    SELECT * FROM soul_messages
-    WHERE user_id = ${userId}
-    ORDER BY created_at DESC
-    LIMIT ${n}
-  `;
-  return (rows as unknown as SoulMessageRow[]).reverse();
 }
 
 export async function insertSoulMessage(
@@ -215,24 +405,186 @@ export async function insertSoulMessage(
   `;
 }
 
-// ── Full Soul Synthesis (user-triggered) ─────────────────────
+export async function getSynthesisStatus(
+  sql: NeonSQL,
+  userId: string
+): Promise<SynthesisStatus | null> {
+  const rows = await sql`
+    SELECT status FROM visible_soul_files
+    WHERE user_id = ${userId}
+  `;
+  return (rows[0]?.status as SynthesisStatus | undefined) ?? null;
+}
+
+export async function checkSynthesisNeeded(
+  sql: NeonSQL,
+  userId: string
+): Promise<{ needed: boolean; pending: boolean }> {
+  const pendingRows = await sql`
+    SELECT synthesis_started_at FROM visible_soul_files
+    WHERE user_id = ${userId} AND status = 'pending'
+  `;
+  if (pendingRows[0]?.synthesis_started_at) {
+    const startedAt = new Date(pendingRows[0].synthesis_started_at).getTime();
+    const isStale = Date.now() - startedAt > SYNTHESIS_STALE_PENDING_MS;
+    if (!isStale) {
+      return { needed: false, pending: true };
+    }
+
+    await sql`
+      UPDATE visible_soul_files SET status = 'failed'
+      WHERE user_id = ${userId} AND status = 'pending'
+    `;
+  }
+
+  const countRows = await sql`
+    SELECT COUNT(*) AS cnt FROM soul_messages
+    WHERE user_id = ${userId} AND role = 'user'
+  `;
+  const userMessageCount = Number(countRows[0]?.cnt ?? 0);
+  if (userMessageCount < 3) {
+    return { needed: false, pending: false };
+  }
+
+  const fileRows = await sql`
+    SELECT last_updated FROM visible_soul_files
+    WHERE user_id = ${userId} AND status = 'ready'
+  `;
+  const lastUpdated = fileRows[0]?.last_updated;
+
+  if (!lastUpdated) {
+    return { needed: true, pending: false };
+  }
+
+  const newMsgRows = await sql`
+    SELECT 1 FROM soul_messages
+    WHERE user_id = ${userId} AND created_at > ${lastUpdated}
+    LIMIT 1
+  `;
+  return { needed: newMsgRows.length > 0, pending: false };
+}
+
+export async function markSynthesisPending(sql: NeonSQL, userId: string): Promise<boolean> {
+  const rows = await sql`
+    INSERT INTO visible_soul_files (user_id, status, synthesis_started_at)
+    VALUES (${userId}, 'pending', NOW())
+    ON CONFLICT (user_id) DO UPDATE SET
+      status = 'pending',
+      synthesis_started_at = NOW()
+    WHERE visible_soul_files.status IS DISTINCT FROM 'pending'
+    RETURNING user_id
+  `;
+  return rows.length > 0;
+}
+
+export async function markSynthesisFailed(sql: NeonSQL, userId: string): Promise<void> {
+  await sql`
+    UPDATE visible_soul_files SET status = 'failed', synthesis_started_at = NULL
+    WHERE user_id = ${userId}
+  `;
+}
+
+export async function runReflectionSnapshot(
+  sql: NeonSQL,
+  apiKey: string,
+  userId: string
+): Promise<ReflectionNote | null> {
+  const reflectionModel = "claude-haiku-4-5-20251001";
+  const reflectionSystemPrompt =
+    "You are a careful transcript synthesizer. Output valid JSON only.";
+  const allMessages = await getAllSoulMessages(sql, userId);
+  const existingSnapshot = await getLatestReflectionSnapshot(sql, userId);
+
+  if (allMessages.length < 10) {
+    return existingSnapshot;
+  }
+
+  const messageCount = allMessages.length;
+  const lastMessageCreatedAt = allMessages[allMessages.length - 1]?.created_at ?? null;
+  const prompt = buildReflectionPrompt(
+    allMessages.map((message) => ({
+      role: message.role,
+      content: message.content
+    })),
+    existingSnapshot,
+    messageCount
+  );
+
+  try {
+    const rawResponse = await callClaude(
+      reflectionSystemPrompt,
+      [{ role: "user", content: prompt }],
+      { apiKey, model: reflectionModel, maxTokens: 1400, temperature: 0.2 }
+    );
+
+    const parsed = parseReflectionNote(rawResponse);
+    await recordClaudeDebugTrace(sql, {
+      userId,
+      traceKind: "reflection",
+      model: reflectionModel,
+      systemPrompt: reflectionSystemPrompt,
+      inputMessages: [{ role: "user", content: prompt }],
+      rawResponse,
+      meta: {
+        message_count: messageCount,
+        parse_success: Boolean(parsed),
+        has_existing_snapshot: Boolean(existingSnapshot)
+      }
+    }).catch((traceError) => {
+      console.error("Failed to record reflection debug trace:", traceError);
+    });
+
+    if (!parsed) {
+      await markReflectionSnapshotFailed(sql, userId, "Reflection parsing failed");
+      return existingSnapshot;
+    }
+
+    await upsertReflectionSnapshot(sql, userId, parsed, messageCount, lastMessageCreatedAt);
+    return parsed;
+  } catch (error) {
+    await recordClaudeDebugTrace(sql, {
+      userId,
+      traceKind: "reflection",
+      model: reflectionModel,
+      systemPrompt: reflectionSystemPrompt,
+      inputMessages: [{ role: "user", content: prompt }],
+      rawResponse: null,
+      meta: {
+        message_count: messageCount,
+        parse_success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        has_existing_snapshot: Boolean(existingSnapshot)
+      }
+    }).catch((traceError) => {
+      console.error("Failed to record failed reflection trace:", traceError);
+    });
+    console.error("Reflection snapshot failed:", error);
+    await markReflectionSnapshotFailed(
+      sql,
+      userId,
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    return existingSnapshot;
+  }
+}
 
 export async function runSoulSynthesis(
   sql: NeonSQL,
   apiKey: string,
   userId: string
 ): Promise<{ visible: VisibleSoulFile | null; hidden: HiddenSoulFile | null }> {
+  const synthesisModel = "claude-opus-4-20250514";
+  const synthesisSystemPrompt =
+    "You are a multi-expert soul analyst. Follow the analysis procedure exactly. Output only the two JSON objects separated by <<<SPLIT>>>.";
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingVisible = await getVisibleSoulFile(sql, userId);
   const existingHidden = await getHiddenSoulFile(sql, userId);
-  const reflectionNote = await getReflectionNote(sql, userId);
+  const reflectionNote = await getLatestReflectionSnapshot(sql, userId);
 
-  const extractionMessages = allMessages
-    .filter(m => m.content !== "[begin]")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content
-    }));
+  const extractionMessages = allMessages.map((m) => ({
+    role: m.role,
+    content: m.content
+  }));
 
   try {
     const synthesisPromptText = buildSoulSynthesisPrompt(
@@ -242,15 +594,37 @@ export async function runSoulSynthesis(
       existingHidden
     );
 
-    const synthesisRaw = await callClaude(
-      "You are a multi-expert soul analyst. Follow the analysis procedure exactly. Output only the two JSON objects separated by <<<SPLIT>>>.",
+    let synthesisRaw = "";
+    for await (const chunk of streamClaude(
+      synthesisSystemPrompt,
       [{ role: "user", content: synthesisPromptText }],
-      { apiKey, model: "claude-opus-4-20250514", maxTokens: 8192, temperature: 0.5 }
-    );
+      { apiKey, model: synthesisModel, maxTokens: 8192, temperature: 0.5 }
+    )) {
+      synthesisRaw += chunk;
+    }
 
     const result = parseSoulSynthesis(synthesisRaw);
+    await recordClaudeDebugTrace(sql, {
+      userId,
+      traceKind: "synthesis",
+      model: synthesisModel,
+      systemPrompt: synthesisSystemPrompt,
+      inputMessages: [{ role: "user", content: synthesisPromptText }],
+      rawResponse: synthesisRaw,
+      meta: {
+        message_count: extractionMessages.length,
+        has_existing_visible: Boolean(existingVisible),
+        has_existing_hidden: Boolean(existingHidden),
+        has_reflection_snapshot: Boolean(reflectionNote),
+        parse_success: Boolean(result)
+      }
+    }).catch((traceError) => {
+      console.error("Failed to record synthesis debug trace:", traceError);
+    });
+
     if (!result) {
       console.error("Soul synthesis parsing failed");
+      await markSynthesisFailed(sql, userId);
       return { visible: existingVisible, hidden: existingHidden };
     }
 
@@ -268,11 +642,36 @@ export async function runSoulSynthesis(
 
     return { visible: mergedVisible, hidden: mergedHidden };
   } catch (error) {
+    const failedPromptText = buildSoulSynthesisPrompt(
+      extractionMessages,
+      reflectionNote,
+      existingVisible,
+      existingHidden
+    );
+    await recordClaudeDebugTrace(sql, {
+      userId,
+      traceKind: "synthesis",
+      model: synthesisModel,
+      systemPrompt: synthesisSystemPrompt,
+      inputMessages: [{ role: "user", content: failedPromptText }],
+      rawResponse: null,
+      meta: {
+        message_count: extractionMessages.length,
+        has_existing_visible: Boolean(existingVisible),
+        has_existing_hidden: Boolean(existingHidden),
+        has_reflection_snapshot: Boolean(reflectionNote),
+        parse_success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      }
+    }).catch((traceError) => {
+      console.error("Failed to record failed synthesis debug trace:", traceError);
+    });
     console.error("Soul synthesis failed:", error);
+    await markSynthesisFailed(sql, userId).catch((markError) =>
+      console.error("Failed to mark synthesis as failed:", markError)
+    );
     return { visible: existingVisible, hidden: existingHidden };
   }
 }
 
-// Re-export parseReflectionNote for use in handlers
-export { parseReflectionNote } from "../../src/domain/soulFile.ts";
-export { emptyVisibleSoulFile } from "../../src/domain/soulFile.ts";
+export { emptyVisibleSoulFile };

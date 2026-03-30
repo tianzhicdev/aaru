@@ -38,7 +38,7 @@ More like: "You move through the world like someone who built walls to protect t
 Plus your own words preserved as "crystallized moments" — mirrors you can revisit.
 
 **5/7**
-Under the hood: every few exchanges, the AI runs your conversation through 4 expert lenses:
+Under the hood: the AI runs your conversation through 4 expert lenses:
 
 - Psychologist
 - Sociologist
@@ -62,7 +62,7 @@ Thumos is free, no account needed.
 Powered by Claude (Anthropic). Your conversations are private — no human reads them.
 
 iOS: [App Store link]
-Web: trythumos.com/thumos
+Web: trythumos.com
 
 The first soul file is always surprising. Try one conversation.
 

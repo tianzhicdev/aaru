@@ -242,7 +242,7 @@ Each dimension gets a poetic description that references the user's actual words
 |------|------|-----------|
 | Apple Developer Program | $99 | Annual |
 | Domain | ~$10-15 | Annual |
-| Supabase | Current plan | Monthly |
+| Cloudflare Workers + Neon | Current plan | Monthly |
 | Claude API (Opus 4 + Haiku 4.5) | Usage-based | Monthly |
 | **Minimum to launch** | **~$110** | **Year 1** |
 
@@ -359,4 +359,3 @@ dev note:
 4. perhaps we need a /version endpoint; device send its build version and server decides if it is deprecated. if yes, app displays a page for forced update. (user should not lose data)
 5. forget about share feature or radar card. not for this version. 
 6. let's use claudflare for website and seo and etc. write a spec doc in a ./web dir for the websites. I will review; 
-

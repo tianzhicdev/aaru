@@ -13,7 +13,7 @@ The idea: what if instead of personality quizzes (MBTI, Enneagram, Big Five), yo
 
 You talk to Thumos. It asks one question at a time. Short responses — 2-4 sentences. It uses your own words and metaphors. It notices contradictions. ("You love being alone, but your best memory is about a crowd. Tell me about that tension.")
 
-Every 8 exchanges, it runs a background synthesis — extracting patterns from the conversation. After a session, it passes everything through a 4-expert pipeline:
+As you talk, it quietly extracts patterns from the conversation. When you're ready, a deeper synthesis passes everything through a 4-expert pipeline:
 
 - Psychologist — emotional patterns, defense mechanisms, core fears
 - Sociologist — identity construction, group positioning
@@ -28,7 +28,7 @@ There's a dual architecture: the visible soul file (user-facing, written "accura
 - Claude Opus 4 for conversation + full synthesis
 - Claude Haiku 4.5 for periodic light extraction
 - SwiftUI native iOS (no React Native, no web views)
-- Supabase Edge Functions (Deno) + Postgres
+- Cloudflare Workers + Neon Postgres
 - SSE streaming for real-time responses
 - Device-keyed identity (Keychain, no accounts)
 
@@ -42,4 +42,4 @@ Free, no account needed. Privacy: conversations processed by Anthropic (Claude),
 Would love technical feedback, especially on the synthesis pipeline. The 4-expert approach was inspired by how multiple therapists might see the same person differently — integrating those views creates a richer portrait than any single lens.
 
 App Store link: [link]
-Website: trythumos.com/thumos
+Website: trythumos.com

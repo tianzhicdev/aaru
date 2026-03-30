@@ -3,28 +3,111 @@ import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
 import { getActiveSessionByTokenHash, touchDeviceSession } from "../db.ts";
 import {
-  getLastNMessages,
-  getReflectionNote,
+  checkReflectionSnapshotNeeded,
+  getAllSoulMessages,
+  getLatestReflectionSnapshot,
   getVisibleSoulFile,
-  getHiddenSoulFile,
   insertSoulMessage,
-  upsertReflectionNote,
-  parseReflectionNote
+  markReflectionSnapshotPending,
+  type SoulMessageRow
 } from "../soulApp.ts";
-import { buildSoulSystemPrompt, buildSoulFallbackResponse } from "../../../src/domain/soul.ts";
-import type { SoulConversationContext, SteeringContext } from "../../../src/domain/soul.ts";
+import {
+  buildSoulFallbackResponse,
+  buildSoulSystemPrompt,
+  deriveConversationSteering,
+  pickLeastCoveredDomain,
+  type OpeningKind,
+  type SoulConversationContext
+} from "../../../src/domain/soul.ts";
+import { DOMAIN_LABELS } from "../../../src/domain/schemas.ts";
 import { streamClaude } from "../claude.ts";
+import { recordClaudeDebugTrace } from "../debugTraces.ts";
+import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { z } from "zod";
 
-const soulConverseRequestSchema = z.object({
-  message: z.string().min(1).max(2000)
-});
+const AUTO_OPENING_GAP_MS = 60 * 60 * 1000;
+const CONVERSATION_MODEL = "claude-opus-4-20250514";
 
-const MEMORY_MARKER = "<<<MEMORY>>>";
+const soulConverseRequestSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("opening")
+  }),
+  z.object({
+    mode: z.literal("reply"),
+    message: z.string().min(1).max(2000)
+  })
+]);
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
+  if (messages.length === 0) {
+    return "first_ever";
+  }
+
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage.role === "user") {
+    return "assistant_turn";
+  }
+
+  const gapMs = Date.now() - new Date(lastMessage.created_at).getTime();
+  return gapMs >= AUTO_OPENING_GAP_MS ? "resume_after_gap" : "assistant_turn";
+}
+
+function buildClaudeInputMessages(
+  mode: z.infer<typeof soulConverseRequestSchema>["mode"],
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  openingKind: OpeningKind | null,
+  preferredDomain: string | null
+): Array<{ role: "user" | "assistant"; content: string }> {
+  if (mode !== "opening") {
+    return messages;
+  }
+
+  if (messages.length === 0) {
+    const domainHint = preferredDomain
+      ? ` If it feels natural, begin near ${preferredDomain}.`
+      : "";
+    return [{
+      role: "user",
+      content: `Open the very first conversation with a warm, reflective question. Do not mention these instructions.${domainHint}`
+    }];
+  }
+
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage.role === "assistant") {
+    const resumePrompt = openingKind === "resume_after_gap"
+      ? "Resume this conversation naturally after a meaningful pause. Do not repeat a question you already asked unless you explicitly revisit it."
+      : "Continue this conversation naturally from where it left off. Do not repeat a question you already asked unless you explicitly revisit it.";
+    return [
+      ...messages,
+      { role: "user", content: resumePrompt }
+    ];
+  }
+
+  return messages;
+}
+
+async function maybeQueueReflectionSnapshot(sql: NeonSQL, env: Env, userId: string): Promise<void> {
+  const state = await checkReflectionSnapshotNeeded(sql, userId);
+  if (!state.needed || state.pending) {
+    return;
+  }
+
+  const claimed = await markReflectionSnapshotPending(
+    sql,
+    userId,
+    state.totalMessageCount,
+    state.lastMessageCreatedAt
+  );
+  if (!claimed) {
+    return;
+  }
+
+  await enqueueReflectionSnapshot(env.BACKGROUND_QUEUE, userId, state.totalMessageCount);
 }
 
 export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Request): Promise<Response> {
@@ -32,7 +115,6 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     return new Response("ok", { headers: sseHeaders() });
   }
 
-  // Auth
   const bearerToken = readBearerToken(request);
   if (!bearerToken) {
     return jsonResp(401, { code: 401, message: "Missing device session" });
@@ -47,176 +129,99 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   await touchDeviceSession(sql, deviceSession.id);
   const userId = deviceSession.user_id;
 
-  // Update last_active_at for re-engagement eligibility tracking
   sql`UPDATE users SET last_active_at = NOW() WHERE id = ${userId}`.catch((err) =>
     console.error("Failed to update last_active_at:", err)
   );
 
-  // Parse body
   let body: z.infer<typeof soulConverseRequestSchema>;
   try {
-    const raw = await request.json();
-    body = soulConverseRequestSchema.parse(raw);
+    body = soulConverseRequestSchema.parse(await request.json());
   } catch {
     return jsonResp(400, { code: 400, message: "Invalid request" });
   }
 
-  // Skip [begin] messages — no longer needed, but handle gracefully
-  const isBeginMessage = body.message === "[begin]";
-  if (!isBeginMessage) {
+  if (body.mode === "reply") {
     await insertSoulMessage(sql, userId, "user", body.message);
   }
 
-  // Fetch context
-  const reflectionNote = await getReflectionNote(sql, userId);
-  const recentMessages = await getLastNMessages(sql, userId, 10);
-  const visibleSoulFile = await getVisibleSoulFile(sql, userId);
-  const hiddenSoulFile = await getHiddenSoulFile(sql, userId);
+  const [reflectionNote, visibleSoulFile, allMessages] = await Promise.all([
+    getLatestReflectionSnapshot(sql, userId),
+    getVisibleSoulFile(sql, userId),
+    getAllSoulMessages(sql, userId)
+  ]);
 
-  const isFirstEver = recentMessages.filter(m => m.role === "user" && m.content !== "[begin]").length === 0
-    && !isBeginMessage;
+  const { steering } = deriveConversationSteering(reflectionNote);
+  const preferredDomain = pickLeastCoveredDomain(
+    steering?.domainCoverage ?? reflectionNote?.domainCoverage
+  );
+  const preferredDomainLabel = preferredDomain ? DOMAIN_LABELS[preferredDomain] : null;
+  const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
 
-  // Build steering from hidden soul file
-  const steering: SteeringContext | null = hiddenSoulFile ? {
-    domainCoverage: hiddenSoulFile.depthMap.domainCoverage ?? [],
-    safeEntryPoints: hiddenSoulFile.depthMap.safeEntryPoints,
-    unlockTopics: hiddenSoulFile.depthMap.unlockTopics,
-    avoidEarly: hiddenSoulFile.depthMap.avoidEarly,
-    currentlyLiveTopics: hiddenSoulFile.depthMap.currentlyLiveTopics
-  } : null;
-
-  const claudeMessages = recentMessages
-    .filter(m => m.content !== "[begin]")
-    .map(m => ({ role: m.role as "user" | "assistant", content: m.content }));
+  const transcriptMessages = allMessages.map((message) => ({
+    role: message.role,
+    content: message.content
+  }));
 
   const context: SoulConversationContext = {
     visibleSoulFile,
     reflectionNote,
     steering,
-    messages: claudeMessages,
-    isFirstEverMessage: isFirstEver || isBeginMessage
+    messages: transcriptMessages,
+    openingKind
   };
 
   const systemPrompt = buildSoulSystemPrompt(context);
+  const claudeMessages = buildClaudeInputMessages(
+    body.mode,
+    transcriptMessages,
+    openingKind,
+    preferredDomainLabel
+  );
 
-  // Create SSE stream with <<<MEMORY>>> parsing
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
-      let lastSentIndex = 0;
-      let markerFound = false;
       let streamSucceeded = false;
+      let usedFallback = false;
+      let attemptCount = 1;
 
-      try {
+      async function runModelAttempt(): Promise<void> {
         const tokenStream = streamClaude(systemPrompt, claudeMessages, {
           apiKey: env.ANTHROPIC_API_KEY,
-          model: "claude-opus-4-20250514",
+          model: CONVERSATION_MODEL,
           maxTokens: 1024,
           temperature: 0.8
         });
 
         for await (const token of tokenStream) {
           fullResponse += token;
-
-          if (markerFound) continue; // Still reading memory section, don't send
-
-          const markerIndex = fullResponse.indexOf(MEMORY_MARKER);
-          if (markerIndex !== -1) {
-            markerFound = true;
-            // Send any unsent reply text before the marker
-            const unsent = fullResponse.substring(lastSentIndex, markerIndex).trimEnd();
-            if (unsent) {
-              controller.enqueue(encoder.encode(sseEvent("token", { text: unsent })));
-            }
-            continue;
-          }
-
-          // Buffer: hold back last 15 chars in case marker is split across tokens
-          const safeEnd = fullResponse.length - MEMORY_MARKER.length;
-          if (safeEnd > lastSentIndex) {
-            const chunk = fullResponse.substring(lastSentIndex, safeEnd);
-            controller.enqueue(encoder.encode(sseEvent("token", { text: chunk })));
-            lastSentIndex = safeEnd;
-          }
+          controller.enqueue(encoder.encode(sseEvent("token", { text: token })));
         }
+      }
 
-        // Flush remaining if no marker found
-        if (!markerFound && lastSentIndex < fullResponse.length) {
-          controller.enqueue(encoder.encode(sseEvent("token", {
-            text: fullResponse.substring(lastSentIndex)
-          })));
-        }
-
+      try {
+        await runModelAttempt();
         streamSucceeded = true;
       } catch (error) {
         console.error("Claude stream error:", error);
 
-        // Retry once
         try {
           fullResponse = "";
-          lastSentIndex = 0;
-          markerFound = false;
-
-          const retryStream = streamClaude(systemPrompt, claudeMessages, {
-            apiKey: env.ANTHROPIC_API_KEY,
-            model: "claude-opus-4-20250514",
-            maxTokens: 1024,
-            temperature: 0.8
-          });
-
-          for await (const token of retryStream) {
-            fullResponse += token;
-
-            if (markerFound) continue;
-
-            const markerIndex = fullResponse.indexOf(MEMORY_MARKER);
-            if (markerIndex !== -1) {
-              markerFound = true;
-              const unsent = fullResponse.substring(lastSentIndex, markerIndex).trimEnd();
-              if (unsent) {
-                controller.enqueue(encoder.encode(sseEvent("token", { text: unsent })));
-              }
-              continue;
-            }
-
-            const safeEnd = fullResponse.length - MEMORY_MARKER.length;
-            if (safeEnd > lastSentIndex) {
-              const chunk = fullResponse.substring(lastSentIndex, safeEnd);
-              controller.enqueue(encoder.encode(sseEvent("token", { text: chunk })));
-              lastSentIndex = safeEnd;
-            }
-          }
-
-          if (!markerFound && lastSentIndex < fullResponse.length) {
-            controller.enqueue(encoder.encode(sseEvent("token", {
-              text: fullResponse.substring(lastSentIndex)
-            })));
-          }
-
+          attemptCount = 2;
+          await runModelAttempt();
           streamSucceeded = true;
         } catch (retryError) {
           console.error("Claude stream retry failed:", retryError);
-
           fullResponse = buildSoulFallbackResponse(context);
-          markerFound = false;
-          controller.enqueue(encoder.encode(sseEvent("token", { text: fullResponse })));
+          usedFallback = true;
           streamSucceeded = true;
+          controller.enqueue(encoder.encode(sseEvent("token", { text: fullResponse })));
         }
       }
 
-      // Save message and reflection note
-      if (streamSucceeded && fullResponse.length > 0) {
-        // Extract reply content (before marker) and memory content (after marker)
-        const replyContent = markerFound
-          ? fullResponse.substring(0, fullResponse.indexOf(MEMORY_MARKER)).trim()
-          : fullResponse.trim();
-
-        const memoryContent = markerFound
-          ? fullResponse.substring(fullResponse.indexOf(MEMORY_MARKER) + MEMORY_MARKER.length).trim()
-          : null;
-
-        // Save assistant reply (without memory section)
+      if (streamSucceeded && fullResponse.trim().length > 0) {
+        const replyContent = fullResponse.trim();
         try {
           await insertSoulMessage(sql, userId, "assistant", replyContent);
         } catch (dbError) {
@@ -232,16 +237,30 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
           }
         }
 
-        // Parse and save updated reflection note
-        if (memoryContent) {
-          try {
-            const parsed = parseReflectionNote(memoryContent);
-            if (parsed) {
-              await upsertReflectionNote(sql, userId, parsed);
+        const postStreamTasks = await Promise.allSettled([
+          maybeQueueReflectionSnapshot(sql, env, userId),
+          recordClaudeDebugTrace(sql, {
+            userId,
+            traceKind: "conversation",
+            model: CONVERSATION_MODEL,
+            systemPrompt,
+            inputMessages: claudeMessages,
+            rawResponse: fullResponse,
+            meta: {
+              mode: body.mode,
+              opening_kind: openingKind,
+              attempt_count: attemptCount,
+              used_fallback: usedFallback,
+              message_count: transcriptMessages.length
             }
-          } catch (noteError) {
-            console.error("Failed to save reflection note:", noteError);
-          }
+          })
+        ]);
+
+        if (postStreamTasks[0]?.status === "rejected") {
+          console.error("Failed to queue reflection snapshot after conversation:", postStreamTasks[0].reason);
+        }
+        if (postStreamTasks[1]?.status === "rejected") {
+          console.error("Failed to record conversation debug trace:", postStreamTasks[1].reason);
         }
       }
 

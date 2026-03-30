@@ -1,5 +1,5 @@
--- Thumos Soul Mirror — Neon Postgres schema
--- Stripped of Supabase RLS policies (no auth.role() in Neon)
+-- Thumos Soul Mirror — current Neon Postgres schema
+-- Matches the Cloudflare Workers runtime.
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -9,6 +9,7 @@ CREATE TABLE public.users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id text NOT NULL UNIQUE,
   display_name text NOT NULL DEFAULT 'Wandering Soul',
+  last_active_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -42,6 +43,21 @@ CREATE TABLE public.soul_messages (
 
 CREATE INDEX idx_soul_messages_user_created ON public.soul_messages(user_id, created_at);
 
+-- ── Reflection Snapshots (async running memory) ──────────────
+
+CREATE TABLE public.reflection_snapshots (
+  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  through_message_count int NOT NULL DEFAULT 0,
+  through_last_message_created_at timestamptz,
+  note jsonb,
+  status text NOT NULL DEFAULT 'ready'
+    CHECK (status IN ('ready', 'pending', 'failed')),
+  started_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- ── Visible Soul Files (user-facing, poetic) ────────────────
 
 CREATE TABLE public.visible_soul_files (
@@ -58,6 +74,10 @@ CREATE TABLE public.visible_soul_files (
   your_voice text DEFAULT '',
   crystallized_moments jsonb DEFAULT '[]'::jsonb,
   open_threads jsonb DEFAULT '[]'::jsonb,
+  compass_scores jsonb DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'ready'
+    CHECK (status IN ('ready', 'pending', 'failed')),
+  synthesis_started_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
 
@@ -75,8 +95,28 @@ CREATE TABLE public.hidden_soul_files (
   voice jsonb DEFAULT '{}'::jsonb,
   depth_map jsonb DEFAULT '{}'::jsonb,
   analyst_notes jsonb DEFAULT '[]'::jsonb,
+  status text NOT NULL DEFAULT 'ready'
+    CHECK (status IN ('ready', 'pending', 'failed')),
+  synthesis_started_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
+
+-- ── Claude Debug Traces ───────────────────────────────────────
+
+CREATE TABLE public.claude_debug_traces (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  trace_kind text NOT NULL CHECK (trace_kind IN ('conversation', 'synthesis', 'reflection')),
+  model text NOT NULL,
+  system_prompt text NOT NULL,
+  input_messages jsonb NOT NULL DEFAULT '[]'::jsonb,
+  raw_response text,
+  meta jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX claude_debug_traces_user_kind_created_idx
+  ON public.claude_debug_traces(user_id, trace_kind, created_at DESC);
 
 -- ── Triggers ─────────────────────────────────────────────────
 
@@ -92,4 +132,8 @@ $$;
 
 CREATE TRIGGER users_touch_updated_at
 BEFORE UPDATE ON public.users
+FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+
+CREATE TRIGGER reflection_snapshots_touch_updated_at
+BEFORE UPDATE ON public.reflection_snapshots
 FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();

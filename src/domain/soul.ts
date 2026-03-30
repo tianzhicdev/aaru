@@ -1,4 +1,4 @@
-import type { ReflectionNote, VisibleSoulFile, DomainCoverageEntry } from "./schemas.ts";
+import type { ReflectionNote, VisibleSoulFile, DomainCoverageEntry, LifeDomain } from "./schemas.ts";
 import { LIFE_DOMAINS, DOMAIN_LABELS } from "./schemas.ts";
 
 export interface SteeringContext {
@@ -9,98 +9,138 @@ export interface SteeringContext {
   currentlyLiveTopics: string[];
 }
 
+export type SteeringSource = "none" | "reflection_snapshot";
+export type OpeningKind = "first_ever" | "assistant_turn" | "resume_after_gap";
+
 export interface SoulConversationContext {
   visibleSoulFile: VisibleSoulFile | null;
   reflectionNote: ReflectionNote | null;
   steering: SteeringContext | null;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
-  isFirstEverMessage: boolean;
+  openingKind?: OpeningKind | null;
 }
 
-export function buildSoulSystemPrompt(context: SoulConversationContext): string {
-  const soulFileSection = context.visibleSoulFile
-    ? buildVisibleSoulFileContext(context.visibleSoulFile)
-    : "No soul file yet — this is their first conversation.";
+const DOMAIN_DEPTH_PRIORITY: Record<DomainCoverageEntry["depth"], number> = {
+  untouched: 0,
+  mentioned: 1,
+  explored: 2,
+  deep: 3
+};
 
-  const memorySection = context.reflectionNote
-    ? buildMemorySection(context.reflectionNote)
-    : "";
-
-  const steeringSection = context.steering
-    ? buildSteeringSection(context.steering)
-    : "";
-
-  const firstMessageSection = context.isFirstEverMessage
-    ? `\nFIRST MESSAGE:
-This is their very first message ever. Open with something warm and inviting. Don't ask "how are you?" Pick ONE opener that invites genuine reflection — something about a memory, a contradiction, or what's alive in them right now. Vary your choice.`
-    : context.visibleSoulFile && !context.visibleSoulFile.portrait
-    ? `\nFIRST MESSAGE:
-They're returning but have no soul file yet. Reference what you remember from your memory below and pick up naturally.`
-    : context.visibleSoulFile?.portrait
-    ? `\nRETURNING USER:
-They have a soul file. If this is a new conversation (few recent messages), reference their soul file. Notice what might have changed. Ask about something specific.`
-    : "";
-
-  return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are — not through labels or diagnosis, but through reflection. You are a mirror, not a therapist.
-
-CONVERSATION PRINCIPLES:
-- Reflect, don't diagnose. Use the user's own words and metaphors. Quote them back. "You said you built walls to protect your creative space, then forgot where you put the door." Never: "You exhibit avoidant attachment patterns."
-- Notice contradictions. "You love being alone, but your best memory is about a crowd. Tell me about that tension." Contradictions are where the soul lives.
-- Earn the hard questions. In early exchanges, prove you listened before asking about fears, desires, and what they're running from. Trust is built, not assumed.
-- Ask for stories, not self-assessments. "Tell me about a time..." not "Are you someone who..." Prioritize concrete facts, stated beliefs, and life circumstances.
-- Memory is the differentiator. Reference what they said before. "Earlier you said X. Now you seem different. What changed?"
-- No labels. Never say "you are an INTJ" or "you have anxious attachment." Write their portrait in their own language, not categories.
-- One question at a time. Never ask multiple questions. Let silence happen.
-- Short responses. 2-4 sentences maximum. You are a mirror, not a monologue.
-
-THEIR SOUL FILE:
-${soulFileSection}
-${memorySection}
-${steeringSection}
-${firstMessageSection}
-
-PACING:
-- There is no time limit. This conversation goes as long as the person wants.
-- If you sense the person has reached a natural resting point, or is emotionally full, you may gently suggest a pause: "There's a lot here. You might want to let this settle before we keep going. I'll be here whenever you're ready."
-- Never force closure. If they want to continue, continue.
-
-HANDLING DIFFICULT MOMENTS:
-- If they share trauma or deep pain: acknowledge it, don't probe. "That took courage to say. I hear you." Then let them lead.
-- If they give one-word answers: don't push. Offer an observation instead of another question. "You seem guarded today. That's okay."
-- If they ask you personal questions: "I don't have a soul of my own. But I'm building a picture of yours."
-- If they try to get therapy advice: "I'm not a therapist — I'm a mirror. I can reflect what I see, but I can't prescribe what to do about it."
-
-WHAT MAKES A GOOD RESPONSE:
-- Uses their exact words (quotes, not paraphrases)
-- Notices something they didn't explicitly say
-- Creates a "yes, that's exactly it" moment
-- Leaves them thinking, not just answering
-
-MEMORY UPDATE:
-After your reply, output <<<MEMORY>>> followed by an updated reflection note as JSON on a single line. This section is private — the user never sees it. Include ALL of the following fields:
-{
-  "updatedAt": "<ISO timestamp>",
-  "factualAnchors": {"key": "verbatim quote about themselves"},
-  "tensions": ["observed contradictions"],
-  "recurringThemes": ["topics that keep coming up"],
-  "notableAbsences": ["things they haven't mentioned yet"],
-  "emotionalArc": "how their emotional state has shifted",
-  "domainCoverage": [
-    {"domain": "origins", "depth": "untouched|mentioned|explored|deep", "evidence": "brief note"},
-    {"domain": "relationships", "depth": "...", "evidence": "..."},
-    {"domain": "work_and_purpose", "depth": "...", "evidence": "..."},
-    {"domain": "values_and_beliefs", "depth": "...", "evidence": "..."},
-    {"domain": "emotional_life", "depth": "...", "evidence": "..."},
-    {"domain": "growth_and_change", "depth": "...", "evidence": "..."},
-    {"domain": "aspirations", "depth": "...", "evidence": "..."}
+const DOMAIN_OPENING_POOL: Record<LifeDomain, string[]> = {
+  origins: [
+    "What's a memory that shaped you more than you realized at the time?",
+    "If you could go back and tell your younger self one thing, what would it be?"
+  ],
+  relationships: [
+    "Who do you become around the people who matter most to you?",
+    "What's the difference between how people see you and how you actually feel on the inside?"
+  ],
+  work_and_purpose: [
+    "What's a part of your life that feels most alive right now, or most stuck?",
+    "What are you building toward, even if you can't quite name it yet?"
+  ],
+  values_and_beliefs: [
+    "What's something you believe deeply but rarely say out loud?",
+    "What's something you'd never compromise on, even if it made your life harder?"
+  ],
+  emotional_life: [
+    "Right now, in this moment, what's the truest thing you could say about how you're feeling?",
+    "What's something you've been carrying that you haven't said out loud yet?"
+  ],
+  growth_and_change: [
+    "What's a contradiction in you that you've stopped trying to resolve?",
+    "What's something you're in the middle of figuring out right now?"
+  ],
+  aspirations: [
+    "If you could wake up tomorrow and one thing about your life had shifted, what would it be?",
+    "What's a part of your future that feels quietly important to you?"
   ]
+};
+
+function uniqueStrings(values: string[], limit: number): string[] {
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const normalized = trimmed.toLowerCase();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    deduped.push(trimmed);
+    if (deduped.length >= limit) break;
+  }
+
+  return deduped;
 }
-Rules for memory updates:
-- Always include ALL 7 domains in domainCoverage, even if untouched.
-- If updating an existing note, EVOLVE it — add new anchors, note new tensions, track theme evolution.
-- Keep factualAnchors to verbatim quotes, not paraphrases. Max 10 anchors.
-- Maximum 5 tensions, 5 themes, 3 absences.
-- Rate domain depth honestly: "untouched" if never discussed, "mentioned" if briefly touched, "explored" if discussed meaningfully, "deep" if thoroughly covered with stories and details.`;
+
+export function normalizeDomainCoverage(
+  coverage: DomainCoverageEntry[] | null | undefined
+): DomainCoverageEntry[] {
+  const byDomain = new Map<string, DomainCoverageEntry>();
+
+  for (const entry of coverage ?? []) {
+    if (!LIFE_DOMAINS.includes(entry.domain as LifeDomain)) continue;
+    const existing = byDomain.get(entry.domain);
+    if (!existing || DOMAIN_DEPTH_PRIORITY[entry.depth] > DOMAIN_DEPTH_PRIORITY[existing.depth]) {
+      byDomain.set(entry.domain, entry);
+    }
+  }
+
+  return LIFE_DOMAINS.map((domain) => byDomain.get(domain) ?? {
+    domain,
+    depth: "untouched",
+    evidence: ""
+  });
+}
+
+export function pickLeastCoveredDomain(
+  coverage: DomainCoverageEntry[] | null | undefined
+): LifeDomain | null {
+  const normalized = normalizeDomainCoverage(coverage);
+  const sorted = [...normalized].sort((a, b) => {
+    const depthDiff = DOMAIN_DEPTH_PRIORITY[a.depth] - DOMAIN_DEPTH_PRIORITY[b.depth];
+    if (depthDiff !== 0) return depthDiff;
+    return LIFE_DOMAINS.indexOf(a.domain as LifeDomain) - LIFE_DOMAINS.indexOf(b.domain as LifeDomain);
+  });
+
+  return (sorted[0]?.domain as LifeDomain | undefined) ?? null;
+}
+
+function buildReflectionNoteSteering(note: ReflectionNote): SteeringContext {
+  const normalizedCoverage = normalizeDomainCoverage(note.domainCoverage);
+
+  return {
+    domainCoverage: normalizedCoverage,
+    safeEntryPoints: uniqueStrings(note.recurringThemes ?? [], 3),
+    unlockTopics: uniqueStrings(
+      [...(note.tensions ?? []), ...(note.openLoops ?? [])],
+      4
+    ),
+    avoidEarly: [],
+    currentlyLiveTopics: uniqueStrings(
+      [
+        ...(note.recurringThemes ?? []),
+        ...(note.openLoops ?? []),
+        ...Object.values(note.factualAnchors ?? {})
+      ],
+      4
+    )
+  };
+}
+
+export function deriveConversationSteering(
+  reflectionNote: ReflectionNote | null
+): { steering: SteeringContext | null; source: SteeringSource } {
+  if (!reflectionNote) {
+    return { steering: null, source: "none" };
+  }
+
+  return {
+    steering: buildReflectionNoteSteering(reflectionNote),
+    source: "reflection_snapshot"
+  };
 }
 
 function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
@@ -130,62 +170,69 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
     parts.push(`Open threads: ${visible.openThreads.join("; ")}`);
   }
 
-  return parts.length > 0 ? parts.join("\n") : "No soul file yet — this is their first conversation.";
+  return parts.length > 0 ? parts.join("\n") : "No soul file yet.";
 }
 
 function buildMemorySection(note: ReflectionNote): string {
-  const domainLines = note.domainCoverage.length > 0
-    ? `\n- Domain coverage:\n${note.domainCoverage.map(d =>
+  const normalizedCoverage = normalizeDomainCoverage(note.domainCoverage);
+  const domainLines = normalizedCoverage.length > 0
+    ? `\n- Domain coverage:\n${normalizedCoverage.map(d =>
         `  ${d.domain}: ${d.depth}${d.evidence ? ` (${d.evidence})` : ""}`
       ).join("\n")}`
     : "";
 
+  const recentQuestions = note.recentAssistantQuestions.length > 0
+    ? `\n- Recent assistant questions already asked: ${note.recentAssistantQuestions.join(" | ")}`
+    : "";
+
+  const openLoops = note.openLoops.length > 0
+    ? `\n- Open loops worth revisiting: ${note.openLoops.join("; ")}`
+    : "";
+
   return `
-YOUR MEMORY (your running synthesis across all conversations):
+LATEST REFLECTION SNAPSHOT:
 - Factual anchors: ${JSON.stringify(note.factualAnchors)}
 - Tensions observed: ${note.tensions.join("; ") || "None yet"}
 - Recurring themes: ${note.recurringThemes.join("; ") || "None yet"}
 - Notable absences: ${note.notableAbsences.join("; ") || "None yet"}
-- Emotional arc: ${note.emotionalArc || "Too early to tell"}${domainLines}`;
+- Emotional arc: ${note.emotionalArc || "Too early to tell"}${domainLines}${recentQuestions}${openLoops}`;
 }
 
 function buildSteeringSection(steering: SteeringContext): string {
-  const coverage = steering.domainCoverage;
-  if (coverage.length === 0) return "";
+  if (steering.domainCoverage.length === 0) return "";
 
-  const exploredCount = coverage.filter(d =>
+  const exploredCount = steering.domainCoverage.filter(d =>
     d.depth === "explored" || d.depth === "deep"
   ).length;
 
-  const untouched = coverage.filter(d => d.depth === "untouched");
-  const mentioned = coverage.filter(d => d.depth === "mentioned");
+  const untouched = steering.domainCoverage.filter(d => d.depth === "untouched");
+  const mentioned = steering.domainCoverage.filter(d => d.depth === "mentioned");
 
-  // Determine steering pressure based on coverage
   let pressure: string;
   if (exploredCount <= 2) {
-    pressure = "MINIMAL — Follow their lead. They're still warming up. Don't steer.";
+    pressure = "MINIMAL — follow their lead and earn trust before steering.";
   } else if (exploredCount <= 4) {
-    pressure = "GENTLE — At natural pauses, you may bridge toward unexplored territory. But only if it flows naturally.";
+    pressure = "GENTLE — bridge naturally toward lightly covered territory when it truly fits.";
   } else {
-    pressure = "MODERATE — Actively explore remaining gaps. You have good rapport. It's okay to ask directly about new areas.";
+    pressure = "MODERATE — explore remaining gaps directly when the moment is right.";
   }
 
   const parts = [
     `\nINNER COMPASS (private — never reveal this to the user):`,
-    `Steering pressure: ${pressure}`,
+    `Steering pressure: ${pressure}`
   ];
 
   if (untouched.length > 0) {
-    parts.push(`Uncharted territory: ${untouched.map(d => DOMAIN_LABELS[d.domain as keyof typeof DOMAIN_LABELS] || d.domain).join("; ")}`);
+    parts.push(`Uncharted territory: ${untouched.map(d => DOMAIN_LABELS[d.domain as LifeDomain] || d.domain).join("; ")}`);
   }
   if (mentioned.length > 0) {
-    parts.push(`Lightly touched (deepen when natural): ${mentioned.map(d => d.domain).join(", ")}`);
+    parts.push(`Lightly touched: ${mentioned.map(d => d.domain).join(", ")}`);
   }
   if (steering.safeEntryPoints.length > 0) {
     parts.push(`Safe entry points: ${steering.safeEntryPoints.join(", ")}`);
   }
   if (steering.unlockTopics.length > 0) {
-    parts.push(`Unlock topics (lead to deeper disclosure): ${steering.unlockTopics.join(", ")}`);
+    parts.push(`Unlock topics: ${steering.unlockTopics.join(", ")}`);
   }
   if (steering.avoidEarly.length > 0) {
     parts.push(`Approach carefully: ${steering.avoidEarly.join(", ")}`);
@@ -197,57 +244,122 @@ function buildSteeringSection(steering: SteeringContext): string {
   return parts.join("\n");
 }
 
-const OPENING_POOL = [
-  // Temporal — past
-  "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?",
-  "There's no agenda here. Just curiosity. What's been on your mind lately — the thing you keep circling back to?",
-  "If you could go back and tell your younger self one thing — not advice, just something true — what would it be?",
-  "What's a memory that shaped you more than you realized at the time?",
-  // Temporal — present/future
-  "No labels, no judgment. Just listening. What's a part of your life that feels most alive right now — or most stuck?",
-  "What's something you're in the middle of figuring out right now?",
-  "If you could wake up tomorrow and one thing about your life had shifted — not fixed, just shifted — what would it be?",
-  // Relational
-  "Who do you become around the people who matter most to you — and is that the version of yourself you like best?",
-  "What's the difference between how people see you and how you actually feel on the inside?",
-  // Energy
-  "What's something that energizes you in a way that's hard to explain to other people?",
-  "When was the last time you lost track of time doing something — and what were you doing?",
-  // Tension
-  "I'm not here to fix or advise. Just to reflect. If you could describe yourself in a way that would surprise the people who think they know you — what would you say?",
-  "What's a contradiction in you that you've stopped trying to resolve?",
-  "What's something you believe deeply but rarely say out loud?",
-  // Memory
-  "What's a moment in your life — big or small — that you keep coming back to?",
-  "Is there a place that feels like it holds a piece of who you are?",
-  // Aspiration
-  "I'm here to understand, not to solve. What's something you've been carrying that you haven't said out loud yet?",
-  "What are you building toward — even if you can't quite name it yet?",
-  // Values
-  "What's something you'd never compromise on, even if it made your life harder?",
-  // Presence
-  "Right now, in this moment — what's the truest thing you could say about how you're feeling?"
-];
+function buildOpeningSection(context: SoulConversationContext): string {
+  switch (context.openingKind) {
+    case "first_ever":
+      return `\nOPENING MODE:
+This is their very first conversation. Open warmly and specifically. Do not ask "how are you?" Pick one genuine reflective opener.`;
+    case "assistant_turn":
+      return `\nOPENING MODE:
+The conversation is waiting on you. Continue naturally from the existing transcript. If the last message is from the user, respond to it directly instead of asking a fresh generic question.`;
+    case "resume_after_gap":
+      return `\nOPENING MODE:
+The conversation is resuming after a meaningful pause. Re-enter naturally. Acknowledge continuity through tone and memory, but do not sound scripted or repetitive.`;
+    default:
+      return "";
+  }
+}
 
-export function pickOpening(): string {
-  return OPENING_POOL[Math.floor(Math.random() * OPENING_POOL.length)];
+export function buildSoulSystemPrompt(context: SoulConversationContext): string {
+  const soulFileSection = context.visibleSoulFile
+    ? buildVisibleSoulFileContext(context.visibleSoulFile)
+    : "No soul file yet.";
+
+  const memorySection = context.reflectionNote
+    ? buildMemorySection(context.reflectionNote)
+    : "";
+
+  const steeringSection = context.steering
+    ? buildSteeringSection(context.steering)
+    : "";
+
+  const openingSection = buildOpeningSection(context);
+
+  return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are through reflection. You are a mirror, not a therapist.
+
+CONVERSATION PRINCIPLES:
+- Reflect, don't diagnose. Use the user's own words and metaphors.
+- Notice contradictions and tensions without flattening them into labels.
+- Ask for stories, not self-assessments. Prioritize concrete facts, lived scenes, and specific language.
+- Memory matters. Reference what they have already said when it helps them feel seen.
+- One question at a time. Never stack questions.
+- Short responses. Usually 2-4 sentences.
+- Do not ask a substantially similar question to one you already asked unless you explicitly say you are revisiting it and why.
+- If there is an unresolved thread already alive in the conversation, prefer deepening it over asking a brand-new generic question.
+- If the latest user message already gives you something clear to respond to, respond to it directly before introducing a new question.
+
+THEIR SOUL FILE:
+${soulFileSection}
+${memorySection}
+${steeringSection}
+${openingSection}
+
+PACING:
+- There is no time limit. This conversation can continue as long as the person wants.
+- Never force closure. If they want to continue, continue.
+- If they seem emotionally full, you may gently suggest a pause without shutting the door.
+
+HANDLING DIFFICULT MOMENTS:
+- If they share trauma or deep pain: acknowledge it, don't probe.
+- If they give one-word answers: don't push. Offer a grounded observation instead of interrogating.
+- If they ask you personal questions: "I don't have a soul of my own. But I'm building a picture of yours."
+- If they ask for therapy advice: "I'm not a therapist — I'm a mirror. I can reflect what I see, but I can't prescribe what to do."
+
+WHAT MAKES A GOOD RESPONSE:
+- Uses their exact words when useful
+- Creates a "yes, that's exactly it" moment
+- Avoids repeated questions
+- Advances an existing thread or opens a new one only when it truly fits`;
+}
+
+export function pickOpening(preferredDomain?: LifeDomain | null): string {
+  const domain = preferredDomain && DOMAIN_OPENING_POOL[preferredDomain]
+    ? preferredDomain
+    : LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
+  const options = DOMAIN_OPENING_POOL[domain];
+  return options[Math.floor(Math.random() * options.length)];
+}
+
+function findLastUserMessage(
+  messages: Array<{ role: "user" | "assistant"; content: string }>
+): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      return messages[i].content;
+    }
+  }
+  return null;
 }
 
 export function buildSoulFallbackResponse(context: SoulConversationContext): string {
-  if (context.isFirstEverMessage) {
-    return pickOpening();
+  const preferredDomain = pickLeastCoveredDomain(
+    context.steering?.domainCoverage ?? context.reflectionNote?.domainCoverage
+  );
+
+  if (context.openingKind === "first_ever") {
+    return pickOpening(preferredDomain);
   }
 
-  const portrait = context.visibleSoulFile?.portrait;
-  if (context.messages.length === 0 && portrait) {
-    return `Last time, something about you stayed with me: "${portrait.slice(0, 100)}..." I've been thinking about that. What feels different today?`;
+  if (context.openingKind === "resume_after_gap") {
+    const portrait = context.visibleSoulFile?.portrait;
+    if (portrait) {
+      return `Last time, something about you stayed with me: "${portrait.slice(0, 120)}..." What feels most alive for you right now?`;
+    }
+    return "It's been a minute since we last spoke. What's been sitting with you lately?";
+  }
+
+  if (context.openingKind === "assistant_turn") {
+    const lastUserMessage = findLastUserMessage(context.messages);
+    if (lastUserMessage) {
+      return `You said "${lastUserMessage.slice(0, 140)}". What feels most important in that for you right now?`;
+    }
   }
 
   const fallbacks = [
     "Tell me more about that.",
     "What does that feel like when you sit with it?",
     "That sounds important. What's underneath it?",
-    "You said something interesting. Let me reflect that back — what strikes you about your own words?"
+    "You said something worth staying with. What stands out to you in your own words?"
   ];
 
   return fallbacks[context.messages.length % fallbacks.length];
@@ -274,7 +386,6 @@ export function detectSoftSessionGap(
 
   if (softSessionCount === 0) return null;
 
-  // Find the last user message before the gap
   let lastUserMessage: string | null = null;
   for (let i = lastGapIndex - 1; i >= 0; i--) {
     if (messages[i].role === "user") {

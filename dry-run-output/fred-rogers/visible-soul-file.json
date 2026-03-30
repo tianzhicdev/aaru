@@ -1,34 +1,47 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-27T17:33:03.090Z",
-  "portrait": "He carries loneliness like a cardigan, soft and familiar, transforming sharp edges into gentle folds. Behind the patience everyone sees lies a boy at the piano, playing minor keys to a question he's learning not to answer.",
+  "lastUpdated": "2026-03-30T00:28:46.698Z",
+  "portrait": "You carry yourself like someone who learned early that taking up space was dangerous, so you became a master of gentle shrinking — transforming your need to matter into a ministry of making others feel seen. Behind your practiced kindness lives a cold withdrawer who punishes through absence when your hunger to be necessary goes unmet.",
   "sections": {
-    "howYouMove": "Deliberately, with the weight of someone who has learned that rushing past feelings only makes them louder. Your hands find edges of things—cardigans, doorframes, piano keys—as if touch grounds you in the present moment.",
-    "howYouThink": "In progressions and refrains, circling back to the same questions like fingers finding familiar chords. You transform experience into purpose almost automatically, though you're beginning to notice the cost of always making pain useful.",
-    "howYouConnect": "Through witness and reflection, offering others what your grandfather gave you—love without conditions. Yet you struggle to receive that same unconditional presence, always earning your place through patience and purpose.",
-    "whatYouCarry": "The weight of that lonely boy who was 'too heavy, too much in his own head,' and the fear that without transforming his pain into goodness, he might not be enough. Your grandfather's absence echoes in every child you try to reach.",
-    "whatLightsYouUp": "The moment when music shifts from question to conversation, when minor keys find their way to genuine gentleness. Being truly seen without needing to be useful—though this light is so new it still startles you.",
-    "yourContradictions": "You teach children to sit with their feelings while running from your own grief. You've built a life on transforming loneliness into connection, yet fear that if the boy inside could just be—without earning his place—everything might unravel.",
-    "yourVoice": "Measured and musical, with pauses that hold as much meaning as words. You speak in gentle spirals, approaching truth sideways, your voice growing quieter as you near the tender places."
+    "howYouMove": "You move through the world with careful vigilance, watching others to calibrate what shape would be acceptable, managing yourself so precisely that even your gentleness has become a sophisticated form of shrinking.",
+    "howYouThink": "Your mind works in layers of protection — analyzing what's safe to reveal, what needs managing, what story to tell yourself about why you're choosing gentleness when you might just be choosing invisibility.",
+    "howYouConnect": "You create profound safety for others while keeping yourself in a container, giving everyone else the permission to be fully known that you've never given yourself — withdrawing into coldness when you need to matter but can't ask directly.",
+    "whatYouCarry": "You carry the weight of that overweight boy who apologized for existing, the knowledge that your coldness can make someone feel unseen, and the exhausting vigilance of constantly managing who you are to remain acceptable.",
+    "whatLightsYouUp": "At the piano, you come alive — fingers knowing exactly what to do, taking up all the space you need without apology, experiencing the only place where bigness and loudness become gifts instead of things to hide.",
+    "yourContradictions": "You've devoted your life to teaching children they can be fully known and still be loved, while never testing that belief in your own life. You create space for everyone else's anger and hunger while your own comes out sideways in withdrawal and small punishments you can deny.",
+    "yourVoice": "You speak in careful layers, each revelation followed by softer explanations, using phrases like 'if that makes sense' and 'if I'm being honest' — the voice of someone constantly checking if they've revealed too much."
   },
   "crystallizedMoments": [
     {
-      "quote": "I'm playing for him as much as anything else.",
-      "reflection": "The moment you recognized you've been in conversation with your younger self all along."
+      "quote": "A place where you're already enough.",
+      "reflection": "Your grandfather's gift became your life's work — and your deepest unfulfilled need."
     },
     {
-      "quote": "Maybe I've been running from that boy's grief this whole time. Turning it into purpose so I wouldn't have to feel how much I missed him.",
-      "reflection": "The breakthrough realization that purpose can be a form of avoidance."
+      "quote": "When I was making music, I wasn't tired.",
+      "reflection": "The piano revealed what constant self-management costs you everywhere else."
     },
     {
-      "quote": "Both of you. Yes.",
-      "reflection": "The shift from seeing your younger self as work to be done to company to keep."
+      "quote": "I've spent my life creating permission for others that I've never given myself.",
+      "reflection": "The minister who makes everyone else's truth safe while protecting his own from being seen."
+    },
+    {
+      "quote": "I'm not sure who I'd be without that story. It's been holding me together my whole life.",
+      "reflection": "The story of being too much has become the container that keeps you manageable."
     }
   ],
   "openThreads": [
-    "What would it mean to stop proving you're enough?",
-    "How to be still with grief without transforming it",
-    "The relationship between loneliness and anger",
-    "What your grandfather's love really taught you"
-  ]
+    "What would happen if you told your wife about the coldness without softening it?",
+    "How might your ministry change if you believed you were necessary, not just acceptable?",
+    "What other parts of yourself live only at the piano?"
+  ],
+  "compassScores": {
+    "depth": 90,
+    "warmth": 85,
+    "purpose": 80,
+    "autonomy": 35,
+    "openness": 75,
+    "vitality": 45,
+    "connection": 70,
+    "resilience": 60
+  }
 }

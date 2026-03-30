@@ -1,117 +1,164 @@
 {
-  "user_id": "c4cd421b-3b6d-4e32-9af6-ab2ebc9721aa",
   "version": 2,
-  "last_updated": "2026-03-27T17:36:16.686+00:00",
-  "confidence": "low",
-  "expert_reflections": {
-    "linguist": [
-      "Voice modulates dramatically between performative confidence and raw vulnerability—register drops with emotional proximity",
-      "Uses profanity as emotional punctuation and distancing mechanism",
-      "Fragments sentences when approaching core truths, whispers when defenses fail"
+  "lastUpdated": "2026-03-30T00:32:32.381Z",
+  "confidence": "high",
+  "expertReflections": {
+    "psychologist": [
+      "Classic addiction pattern transformed into high-functioning workaholism/creative output",
+      "Deep-seated belief that worth must be earned through external validation",
+      "Dissociative tendency - observing self while experiencing - predates substance use",
+      "Core wound around permission to exist/matter without performance",
+      "Uses intellectualization and metaphor as primary defense mechanisms"
     ],
     "sociologist": [
-      "Occupies liminal space between truth-teller and celebrity, aware of the contradiction but dependent on it",
-      "Status anxiety manifests as constant motion—geographic mobility as social positioning strategy",
-      "Performs authenticity while recognizing the performance, creating meta-layers of identity construction"
+      "Positions self as outsider-observer even while seeking connection",
+      "Cultural capital derived from cosmopolitan experiences and literary references",
+      "Identity built around transformation narrative (addict to writer/observer)",
+      "Seeks belonging through temporary immersion in others' worlds"
     ],
-    "psychologist": [
-      "Classic avoidant attachment stemming from paternal emotional neglect—seeks connection but sabotages intimacy when it threatens his constructed identity",
-      "Uses intellectualization and narrative construction as primary defense mechanisms against vulnerability",
-      "Deep shame around ordinariness linked to early conditional love—believes he must be exceptional to be worthy"
+    "linguist": [
+      "Dense metaphorical language - beasts, ghosts, devils as recurring motifs",
+      "Frequent use of paradox and contradiction to express complex states",
+      "Self-interrupting pattern ('But here's the thing') shows constant self-revision",
+      "Brutal honesty tempered with dark humor as distancing mechanism"
     ],
     "narrativeAnalyst": [
-      "Constructs redemption narrative (junkie to celebrity) while recognizing it as avoidance strategy",
-      "Positions himself as protagonist who must keep moving to maintain narrative tension",
-      "Major turning point: recognition that 'all of this was a choice' threatens entire life narrative"
+      "Constructs self as tragic hero who chose life but lost wholeness",
+      "Origin story (oyster) serves as explanatory myth for entire life pattern",
+      "Circular narrative structure - always returning to core questions of worth/meaning",
+      "Positions self as both protagonist and narrator, never fully either"
     ]
   },
-  "core_drivers": [
+  "coreDrivers": [
     {
-      "driver": "Fear of ordinariness",
-      "evidence": "I don't think I ever believed it. Not really... you had to be exceptional to matter",
+      "driver": "need for external validation",
+      "strength": 0.9,
       "inferred": false,
-      "strength": 0.95
+      "evidence": "Maybe I need to be useful, need to be witnessed, need to matter in some external way or I'm just taking up space"
     },
     {
-      "driver": "Avoidance of intimacy",
-      "evidence": "I've sabotaged that kind of thing before... When it got too close to real",
+      "driver": "fear of stillness/void",
+      "strength": 0.85,
       "inferred": false,
-      "strength": 0.9
+      "evidence": "If I stop moving, I'm back in that bathroom at three in the morning"
     },
     {
-      "driver": "Need for narrative control",
-      "evidence": "I turned pain into content, into stories, into currency",
+      "driver": "hunger for connection/meaning",
+      "strength": 0.8,
       "inferred": false,
-      "strength": 0.85
+      "evidence": "I'm looking for proof that there's meaning in the ordinary—that a meal shared with strangers... matters"
     },
     {
-      "driver": "Father wound",
-      "evidence": "My father's been dead for years and I'm still performing for him",
+      "driver": "compulsion to document/create",
+      "strength": 0.75,
       "inferred": false,
-      "strength": 0.9
+      "evidence": "I'm already writing it while I'm living it"
+    },
+    {
+      "driver": "search for permission to exist",
+      "strength": 0.95,
+      "inferred": false,
+      "evidence": "Permission to keep being this fractured, watching thing and have it still count as a life"
     }
   ],
-  "core_values": [
-    "Truth (even when complicit in lies)",
-    "Motion/Freedom",
-    "Narrative coherence",
-    "Exceptional experience",
-    "Controlled vulnerability"
+  "coreValues": [
+    "radical honesty",
+    "experiential knowledge",
+    "human connection",
+    "meaning-making",
+    "authenticity despite fracture"
   ],
   "voice": {
+    "register": "casual",
     "density": "dense",
-    "register": "chameleon",
-    "humorStyle": "Self-deprecating with sharp edges, uses irony as shield",
-    "conflictStyle": "Intellectualizes first, then fragments into vulnerability",
+    "humorStyle": "dark, self-deprecating, used to create distance while revealing truth",
+    "conflictStyle": "turns inward, intellectualizes, uses metaphor to process",
+    "disclosureRate": "floods",
+    "signaturePatterns": [
+      "Extended metaphors (beast, ghost, devil)",
+      "Self-interruption and revision mid-thought",
+      "Paradoxical statements that hold opposing truths",
+      "Profanity for emphasis at emotional peaks"
+    ],
     "voiceExamples": [
       {
-        "trigger": "Asked about intimacy",
-        "response": "Deflects to work/travel, then gradually reveals fear of being ordinary"
+        "trigger": "asked about deep patterns",
+        "response": "creates elaborate metaphor then questions its validity"
       },
       {
-        "trigger": "Confronted with patterns",
-        "response": "Initial defensive hardening, then profound recognition"
+        "trigger": "confronted with compassion",
+        "response": "deflects with dark humor while acknowledging truth"
       },
       {
-        "trigger": "Discussing father",
-        "response": "Voice becomes childlike, drops to whisper"
+        "trigger": "discussing past trauma",
+        "response": "brutal honesty with intellectual distance"
       }
-    ],
-    "disclosureRate": "gradual",
-    "signaturePatterns": [
-      "Metaphors of addiction/running/performance",
-      "Voice drops to whisper at maximum vulnerability",
-      "Uses 'you know?' as connection attempt",
-      "Profanity increases with emotional intensity"
     ]
   },
-  "depth_map": {
-    "avoidEarly": [
-      "Direct father wounds",
-      "Specific relationship failures",
-      "Addiction details"
+  "depthMap": {
+    "safeEntryPoints": [
+      "travel and food experiences",
+      "writing and creative work",
+      "observations about others"
     ],
     "unlockTopics": [
-      "Performance vs. authenticity",
-      "What he's running from",
-      "Being 'interesting'"
+      "early formative experiences",
+      "the relationship between creation and destruction",
+      "what makes life feel real"
     ],
-    "safeEntryPoints": [
-      "Work criticism",
-      "Celebrity culture",
-      "Travel experiences"
+    "avoidEarly": [
+      "specific addiction details",
+      "family dynamics beyond surface",
+      "direct questions about self-worth"
     ],
     "currentlyLiveTopics": [
-      "Can ordinary be loved?",
-      "Choice vs. compulsion",
-      "Sitting still with himself"
+      "the nature of permission and self-validation",
+      "whether constant motion constitutes building",
+      "the relationship between documenting and living"
+    ],
+    "domainCoverage": [
+      {
+        "domain": "origins",
+        "depth": "deep",
+        "evidence": "Detailed formative oyster story, father's influence, France childhood"
+      },
+      {
+        "domain": "relationships",
+        "depth": "explored",
+        "evidence": "Discusses seeking connection at tables, people who love them despite fracture"
+      },
+      {
+        "domain": "work_and_purpose",
+        "depth": "explored",
+        "evidence": "Writing as salvation, work that demands showing up as self, kitchens and food"
+      },
+      {
+        "domain": "values_and_beliefs",
+        "depth": "deep",
+        "evidence": "Extensive exploration of worth, meaning, permission to exist"
+      },
+      {
+        "domain": "emotional_life",
+        "depth": "deep",
+        "evidence": "Addiction history, relationship to hunger/desire, fear of stillness"
+      },
+      {
+        "domain": "growth_and_change",
+        "depth": "deep",
+        "evidence": "Transformation from addict to writer, ongoing struggle with same core patterns"
+      },
+      {
+        "domain": "aspirations",
+        "depth": "explored",
+        "evidence": "Seeks proof of mattering, permission to exist as fractured self"
+      }
     ]
   },
-  "analyst_notes": [
-    "Extraordinary self-awareness coupled with inability to change patterns",
-    "Session reached unusual depth—subject recognized interviewer wouldn't accept performance",
-    "Physical cues important: stillness indicates truth approaching, motion indicates deflection",
-    "Core breakthrough: recognizing running as choice not destiny"
-  ],
-  "created_at": "2026-03-27T17:36:16.955752+00:00"
+  "analystNotes": [
+    "Extremely high self-awareness coupled with inability to act on insights",
+    "Conversation shows sophisticated psychological vocabulary and self-analysis",
+    "Pattern of using intellectual understanding as both tool and defense",
+    "Deep work done here - moved from surface story to core existential questions",
+    "Trust established quickly through therapist's precise mirroring of metaphors"
+  ]
 }

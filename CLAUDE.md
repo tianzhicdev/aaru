@@ -13,7 +13,7 @@ Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
 | Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (src/domain/), Zod validation |
-| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (extraction + reengagement) |
+| LLM | Claude Opus 4 (conversation + synthesis), Haiku 4.5 (reflection snapshots) |
 | Tests | Vitest (TS), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
@@ -23,7 +23,7 @@ Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective
 ```bash
 npx vitest run
 ```
-All 79 tests must pass. Tests work without API keys (fallback paths are exercised).
+All tests must pass. Tests work without API keys (fallback paths are exercised).
 
 ### TypeScript lint
 ```bash
@@ -50,11 +50,10 @@ xcodebuild build -scheme Thumos \
 
 ### TypeScript (src/)
 - `src/domain/` — Pure domain logic (soul mirror only)
-- `src/domain/soul.ts` — Soul Mirror system prompts, conversation context, fallbacks
-- `src/domain/soulFile.ts` — Soul file extraction, 4-expert synthesis, reflection, merging
-- `src/domain/reengagement.ts` — Personalized re-engagement question generation + fallbacks
+- `src/domain/soul.ts` — Soul Mirror system prompts, reflection-snapshot steering, opening flow, anti-repeat rules
+- `src/domain/soulFile.ts` — Reflection snapshot prompt, soul file extraction, 4-expert synthesis, merging
 - `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
-- `src/domain/constants.ts` — SOFT_SESSION_GAP_MS (1 hour)
+- `db/` — Neon schema and migrations
 
 ### Cloudflare Workers (workers/src/)
 - `workers/src/index.ts` — Raw fetch() router
@@ -62,22 +61,22 @@ xcodebuild build -scheme Thumos \
 - `workers/src/db.ts` — Neon serverless driver + user/session CRUD
 - `workers/src/auth.ts` — HMAC SHA-256 session tokens
 - `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
-- `workers/src/soulApp.ts` — Soul message CRUD + synthesis logic
+- `workers/src/soulApp.ts` — Soul message CRUD + reflection/synthesis logic
+- `workers/src/backgroundJobsQueue.ts` — Queue producer/consumer helpers
+- `workers/src/debugTraces.ts` — Last-3 Claude trace persistence per user/kind
 - `workers/src/edge.ts` — CORS + SSE headers + error handling
 - `workers/src/handlers/` — Route handlers:
   - `bootstrap-soul.ts` — User bootstrap + session creation
-  - `soul-converse.ts` — SSE streaming soul conversations + last_active_at tracking
-  - `get-soul-file.ts` — Fetch visible soul file
-  - `end-soul-session.ts` — Deprecated no-op (backward compat)
-  - `synthesize-soul-file.ts` — Full 4-expert soul file synthesis
-  - `generate-reengagement.ts` — On-demand Haiku-generated re-engagement question
+  - `sync-messages.ts` — Full canonical transcript sync
+  - `soul-converse.ts` — SSE streaming soul conversations for both `opening` and `reply`
+  - `get-soul-file.ts` — Fetch visible soul file + trigger async queue-backed synthesis
   - `delete-account.ts` — Cascade delete user
-  - `get-debug-info.ts` — Debug endpoint
+  - `get-debug-info.ts`, `debug-dump.ts` — Debug endpoints
   - `ping.ts`, `version.ts` — Health check + version gate
 
 ### Swift (Thumos/)
 - `Thumos/App/ThumosApp.swift` — Entry point
-- `Thumos/App/AppModel.swift` — Main @MainActor ObservableObject (state management + reengagement)
+- `Thumos/App/AppModel.swift` — Main @MainActor ObservableObject (bootstrap, sync, streaming state)
 - `Thumos/App/BackendClient.swift` — HTTP + SSE streaming client with fallback mode
 - `Thumos/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
 - `Thumos/App/NotificationManager.swift` — Local notification scheduling (weekly Saturday 8pm)
@@ -89,7 +88,7 @@ xcodebuild build -scheme Thumos \
 - `ThumosTests/` — XCTest unit tests
 
 ### Tests (tests/)
-- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, reengagement, version)
+- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, debugTraces, version)
 - `tests/integration/` — Handler integration tests (soulMirrorHandlers, deleteAccount)
 
 ## Code Style Conventions
@@ -112,7 +111,7 @@ xcodebuild build -scheme Thumos \
 
 ## Definition of Done
 A task is complete when ALL of the following are true:
-1. `npx vitest run` — all tests pass (79 currently)
+1. `npx vitest run` — all tests pass
 2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
@@ -125,16 +124,18 @@ A task is complete when ALL of the following are true:
 - **iOS client is a display layer** — all state is server-authoritative
 - **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
-- **Re-engagement** — On-demand: app opens → if no active session & returning user → POST /generate-reengagement → Haiku question shown as AI's opening. Local notification scheduled for next Saturday 8pm (>3 days out).
+- **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
+- **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow.
+- **Reflection snapshots** — Reflection notes are async snapshots generated from all persisted messages every 10 total messages and stored in `reflection_snapshots`.
+- **Conversation steering** — Live conversation can include the latest ready reflection snapshot as advisory context, but raw messages remain authoritative.
 - **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
 
-## Autonomous Operating Loop
-When given a task:
-1. Write the code
-2. Run `npx vitest run` and `npx tsc -p tsconfig.json --noEmit`
-3. If tests fail: read the error, fix, rerun — repeat up to 3 times
-4. If still failing after 3 attempts: write BLOCKED.md explaining why
-5. Only mark done when: tests pass + no regressions + code is committed
+## Verify (standard process — run after every change)
+1. `npx vitest run` — all tests pass
+2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
+3. If iOS code was changed: `xcodebuild build-for-testing -project Thumos.xcodeproj -scheme Thumos -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1'`
+4. If tests fail: read error, fix, rerun — repeat up to 3 times
+5. If still failing after 3 attempts: write BLOCKED.md explaining why
 
 ## Deployment
 ```bash
@@ -144,11 +145,13 @@ wrangler secret put ANTHROPIC_API_KEY
 wrangler secret put THUMOS_SESSION_SECRET
 ```
 
-Active endpoints: ping, version, bootstrap-soul, soul-converse, get-soul-file, end-soul-session, synthesize-soul-file, generate-reengagement, delete-account, get-debug-info
+Wrangler deploys require Cloudflare auth, typically via `CLOUDFLARE_API_TOKEN`.
+
+Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, delete-account, get-debug-info, debug-dump
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: Thumos
 - Bundle ID: com.trythumos.app
-- Simulator: iPhone 17 Pro (iOS 26.3)
+- Simulator: iPhone 17 Pro (iOS 26.1)
 - Boot: `xcrun simctl boot "iPhone 17 Pro"`
 - Screenshot: `xcrun simctl io booted screenshot /tmp/state.png`

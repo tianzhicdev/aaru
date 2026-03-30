@@ -11,7 +11,7 @@ Target: Ship Thumos v1 to iOS App Store
 - [x] ~~Enroll in Apple Developer Program~~ — already done
 - [x] ~~Register domain~~ — using `trythumos.com/thumos`
 - [ ] **Set up Cloudflare Pages** — In Cloudflare dashboard: Pages → Create Project → Connect to Git (or direct upload). I'll write the site in `./web/` and a spec for your review.
-- [ ] **Decide on support email** — e.g. `info@trythumos.com` or whatever you prefer. Cloudflare Email Routing can forward for free.
+- [x] **Decide on support email** — use `support@trythumos.com`. Cloudflare Email Routing can forward for free.
 - [ ] **Rename GitHub repo** — GitHub → Settings → Repository name → change to `thumos`. Then locally: `git remote set-url origin <new-url>`.
 
 ### Week 2 — Apple Setup
@@ -26,10 +26,10 @@ Target: Ship Thumos v1 to iOS App Store
 - [ ] **Take App Store screenshots** — I can automate via simulator, you choose which conversations/soul files look best. Need 6.9" iPhone screenshots (1320x2868).
 - [ ] **Review App Store description** — Draft ready in `marketing/app-store-description.md`. Personalize and submit. First 3 lines are critical.
 
-### Week 4 — Supabase
+### Week 4 — Cloudflare Workers + Neon
 
-- [ ] **Update Supabase environment variables** — Dashboard → Settings → Edge Functions → Secrets. Add `THUMOS_SESSION_SECRET` (same value as current `Thumos_SESSION_SECRET`). I'll tell you exactly which keys.
-- [ ] **Verify Supabase RLS policies** — Anon key will be in a public binary. Ensure row-level security is tight.
+- [ ] **Update Cloudflare Workers secrets** — Set `DATABASE_URL`, `ANTHROPIC_API_KEY`, and `THUMOS_SESSION_SECRET` in the Worker environment.
+- [ ] **Verify Neon connectivity and least privilege** — Confirm the worker uses the intended database role and can only access the production schema it needs.
 
 ### Ongoing
 

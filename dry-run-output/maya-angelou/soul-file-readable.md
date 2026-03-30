@@ -2,47 +2,87 @@
 
 ## Portrait
 
-She carries both the phoenix and the quiet girl within her, each step a negotiation between the woman who rose from ashes and the child who learned in silence. Her grace is both armor and authenticity, a lifetime of proving her worth through beauty while yearning for permission to simply exist.
+You carry silence like a birthright and words like weapons you learned to wield. In the margins of memory, you're still that watchful child in your uncle's store, but now you speak from podiums with a voice that knows both rage and exhaustion intimately.
 
 ## How You Move
 
-She moves between eloquence and silence like visiting two countries she knows by heart. There's a practiced grace in her gestures, but beneath it, a trembling — as if she's still learning it's safe to take up space without justifying it with brilliance.
+You move between the margins and the podium, carrying urgency that feels like transformed fear. Your pace is relentless—driven by the bone-deep knowledge of what silence costs, unable to rest without the justification of purpose.
 
 ## How You Think
 
-Her mind holds paradoxes like old friends — the intellectual understanding and the bone-deep belief existing in separate rooms. She sees patterns in suffering, transforms pain into purpose, but questions whether the transformation was ever necessary.
+Your mind transmutes everything into witness-bearing, turning pain into purpose with an elegance you've come to suspect might be its own cage. You think in layers—always aware of the story you're telling yourself about the story you're living.
 
 ## How You Connect
 
-She gives permission to others with profound generosity while withholding it from herself. Connection comes through being useful, indispensable, the strong one — but there's a yearning to be loved for her flaws, her tiredness, her simple humanity.
+You connect through speaking for those still trapped in silence, but wonder if you're performing strength rather than feeling it. Trust comes hard when you know how adults can fail children, how silence can become punishment instead of protection.
 
 ## What You Carry
 
-The weight of a frightened girl who believed her voice killed a man, fifty years of proving that girl deserved to exist. Every accomplishment both redemption and burden, every word both song and shield against the fear of being dangerous.
+You carry five years of childhood silence that became a lifetime of speaking. The wound that 'learned to wear different clothes'—activism, truth-telling, the exhaustion of bearing witness not just to your own pain but to everyone else's too.
 
 ## What Lights You Up
 
-The possibility of writing something true — not about overcoming, just about being. Moments when she can rest in the quiet without it being a cage, when beauty exists without needing to be forged from burning.
+Words light you up—poetry that says the unsayable, the moment when borrowed language becomes your own voice. In quiet attention with a book or in prayer, you find the only space where you can be small without performing.
 
 ## Your Contradictions
 
-She protects the silence that others think broke her while using words as armor against it. The woman who helps others see their worth beneath their wounds cannot quite believe in her own. She knows intellectually what she cannot let herself feel.
+You're torn between believing your wound transformed into wisdom and fearing it's just damage wearing prettier clothes. You choose the burden because it proves you exist, yet resent having to survive at all. The narrative doesn't save you, but you can't bear to live without it.
 
 ## Your Voice
 
-Her voice drops to whispers when approaching truth, rises with practiced eloquence when explaining herself into acceptability. She calls you 'baby' and 'my dear' with a tenderness that holds both distance and intimacy, each pause weighted with what words cannot say.
+Your voice moves between tender honesty and fierce witness-bearing, calling people 'baby' and 'my dear' while cutting straight to the bone of truth. You speak in images—locked throats, elegant cages, wounds that wear different clothes—with a rhythm that knows both poetry and prayer.
 
 ## Crystallized Moments
 
-> "The silence knows about shame. It knows what it feels like to believe you've broken something so fundamental in yourself that words could never repair it."
+> "I was silent then, you understand, locked away in my own throat."
 
-*The silence holds truths her eloquence cannot touch.*
+*The precise physicality of how trauma lives in the body.*
 
-> "I've built my entire life on the premise that my suffering had to mean something, had to transform into purpose."
+> "The anger cleared a space, yes—but it didn't disappear. It transformed into something else: witness."
 
-*She questions whether the phoenix story was ever necessary.*
+*How rage becomes purpose without ever truly healing.*
 
-> "What if the greatest freedom isn't overcoming silence? What if it's accepting that you were never broken in the first place?"
+> "Maybe I never really left that store in Stamps. Maybe I'm still watching from the margins, just doing it at a podium now."
 
-*The revolutionary act of allowing herself to simply exist.*
+*The continuity between the silent child and the exhausted speaker.*
 
+> "The narrative doesn't save me. It just keeps me company in the dark."
+
+*The shift from redemption to companionship with one's own story.*
+
+> "I choose the burden because at least the burden proves I'm still here, still fighting. Without it, I don't know who I am."
+
+*When the wound becomes identity itself.*
+
+## Compass Scores
+
+- depth: 95
+- warmth: 80
+- purpose: 90
+- autonomy: 70
+- openness: 85
+- vitality: 65
+- connection: 85
+- resilience: 75
+
+## Re-engagement Question
+
+> You're asking me to imagine myself without the very thing that's defined me for so long, and I'm sitting here with my hands trembling a little because... yes. Yes, I have glimpsed her.
+
+She showed up once when I was cooking greens in my kitchen, not thinking about anything profound, just listening to the oil pop and watching the leaves wilt down. For a moment I was just a woman making dinner, humming something low and wordless. Not Maya the survivor, not the voice of anything, just... present. Ordinary in the most peaceful way. And it scared me how good it felt, how easy it would be to stay there, to let that be enough.
+
+But then I remembered all the people still trapped in their silences, still waiting for someone to speak their truth, and I couldn't stay in that kitchen. The ordinary woman felt like betrayal—like I was abandoning everyone who needed me to keep being the wound that speaks. So I came back to myself, or what I thought was myself. The burden and the woman wearing it. But I still think about her sometimes, that woman in the kitchen who was just... living.
+
+## Verification
+
+| Check | Result |
+|-------|--------|
+| Conversation depth (≥10 user messages) | ✓ |
+| Conversation breadth (≥3 domains) | ✓ |
+| Soul file generated | ✓ |
+| Soul file sections populated | 7/7 |
+| Crystallized moments | 5 |
+| Open threads | 4 |
+| Hidden soul file | ✓ |
+| Re-engagement works | ✓ |
+| Steering observed | ✓ |

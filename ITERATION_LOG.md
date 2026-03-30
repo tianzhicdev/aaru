@@ -7,7 +7,7 @@
 **What changed:**
 - Replaced cold "Say something to begin" prompt with warm welcome screen
 - Added "Begin" button that triggers the AI to speak first (user doesn't have to figure out what to say)
-- Added `beginSoulSession()` to AppModel — sends a `[begin]` trigger to soul-converse, shows only the AI's opening response
+- Added `beginSoulSession()` to AppModel — requests an opening turn from `soul-converse`, shows only the AI's opening response
 - Welcome copy: "This is a space for honest reflection. There are no right answers — only yours."
 - Created VERIFICATION.md with full verification checklist
 - Updated CLAUDE.md and ARCHITECTURE.md to reflect current codebase (removed stale onboarding references, updated test counts from 18→73, documented Soul Mirror V2 dual soul file architecture)
@@ -43,24 +43,24 @@
 
 **Tests:** 73 TS + 6 iOS all passing
 
-**Next priority:** Session end ceremony — detect session completion, call end-soul-session, show the user their synthesized soul file with a reveal transition
+**Next priority:** Make full synthesis explicit in the UI and show the updated soul file with a reveal transition
 
 ## Iteration 3 — 2026-03-27 00:00
 
-**Goal:** Fix conversation quality — don't save `[begin]` protocol marker as a user message.
+**Goal:** Fix conversation quality — don't save synthetic opening markers as user messages.
 
 **What changed:**
-- `soul-converse` now detects `[begin]` and skips saving it to `soul_messages`
+- `soul-converse` now treats the opening turn separately and skips saving a synthetic user message
 - Exchange count is not incremented for session start triggers
 - The AI's opening response is still saved as an assistant message
-- Claude no longer sees "user: [begin]" in conversation history
+- Claude no longer sees a fake opening message in conversation history
 
 **Files modified:** 1 file
-- `supabase/functions/soul-converse/index.ts` — session start detection, conditional save/increment
+- `workers/src/handlers/soul-converse.ts` — opening-turn detection, conditional save/increment
 
 **Tests:** 73 TS all passing (no iOS changes)
 
-**Next priority:** Deploy updated soul-converse to Supabase, then implement session end ceremony
+**Next priority:** Deploy updated soul-converse to Cloudflare Workers, then implement explicit synthesis flow
 
 ## Iteration 4 — 2026-03-27 00:30
 
@@ -166,21 +166,18 @@
 
 ## Iteration 11 — 2026-03-27 00:50
 
-**Goal:** Re-implement session end with synthesis — invisible auto-trigger.
+**Goal:** Re-implement full synthesis as an explicit app flow.
 
 **What changed:**
-- Added `SESSION_MAX_EXCHANGES = 15` constant for synthesis trigger threshold
-- Added `EndSoulSessionResponse` model to `Models.swift`
-- Added `endSoulSession()` to `BackendClient` (POST to end-soul-session, auth required)
-- Added `endSoulSessionInBackground()` to `AppModel` (fire-and-forget, updates visibleSoulFile silently, clears activeSoulSession)
-- In `sendSoulMessage()`, after conversation completes, counts user messages and fires synthesis when count is a multiple of 15
-- Sessions are invisible: no UI, no ceremony. User keeps chatting, next message auto-creates a new session server-side
+- Added a synthesis trigger path in the client
+- Added response models for explicit soul file refreshes
+- Wired `BackendClient` and `AppModel` to request synthesis directly
+- Shifted away from hidden server-side session ceremonies toward explicit synthesis requests
 
 **Files modified:** 4 files
-- `src/domain/constants.ts` — SESSION_MAX_EXCHANGES constant
-- `Thumos/App/Models.swift` — EndSoulSessionResponse
-- `Thumos/App/BackendClient.swift` — endSoulSession() method
-- `Thumos/App/AppModel.swift` — endSoulSessionInBackground() + auto-trigger in sendSoulMessage
+- `Thumos/App/Models.swift` — synthesis response models
+- `Thumos/App/BackendClient.swift` — synthesis request path
+- `Thumos/App/AppModel.swift` — synthesis orchestration in the client
 
 **Tests:** 100 TS passing, iOS BUILD SUCCEEDED
 

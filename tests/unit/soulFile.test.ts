@@ -48,6 +48,8 @@ describe("buildSoulSynthesisPrompt", () => {
       recurringThemes: ["movement"],
       notableAbsences: [],
       emotionalArc: "Reflective",
+      recentAssistantQuestions: [],
+      openLoops: [],
       domainCoverage: [
         { domain: "origins", depth: "untouched", evidence: "" }
       ]

@@ -39,6 +39,11 @@ enum BackendError: Error, LocalizedError {
     }
 }
 
+enum SoulConverseMode: String {
+    case opening
+    case reply
+}
+
 final class BackendClient {
     private let logger = Logger(subsystem: "com.trythumos.app", category: "backend")
     private let configuration: BackendConfiguration
@@ -62,7 +67,6 @@ final class BackendClient {
                 userId: UUID(),
                 token: nil,
                 visibleSoulFile: nil,
-                messages: nil,
                 hasMessages: false
             )
         }
@@ -78,7 +82,8 @@ final class BackendClient {
             return SoulFileResponse(
                 visibleSoulFile: .empty,
                 version: 0,
-                lastUpdated: nil
+                lastUpdated: nil,
+                synthesisPending: false
             )
         }
         return try await post(
@@ -88,8 +93,20 @@ final class BackendClient {
         )
     }
 
+    func syncMessages() async throws -> SyncMessagesResponse {
+        guard endpoint(named: "sync-messages") != nil else {
+            return SyncMessagesResponse(messages: [])
+        }
+        return try await post(
+            "sync-messages",
+            body: EmptyBody(),
+            retryOnServerError: true
+        )
+    }
+
     func soulConverseStream(
-        message: String,
+        mode: SoulConverseMode,
+        message: String? = nil,
         onToken: @escaping (String) -> Void,
         onError: @escaping (String) -> Void
     ) async throws {
@@ -104,8 +121,9 @@ final class BackendClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 30
-        let body: [String: String] = ["message": message]
+        // Opus can take a while to produce the first streamed token.
+        request.timeoutInterval = 300
+        let body = SoulConverseRequest(mode: mode.rawValue, message: message)
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
@@ -154,17 +172,6 @@ final class BackendClient {
         )
     }
 
-    func generateReengagement() async throws -> ReengagementResponse {
-        guard endpoint(named: "generate-reengagement") != nil else {
-            return ReengagementResponse(question: "")
-        }
-        return try await post(
-            "generate-reengagement",
-            body: EmptyBody(),
-            retryOnServerError: true
-        )
-    }
-
     func deleteAccount() async throws -> DeleteAccountResponse {
         guard endpoint(named: "delete-account") != nil else {
             return DeleteAccountResponse(deleted: true)
@@ -183,20 +190,6 @@ final class BackendClient {
         )
     }
     #endif
-
-    func synthesizeSoulFile() async throws -> SynthesizeSoulFileResponse {
-        guard endpoint(named: "synthesize-soul-file") != nil else {
-            return SynthesizeSoulFileResponse(
-                visibleSoulFile: .empty,
-                synthesisSucceeded: false
-            )
-        }
-        return try await post(
-            "synthesize-soul-file",
-            body: EmptyBody(),
-            retryOnServerError: true
-        )
-    }
 
     private func endpoint(named function: String) -> URL? {
         configuration.functionBaseURL?.appendingPathComponent(function)
@@ -246,6 +239,11 @@ final class BackendClient {
 }
 
 private struct EmptyBody: Encodable {}
+
+private struct SoulConverseRequest: Encodable {
+    let mode: String
+    let message: String?
+}
 
 // MARK: - SSE Event Types
 

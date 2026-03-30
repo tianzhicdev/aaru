@@ -17,7 +17,9 @@ struct DebugView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         identitySection
-                        sessionSection
+                        steeringSection
+                        reflectionNoteSection
+                        visibleSoulFileSection
                         impersonateSection
                         hiddenSoulFileSection
                     }
@@ -75,18 +77,111 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Session
+    // MARK: - Steering
 
-    private var sessionSection: some View {
+    private var steeringSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Active Session")
-            if let session = model.debugInfo?.activeSession {
-                debugRow("Session #", "\(session.sessionNumber)")
-                debugRow("Status", session.status)
-                debugRow("Exchanges", "\(session.exchangeCount)")
-                debugRow("Started", session.startedAt)
+            sectionHeader("Steering")
+            debugRow("Source", model.debugInfo?.steeringSource ?? "none")
+
+            if let steering = model.debugInfo?.steeringPreview {
+                if !steering.currentlyLiveTopics.isEmpty {
+                    debugSubheader("Currently Live")
+                    ForEach(steering.currentlyLiveTopics, id: \.self) { bulletText($0) }
+                }
+
+                if !steering.safeEntryPoints.isEmpty {
+                    debugSubheader("Safe Entry Points")
+                    ForEach(steering.safeEntryPoints, id: \.self) { bulletText($0) }
+                }
+
+                if !steering.unlockTopics.isEmpty {
+                    debugSubheader("Unlock Topics")
+                    ForEach(steering.unlockTopics, id: \.self) { bulletText($0) }
+                }
+
+                if !steering.avoidEarly.isEmpty {
+                    debugSubheader("Approach Carefully")
+                    ForEach(steering.avoidEarly, id: \.self) { bulletText($0) }
+                }
+
+                if !steering.domainCoverage.isEmpty {
+                    debugSubheader("Domain Coverage")
+                    ForEach(Array(steering.domainCoverage.enumerated()), id: \.offset) { _, entry in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(entry.domain) — \(entry.depth)")
+                                .font(Theme.sans(12, weight: .medium))
+                                .foregroundStyle(Theme.textSecondary)
+                            if !entry.evidence.isEmpty {
+                                Text(entry.evidence)
+                                    .font(Theme.sans(12))
+                                    .foregroundStyle(Theme.textTertiary)
+                            }
+                        }
+                        .padding(.leading, 8)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Reflection Note
+
+    private var reflectionNoteSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Reflection Note")
+
+            if let note = model.debugInfo?.reflectionNote {
+                debugRow("Updated", note.updatedAt)
+
+                if !note.recurringThemes.isEmpty {
+                    debugSubheader("Recurring Themes")
+                    ForEach(note.recurringThemes, id: \.self) { bulletText($0) }
+                }
+
+                if !note.tensions.isEmpty {
+                    debugSubheader("Tensions")
+                    ForEach(note.tensions, id: \.self) { bulletText($0) }
+                }
+
+                if !note.notableAbsences.isEmpty {
+                    debugSubheader("Notable Absences")
+                    ForEach(note.notableAbsences, id: \.self) { bulletText($0) }
+                }
+
+                if !note.emotionalArc.isEmpty {
+                    debugRow("Emotional Arc", note.emotionalArc)
+                }
+
+                if !note.factualAnchors.isEmpty {
+                    debugSubheader("Factual Anchors")
+                    ForEach(note.factualAnchors.keys.sorted(), id: \.self) { key in
+                        if let value = note.factualAnchors[key] {
+                            bulletText("\(key): \(value)")
+                        }
+                    }
+                }
             } else {
-                Text("No active session")
+                Text("No reflection note yet")
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+        }
+    }
+
+    // MARK: - Visible Soul File
+
+    private var visibleSoulFileSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Visible Soul File")
+            if let visible = model.debugInfo?.visibleSoulFile {
+                debugRow("Version", "\(visible.version)")
+                debugRow("Last Updated", visible.lastUpdated)
+                debugRow("Portrait", visible.portrait ?? "—")
+                debugRow("Open Threads", "\(visible.openThreads.count)")
+                debugRow("Moments", "\(visible.crystallizedMoments.count)")
+            } else {
+                Text("No visible soul file yet")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.textTertiary)
             }

@@ -34,6 +34,74 @@ export const domainCoverageEntrySchema = z.object({
 
 export type DomainCoverageEntry = z.infer<typeof domainCoverageEntrySchema>;
 
+const signalConfidenceSchema = z.enum(["low", "medium", "high"]);
+
+const inferredTraitSchema = z.object({
+  score: z.number().min(0).max(100),
+  confidence: signalConfidenceSchema,
+  evidence: z.string()
+});
+
+const inferredBigFiveDefaults = {
+  openness: null,
+  conscientiousness: null,
+  extraversion: null,
+  agreeableness: null,
+  neuroticism: null
+} as const;
+
+const inferredBigFiveSchema = z.object({
+  openness: inferredTraitSchema.nullable().default(null),
+  conscientiousness: inferredTraitSchema.nullable().default(null),
+  extraversion: inferredTraitSchema.nullable().default(null),
+  agreeableness: inferredTraitSchema.nullable().default(null),
+  neuroticism: inferredTraitSchema.nullable().default(null)
+}).default(inferredBigFiveDefaults);
+
+const hiddenTraitSchema = z.object({
+  score: z.number().min(0).max(100),
+  confidence: z.number().min(0).max(1),
+  evidence: z.string()
+});
+
+const hiddenBigFiveDefaults = {
+  openness: null,
+  conscientiousness: null,
+  extraversion: null,
+  agreeableness: null,
+  neuroticism: null
+} as const;
+
+const hiddenBigFiveSchema = z.object({
+  openness: hiddenTraitSchema.nullable().default(null),
+  conscientiousness: hiddenTraitSchema.nullable().default(null),
+  extraversion: hiddenTraitSchema.nullable().default(null),
+  agreeableness: hiddenTraitSchema.nullable().default(null),
+  neuroticism: hiddenTraitSchema.nullable().default(null)
+}).default(hiddenBigFiveDefaults);
+
+const spectrumEntrySchema = z.object({
+  position: z.number().min(0).max(100),
+  label: z.string(),
+  evidence: z.string()
+});
+
+const personalitySpectrumDefaults = {
+  openness: null,
+  conscientiousness: null,
+  extraversion: null,
+  agreeableness: null,
+  emotionalSensitivity: null
+} as const;
+
+const personalitySpectrumSchema = z.object({
+  openness: spectrumEntrySchema.nullable().default(null),
+  conscientiousness: spectrumEntrySchema.nullable().default(null),
+  extraversion: spectrumEntrySchema.nullable().default(null),
+  agreeableness: spectrumEntrySchema.nullable().default(null),
+  emotionalSensitivity: spectrumEntrySchema.nullable().default(null)
+}).default(personalitySpectrumDefaults);
+
 // ── Reflection Note ────────────────────────────────────────────
 
 export const reflectionNoteSchema = z.object({
@@ -45,7 +113,24 @@ export const reflectionNoteSchema = z.object({
   emotionalArc: z.string().default(""),
   domainCoverage: z.array(domainCoverageEntrySchema).default([]),
   recentAssistantQuestions: z.array(z.string()).default([]),
-  openLoops: z.array(z.string()).default([])
+  openLoops: z.array(z.string()).default([]),
+  inferredBigFive: inferredBigFiveSchema,
+  attachmentSignals: z.array(z.object({
+    dimension: z.enum(["anxiety", "avoidance"]),
+    signal: z.string(),
+    strength: z.enum(["weak", "moderate", "strong"])
+  })).default([]),
+  valueSignals: z.array(z.object({
+    value: z.string(),
+    evidence: z.string(),
+    direction: z.enum(["high_priority", "low_priority"])
+  })).default([]),
+  moralFoundationSignals: z.array(z.object({
+    foundation: z.enum(["care", "fairness", "loyalty", "authority", "purity"]),
+    signal: z.string()
+  })).default([]),
+  conflictStyle: z.string().default(""),
+  meaningOrientation: z.string().default("")
 });
 
 export type ReflectionNote = z.infer<typeof reflectionNoteSchema>;
@@ -75,7 +160,13 @@ export const visibleSoulFileSchema = z.object({
   }),
   crystallizedMoments: z.array(crystallizedMomentSchema).default([]),
   openThreads: z.array(z.string()).default([]),
-  compassScores: z.record(z.string(), z.number().nullable()).default({})
+  compassScores: z.record(z.string(), z.number().nullable()).default({}),
+  personalitySpectrum: personalitySpectrumSchema,
+  topValues: z.array(z.object({
+    value: z.string(),
+    description: z.string()
+  })).max(3).default([]),
+  relationalStyle: z.string().nullable().default(null)
 });
 
 export type VisibleSoulFile = z.infer<typeof visibleSoulFileSchema>;
@@ -131,7 +222,32 @@ export const hiddenSoulFileSchema = z.object({
   depthMap: depthMapSchema.default({
     safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: []
   }),
-  analystNotes: z.array(z.string()).default([])
+  analystNotes: z.array(z.string()).default([]),
+  bigFiveScores: hiddenBigFiveSchema,
+  schwartzProfile: z.array(z.object({
+    value: z.string(),
+    priority: z.number().min(1).max(10),
+    evidence: z.string()
+  })).max(10).default([]),
+  attachmentScores: z.object({
+    anxiety: z.number().min(0).max(100).nullable().default(null),
+    avoidance: z.number().min(0).max(100).nullable().default(null),
+    style: z.enum(["secure", "preoccupied", "dismissive", "fearful"]).nullable().default(null),
+    evidence: z.string().default("")
+  }).default({ anxiety: null, avoidance: null, style: null, evidence: "" }),
+  moralFoundations: z.object({
+    care: z.number().min(0).max(100).nullable().default(null),
+    fairness: z.number().min(0).max(100).nullable().default(null),
+    loyalty: z.number().min(0).max(100).nullable().default(null),
+    authority: z.number().min(0).max(100).nullable().default(null),
+    purity: z.number().min(0).max(100).nullable().default(null)
+  }).default({ care: null, fairness: null, loyalty: null, authority: null, purity: null }),
+  meaningOrientation: z.enum([
+    "meaning_present",
+    "meaning_seeking",
+    "meaning_ambivalent",
+    "meaning_skeptical"
+  ]).nullable().default(null)
 });
 
 export type HiddenSoulFile = z.infer<typeof hiddenSoulFileSchema>;

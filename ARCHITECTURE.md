@@ -12,8 +12,8 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 │  ┌──────────────────────────────────────────────┐ │
 │  │          SoulMirrorTabView                    │ │
 │  │  ┌─────────────────┐ ┌────────────────────┐  │ │
-│  │  │  Conversation    │ │  Soul File         │  │ │
-│  │  │  (streaming chat)│ │  (7-section view)  │  │ │
+│  │  │  Conversation    │ │  Soul Dashboard    │  │ │
+│  │  │  (streaming chat)│ │  (dashboard-v2)    │  │ │
 │  │  └────────┬─────────┘ └──────────┬─────────┘  │ │
 │  └───────────┼──────────────────────┼────────────┘ │
 │  ┌───────────┴──────────────────────┴────────────┐ │
@@ -48,7 +48,8 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 │ Claude │        │  Claude   │
 │ Opus 4 │        │ Haiku 4.5 │
 │(convo, │        │(reflection│
-│ synth) │        │ snapshots)│
+│ assess,│        │ snapshots,│
+│ visible)│        │ hidden)   │
 └────────┘        └───────────┘
 ```
 
@@ -59,9 +60,9 @@ Thumos is a soul-based social app. Phase 1 (current) focuses on **Soul Mirror** 
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
 | Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (`src/domain/`), Zod validation |
-| Soul Mirror LLM | Claude Opus 4 (conversation + synthesis) |
-| Extraction LLM | Claude Haiku 4.5 (reflection snapshots) |
-| Tests | Vitest (88 TS tests), XCTest (Swift) |
+| Soul Mirror LLM | Claude Opus 4 (conversation + assessment + visible narrative) |
+| Extraction LLM | Claude Haiku 4.5 (reflection snapshots + hidden clinical profile) |
+| Tests | Vitest, XCTest |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
 ---
@@ -73,7 +74,7 @@ thumos/
 ├── src/domain/              # Pure TypeScript domain logic
 │   ├── schemas.ts           # Zod validation schemas
 │   ├── soul.ts              # Soul Mirror prompts + opening flow + steering
-│   └── soulFile.ts          # Reflection prompt + soul file synthesis + merging
+│   └── soulFile.ts          # Reflection prompts + dashboard-v2 synthesis pipeline + merging
 ├── src/lib/                 # Utilities (http)
 ├── db/                      # Neon schema + SQL migrations
 │   ├── schema.sql           # Current schema snapshot
@@ -107,11 +108,14 @@ thumos/
 │       ├── RootView.swift               # → SoulMirrorTabView
 │       ├── SoulMirrorTabView.swift      # Tab container (Conversation + Soul File)
 │       ├── SoulConversationScreen.swift # Streaming chat UI
-│       ├── SoulFileScreen.swift         # 7-section soul file display
+│       ├── SoulFileScreen.swift         # Dashboard-v2 soul file display
+│       ├── SoulCompassView.swift        # Tappable compass with axis detail
+│       ├── PersonalitySpectrumView.swift# Dashboard-v2 spectrum bars
+│       ├── TopValuesView.swift          # Top value pills
 │       └── SecureStore.swift            # Keychain wrapper
 ├── ThumosTests/             # XCTest unit tests
 ├── tests/
-│   ├── unit/                # Domain logic tests (88 tests)
+│   ├── unit/                # Domain logic tests
 │   └── integration/         # Handler tests
 ├── VISION.md                # Product vision (human-only, immutable)
 ├── CLAUDE.md                # Claude Code operating rules
@@ -146,6 +150,9 @@ users
   │      crystallized_moments: [{quote, reflection}]
   │      open_threads: [string]
   │      compass_scores: {axis: score|null}
+  │      personality_spectrum: {trait: {position, label, evidence}}
+  │      top_values: [{value, description}]
+  │      relational_style: text|null
   │
   └──▶ hidden_soul_files (agent-facing, clinical)
          user_id (PK), version, last_updated
@@ -154,6 +161,8 @@ users
          expert_reflections: {psychologist, sociologist, linguist, narrativeAnalyst}
          coreDrivers: [{driver, strength 0-1, inferred, evidence}]
          coreValues, voice, depthMap, analystNotes
+         big_five_scores, schwartz_profile, attachment_scores
+         moral_foundations, meaning_orientation
   │
   └──▶ claude_debug_traces
          id, user_id, trace_kind (conversation|synthesis|reflection)
@@ -209,8 +218,10 @@ POST /soul-converse (SSE streaming)
   ├─ buildSoulSystemPrompt(context)
   │   - full transcript is authoritative
   │   - latest reflection snapshot is optional advisory context
+  │   - visible soul file context is available when present
   │   - explicit anti-repeat rules
   │   - opening instructions when applicable
+  │   - optional current-events context via xAI when opening after a gap
   │
   ├─ streamClaude(prompt, messages)
   │   │ Claude Opus 4, maxTokens: 1024, temp: 0.8
@@ -227,7 +238,7 @@ POST /soul-converse (SSE streaming)
 
 Prompt files to inspect directly:
 - `src/domain/soul.ts` — main conversation system prompt, opening flow, steering logic, anti-repeat rules
-- `src/domain/soulFile.ts` — reflection snapshot prompt + full soul file synthesis prompt
+- `src/domain/soulFile.ts` — reflection snapshot prompt + assessment/visible/hidden synthesis prompts
 ```
 
 ### Background Jobs (queue-backed)
@@ -253,20 +264,18 @@ GET /get-soul-file
        └─ Soul synthesis jobs:
            ├─ Fetch ALL messages for user
            ├─ Load latest ready reflection snapshot
-           ├─ buildSoulSynthesisPrompt() → Claude Opus 4 (8192 tokens)
-       │   4-pass expert analysis:
-       │     1. Psychologist — attachment patterns, defense mechanisms, growth edges
-       │     2. Sociologist — social positioning, identity signals, cultural context
-       │     3. Linguist — speech patterns, vocabulary density, hedging/humor
-       │     4. Narrative Analyst — story arcs, metaphors, what's unsaid
-       │
-           ├─ Output: VisibleSoulFile + HiddenSoulFile separated by <<<SPLIT>>>
+           ├─ Assessment call → Claude Opus 4
+           │   Produces structured Big Five / values / attachment / moral / meaning assessment
+           ├─ Visible narrative call → Claude Opus 4
+           │   Produces portrait, sections, compass, spectrum, top values, relational style
+           ├─ Hidden clinical call → Claude Haiku 4.5
+           │   Produces expert reflections, drivers, depth map, analyst notes, hidden profiles
            ├─ mergeVisibleSoulFile() — user-facing, "accurate and loving"
            ├─ mergeHiddenSoulFile() — agent-facing, clinical
            └─ Upsert both to database with status = 'ready'
 ```
 
-iOS polls `/get-soul-file` every 60s on the Soul File tab. The soul file "appears" when ready — no timeout, no blocking.
+iOS polls `/get-soul-file` every 60s on the Soul File tab. The dashboard appears when ready — no timeout, no blocking.
 
 ---
 
@@ -279,7 +288,7 @@ ThumosApp
   └─ RootView
        └─ SoulMirrorTabView
             ├─ Tab 0: SoulConversationScreen (streaming chat)
-            └─ Tab 1: SoulFileScreen (7-section display)
+            └─ Tab 1: SoulFileScreen (dashboard-v2 display)
 ```
 
 ### State Management
@@ -334,8 +343,11 @@ Device-based anonymous auth:
 | Use Case | Provider | Model | Streaming | Tokens | Fallback |
 |----------|----------|-------|-----------|--------|----------|
 | Soul conversation | Claude | Opus 4 | SSE | 1024 | Deterministic reflective fallback |
-| Reflection snapshot | Claude | Haiku 4.5 | No | 1400 | Skip snapshot |
-| Full synthesis | Claude | Opus 4 | No | 8192 | Skip synthesis |
+| Opening current-events context | xAI | Grok 4 Fast | No | n/a | Omit current-events context |
+| Reflection snapshot | Claude | Haiku 4.5 | No | 4000 | Skip snapshot |
+| Synthesis assessment | Claude | Opus 4 | No | 4096 | Fallback single-call synthesis |
+| Synthesis visible narrative | Claude | Opus 4 | No | 6144 | Fallback single-call synthesis |
+| Synthesis hidden clinical | Claude | Haiku 4.5 | No | 3072 | Fallback single-call synthesis |
 
 All LLM calls have deterministic fallbacks. Tests pass without API keys.
 
@@ -344,7 +356,7 @@ All LLM calls have deterministic fallbacks. Tests pass without API keys.
 ## Testing
 
 ```bash
-# TypeScript (88 tests, no API keys needed)
+# TypeScript (no API keys needed for unit tests)
 npx vitest run
 
 # Type checking
@@ -378,6 +390,7 @@ Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, g
 | ANTHROPIC_API_KEY | claude.ts (Soul Mirror) |
 | THUMOS_SESSION_SECRET | auth.ts (HMAC signing) |
 | DATABASE_URL | db.ts (Neon Postgres) |
+| XAI_TOKEN | xai.ts (optional opening-mode current-events context) |
 
 ### iOS → XcodeGen
 

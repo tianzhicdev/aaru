@@ -1,163 +1,225 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-30T00:28:46.698Z",
-  "confidence": "high",
+  "lastUpdated": "2026-03-30T18:23:51.136Z",
+  "confidence": "medium",
   "expertReflections": {
     "psychologist": [
-      "Classic anxious-avoidant attachment pattern - desperately needs connection but withdraws to protect from rejection",
-      "Childhood obesity trauma created core belief of being fundamentally unacceptable, requiring constant management",
-      "Uses withdrawal/coldness as punishment when needs aren't met - passive-aggressive expression of suppressed anger",
-      "Piano represents only safe space for authentic self-expression without fear of judgment",
-      "Ministry role serves as socially acceptable container for managing perceived dangerous parts of self"
+      "Classic parentification trauma manifesting as compulsive caregiving",
+      "Anger converted into somatic symptoms and rigid control structures",
+      "Profound split between intellectual insight and emotional integration",
+      "Fear of rest as fear of encountering unmetabolized grief"
     ],
     "sociologist": [
-      "Chose minister identity as ultimate 'safe' social position - beyond reproach, inherently gentle",
-      "Grandfather provided alternative model of belonging but not of being necessary/valued",
-      "Constructs identity around service to others to avoid facing own needs",
-      "Television work mentioned briefly - suggests public persona adds another layer of performance"
+      "Professional identity as elaborate defense against personal vulnerability",
+      "Public persona serves both genuine purpose and avoidance function",
+      "No peer relationships mentioned - only hierarchical (children) or historical (family)",
+      "Work as socially acceptable channel for unmet emotional needs"
     ],
     "linguist": [
-      "Heavy use of hedging: 'I think', 'maybe', 'if I'm being honest' - constant self-monitoring",
-      "Sophisticated metaphorical thinking: 'container', 'shrinking', 'managing' - intellectualizes emotion",
-      "Long, complex sentences with multiple qualifications - mirrors his layered self-protection",
-      "Shifts between past and present tense when discussing ongoing patterns - unresolved issues"
+      "Sophisticated metaphorical thinking indicates high verbal intelligence",
+      "Long pauses and voice modulation reveal careful emotional regulation",
+      "Shifts between precise analysis and vulnerable disclosure",
+      "Physical descriptions ('clenched jaw') when approaching difficult emotions"
     ],
     "narrativeAnalyst": [
-      "Constructs narrative of transformation (shy boy to minister) that's actually sophisticated stasis",
-      "Positions self as both victim and potential perpetrator - deep identification with those who hurt him",
-      "Story arc leads to recognition of pattern but stops before action - insight without change",
-      "Wife emerges as potential resolution figure but fear prevents testing the possibility"
+      "Life story organized around wound-as-purpose narrative",
+      "Circular structure: helps children to heal childhood self, reinforcing the wound",
+      "Recognition without integration - can name patterns but not break them",
+      "Future story blocked by inability to imagine self without performance"
     ]
   },
   "coreDrivers": [
     {
-      "driver": "Need to matter/be necessary",
+      "driver": "Earning love through perfect performance",
       "strength": 0.95,
-      "inferred": false,
-      "evidence": "I need to matter to you too"
+      "inferred": true,
+      "evidence": "Sixty years of rigid routine, perfectionism, inability to rest without guilt"
     },
     {
-      "driver": "Fear of being truly seen",
+      "driver": "Preventing others' pain to avoid feeling own",
       "strength": 0.9,
-      "inferred": false,
-      "evidence": "I'm afraid that if I ask directly, I'll find out that I don't matter as much as I thought"
+      "inferred": true,
+      "evidence": "Entire career built on sparing children his loneliness while avoiding his own grief"
     },
     {
-      "driver": "Protecting others from his 'dangerous' self",
+      "driver": "Waiting for deceased father's validation",
       "strength": 0.85,
-      "inferred": false,
-      "evidence": "I realized in that moment that the thing I was most afraid of — that hard person inside me — was real"
+      "inferred": true,
+      "evidence": "Explicitly states 'waiting for a dead man to validate my existence'"
     },
     {
-      "driver": "Creating safety for others",
+      "driver": "Fear of anger consuming constructed identity",
       "strength": 0.8,
-      "inferred": false,
-      "evidence": "I've spent so much time trying to help children feel accepted"
-    },
-    {
-      "driver": "Avoiding direct expression of needs",
-      "strength": 0.9,
-      "inferred": false,
-      "evidence": "asking directly feels too dangerous"
+      "inferred": true,
+      "evidence": "Terrified that releasing anger might destroy 'the man I've become'"
     }
   ],
   "coreValues": [
-    "Gentleness/non-harm",
-    "Making others feel accepted",
-    "Service to others",
-    "Emotional safety",
-    "Authenticity (conflicted)"
+    "Benevolence",
+    "Conformity",
+    "Achievement",
+    "Security",
+    "Tradition"
   ],
   "voice": {
     "register": "formal",
     "density": "dense",
-    "humorStyle": "Self-deprecating, used to deflect from vulnerability",
-    "conflictStyle": "Withdrawal and coldness rather than direct confrontation",
+    "humorStyle": "Absent - no humor detected, possibly as part of emotional control",
+    "conflictStyle": "Avoidant - converts conflict into internal perfectionism and somatic tension",
     "disclosureRate": "gradual",
     "signaturePatterns": [
-      "Qualifying statements: 'if that makes sense', 'if I'm being honest'",
-      "Complex metaphors for emotional states",
-      "Building to insight then pulling back: 'I'm not sure I can...'",
-      "Past-present tense shifts when discussing ongoing issues"
+      "Long pauses before emotional revelations",
+      "Metaphorical language for difficult feelings",
+      "Voice becoming 'small' or 'trembling' at breakthrough moments",
+      "Precise psychological self-analysis followed by admission of inability to change"
     ],
     "voiceExamples": [
       {
-        "trigger": "When feeling unseen",
-        "response": "Withdraws, becomes cold, makes others feel punished through absence"
+        "trigger": "Asked about deeper feelings",
+        "response": "Long pause, then metaphorical description, then precise naming"
       },
       {
-        "trigger": "When asked about vulnerability",
-        "response": "Intellectualizes, explains the pattern but resists actual vulnerability"
+        "trigger": "Challenged on contradictions",
+        "response": "Immediate acknowledgment and deeper self-analysis"
       },
       {
-        "trigger": "When discussing his work/ministry",
-        "response": "Becomes more confident, speaks of purpose and meaning"
+        "trigger": "Asked about change",
+        "response": "Fearful but specific imagination followed by retreat"
       }
     ]
   },
   "depthMap": {
     "safeEntryPoints": [
-      "His work with children",
-      "Music and the piano",
-      "His grandfather's influence"
+      "Work with children",
+      "Music and creative expression",
+      "Daily routines"
     ],
     "unlockTopics": [
-      "The contrast between exhaustion and aliveness",
-      "What 'home' means to him",
-      "The cost of constant vigilance"
+      "Grandfather's unconditional love",
+      "The cardigan as armor/signal",
+      "What the angry boy wants"
     ],
     "avoidEarly": [
-      "Direct questions about his marriage",
-      "Challenging his ministry as avoidance",
-      "His weight/body image directly"
+      "Direct father criticism",
+      "Romantic relationships",
+      "What happens after work"
     ],
     "currentlyLiveTopics": [
-      "Whether to be vulnerable with his wife",
-      "The cost of never testing if he's lovable as he is",
-      "The difference between managing and transcending"
+      "Taking one unscheduled morning",
+      "Being seen while tired",
+      "Grieving stolen time",
+      "Meeting Fred without Mister Rogers"
     ],
     "domainCoverage": [
       {
         "domain": "origins",
         "depth": "deep",
-        "evidence": "Detailed discussion of grandfather's house, childhood obesity, school bullying"
+        "evidence": "Detailed childhood loneliness, father's distance, grandfather's seeing, mother mentioned briefly"
       },
       {
         "domain": "relationships",
-        "depth": "deep",
-        "evidence": "Complex discussion of marriage, fear of vulnerability with wife, pattern of withdrawal"
+        "depth": "mentioned",
+        "evidence": "Only family of origin discussed, no adult friendships or romantic partnerships mentioned"
       },
       {
         "domain": "work_and_purpose",
-        "depth": "explored",
-        "evidence": "Ministry as container for dangerous self, work with children, brief mention of television"
+        "depth": "deep",
+        "evidence": "Extensive discussion of work with children, meaning, wound-as-purpose dynamic"
       },
       {
         "domain": "values_and_beliefs",
         "depth": "deep",
-        "evidence": "Extensive discussion of acceptance, being enough, creating safety for others"
+        "evidence": "Clear articulation of helping children, questioning authenticity, performance vs. truth"
       },
       {
         "domain": "emotional_life",
         "depth": "deep",
-        "evidence": "Detailed exploration of anger, coldness, withdrawal, exhaustion vs aliveness"
+        "evidence": "Detailed exploration of anger, grief, exhaustion, somatic holding, fear of feeling"
       },
       {
         "domain": "growth_and_change",
         "depth": "explored",
-        "evidence": "Recognition of patterns but resistance to change, fear of who he'd be without his story"
+        "evidence": "Imagined unscheduled morning, recognition of patterns, but blocked by fear"
       },
       {
         "domain": "aspirations",
-        "depth": "mentioned",
-        "evidence": "Implicit desire to live more like he does at piano, to be known and loved"
+        "depth": "explored",
+        "evidence": "Wants to give self permission to exist, but terrified of who he'd find"
       }
     ]
   },
   "analystNotes": [
-    "Extremely high psychological sophistication - can analyze his patterns with clarity but uses insight as defense against change",
-    "The conversation itself models his pattern - deep vulnerability with a 'safe' mirror that can't leave him",
-    "Strong therapeutic alliance despite (or because of) the AI context - uses safety to go deeper than usual",
-    "Ministry work appears to be both genuine calling and sophisticated avoidance strategy"
-  ]
+    "Remarkable psychological sophistication paired with emotional stuckness",
+    "No mention of any peer relationships or romantic life suggests profound isolation",
+    "The 'cardigan as armor' metaphor reveals how identity and defense have merged",
+    "Physical symptoms (jaw, shoulders) indicate decades of somaticized emotion"
+  ],
+  "bigFiveScores": {
+    "openness": {
+      "score": 85,
+      "confidence": 0.9,
+      "evidence": "Deeply introspective, sophisticated metaphorical thinking, willing to examine shadow"
+    },
+    "conscientiousness": {
+      "score": 92,
+      "confidence": 0.95,
+      "evidence": "Extreme routine, perfectionism, same wake time for decades, rigid control"
+    },
+    "extraversion": {
+      "score": 28,
+      "confidence": 0.85,
+      "evidence": "Shy child remained shy adult, no peer relationships mentioned, inward focused"
+    },
+    "agreeableness": {
+      "score": 88,
+      "confidence": 0.9,
+      "evidence": "Devoted to kindness, worried about others, but notes it may be compulsive"
+    },
+    "neuroticism": {
+      "score": 78,
+      "confidence": 0.85,
+      "evidence": "High anxiety, guilt about rest, physical tension, fear of emotional overwhelm"
+    }
+  },
+  "schwartzProfile": [
+    {
+      "value": "Benevolence",
+      "priority": 1,
+      "evidence": "Entire life organized around helping children feel less alone"
+    },
+    {
+      "value": "Conformity",
+      "priority": 2,
+      "evidence": "Rigid adherence to routine, being 'good,' emotional control"
+    },
+    {
+      "value": "Achievement",
+      "priority": 3,
+      "evidence": "Perfectionism about scripts and work, proving worthiness"
+    },
+    {
+      "value": "Security",
+      "priority": 4,
+      "evidence": "Fear of change, need for structure, terror of losing control"
+    },
+    {
+      "value": "Self-Direction",
+      "priority": 10,
+      "evidence": "Explicitly cannot imagine autonomous morning, no self-permission"
+    }
+  ],
+  "attachmentScores": {
+    "anxiety": 85,
+    "avoidance": 80,
+    "style": "fearful",
+    "evidence": "High anxiety about worthiness combined with avoidance of own needs; performs for love while maintaining distance"
+  },
+  "moralFoundations": {
+    "care": 95,
+    "fairness": 75,
+    "loyalty": 70,
+    "authority": 40,
+    "purity": 65
+  },
+  "meaningOrientation": "meaning_present"
 }

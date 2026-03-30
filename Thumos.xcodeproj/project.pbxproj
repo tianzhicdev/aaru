@@ -10,6 +10,7 @@
 		01D225007E10D9715C5B7693 /* m07_nomad_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = D8040764343D6B50105C26FD /* m07_nomad_walk.png */; };
 		02A3865906B6EB9B37F2EF6A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61CB2540924FC677CCCDFAAA /* SettingsView.swift */; };
 		038F2A7118603C8601DA77D7 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF17CD9EF6C056634061764 /* AppModel.swift */; };
+		079CE20535102EFCBB67FD3A /* PersonalitySpectrumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */; };
 		10652552B9B6D8C68EB8A6AC /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 427464C56B70E731B3E93B29 /* SpaceGrotesk-Regular.ttf */; };
 		16FAF3C4E8A0B516B1309861 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2515DAFDA782E1E49D886250 /* Models.swift */; };
 		19C32519AC26D20D76EB9F29 /* CormorantGaramond-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8AC4956A0F9ECCF6F2B44DCB /* CormorantGaramond-Medium.ttf */; };
@@ -25,6 +26,7 @@
 		4F9AA515B185A34BBFDD4A75 /* f03_scholar_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 8F8144501D1085F17F1D1479 /* f03_scholar_walk.png */; };
 		54646E965D448306153F102D /* t02_skater_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 46E748A2A59118D411ACE606 /* t02_skater_walk.png */; };
 		551ACF04C71A0EB735DA3E17 /* CormorantGaramond-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DD1ED1D7A1E96A186F09A788 /* CormorantGaramond-Regular.ttf */; };
+		5DC75890C76BFC71969170F0 /* TopValuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C266964884DD0A49FF235A8 /* TopValuesView.swift */; };
 		5EA57C895F00E0517F554513 /* m12_surfer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 477301D92FFACAAE3B7027B6 /* m12_surfer_walk.png */; };
 		6082C55AC8DF8B7A0911FEDD /* SecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 594FC516B410231D9CCB794C /* SecureStore.swift */; };
 		61CAD536F25F61B2A9095E41 /* m13_dreads_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = C2A27810AEC450BF2A4A7ED5 /* m13_dreads_walk.png */; };
@@ -78,7 +80,7 @@
 
 /* Begin PBXFileReference section */
 		03353E9AD37FA9DA221FAD83 /* CormorantGaramond-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Light.ttf"; sourceTree = "<group>"; };
-		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0E0C051A3655BF0C1A3C2C5B /* m04_rebel_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m04_rebel_walk.png; sourceTree = "<group>"; };
 		10394D66BFD5E8E083AB1711 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		14D226C28CCC9536C6DCE559 /* f02_mystic_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f02_mystic_walk.png; sourceTree = "<group>"; };
@@ -86,10 +88,12 @@
 		24C0FBC98C1F26FA68BA6C4F /* AIConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConsentView.swift; sourceTree = "<group>"; };
 		2515DAFDA782E1E49D886250 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		27582326B464B2B57E3EB65E /* m10_hipster_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m10_hipster_walk.png; sourceTree = "<group>"; };
+		318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalitySpectrumView.swift; sourceTree = "<group>"; };
 		3721C7B04CDF94E2F75FBB2D /* m06_farmer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m06_farmer_walk.png; sourceTree = "<group>"; };
 		3794F1123A25A0EB6868BB07 /* f04_punk_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f04_punk_walk.png; sourceTree = "<group>"; };
 		38980E9538DFFF63E52B4871 /* m03_sage_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m03_sage_walk.png; sourceTree = "<group>"; };
 		3A42797FCE74E392D97A7C65 /* SpaceGrotesk-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Medium.ttf"; sourceTree = "<group>"; };
+		3C266964884DD0A49FF235A8 /* TopValuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopValuesView.swift; sourceTree = "<group>"; };
 		427464C56B70E731B3E93B29 /* SpaceGrotesk-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Regular.ttf"; sourceTree = "<group>"; };
 		42AA875018D348AAFB3D0B01 /* m14_cowlick_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m14_cowlick_walk.png; sourceTree = "<group>"; };
 		44003C880FA148D520D0670C /* ThumosTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ThumosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -131,7 +135,7 @@
 		DD1ED1D7A1E96A186F09A788 /* CormorantGaramond-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Regular.ttf"; sourceTree = "<group>"; };
 		E3C7D49379171BC95FB8C4CD /* f10_adventurer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f10_adventurer_walk.png; sourceTree = "<group>"; };
 		E9F27E3DC5F4793996F7CF06 /* m02_artisan_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m02_artisan_walk.png; sourceTree = "<group>"; };
-		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF9FD5D9AE86FAAE5989719F /* f09_artist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f09_artist_walk.png; sourceTree = "<group>"; };
 		F93A116D54888ADD10E7C0DF /* m05_gentleman_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m05_gentleman_walk.png; sourceTree = "<group>"; };
 		F9DFE166F49AD94C8312BAFC /* t01_student_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = t01_student_walk.png; sourceTree = "<group>"; };
@@ -249,6 +253,7 @@
 				44FAE79B4B5A28D497C6CA81 /* ForceUpdateView.swift */,
 				2515DAFDA782E1E49D886250 /* Models.swift */,
 				557A75DDC74B75962FFCDAE9 /* NotificationManager.swift */,
+				318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */,
 				D9224320ED12C526A5BFFA9E /* RootView.swift */,
 				594FC516B410231D9CCB794C /* SecureStore.swift */,
 				61CB2540924FC677CCCDFAAA /* SettingsView.swift */,
@@ -258,6 +263,7 @@
 				722C30D2A06E75B300348A9A /* SoulMirrorTabView.swift */,
 				84C512C8DCA175C367F9EBC9 /* Theme.swift */,
 				FF86DC7FAF1336E26410AE14 /* ThumosApp.swift */,
+				3C266964884DD0A49FF235A8 /* TopValuesView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -309,6 +315,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 888EC908255CC0B5B03B6862 /* Build configuration list for PBXProject "Thumos" */;
 			developmentRegion = en;
@@ -391,6 +399,7 @@
 				4AEC7256422D90472218626E /* ForceUpdateView.swift in Sources */,
 				16FAF3C4E8A0B516B1309861 /* Models.swift in Sources */,
 				40DF4454C84DB08855B6B54E /* NotificationManager.swift in Sources */,
+				079CE20535102EFCBB67FD3A /* PersonalitySpectrumView.swift in Sources */,
 				B00E02276B2AA6AF9CAEAF94 /* RootView.swift in Sources */,
 				6082C55AC8DF8B7A0911FEDD /* SecureStore.swift in Sources */,
 				02A3865906B6EB9B37F2EF6A /* SettingsView.swift in Sources */,
@@ -400,6 +409,7 @@
 				9B5D0B615B731FB472B9277B /* SoulMirrorTabView.swift in Sources */,
 				4392AEA5BE25BA2E5A63A4B4 /* Theme.swift in Sources */,
 				8515AD19B8A6A2BDAA456950 /* ThumosApp.swift in Sources */,
+				5DC75890C76BFC71969170F0 /* TopValuesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -428,19 +438,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -590,19 +594,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};

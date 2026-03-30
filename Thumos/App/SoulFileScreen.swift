@@ -2,7 +2,9 @@ import SwiftUI
 
 struct SoulFileScreen: View {
     @EnvironmentObject private var model: AppModel
+
     @State private var showPrivacy = false
+    @State private var expandedSections: Set<String> = []
 
     var body: some View {
         ZStack {
@@ -30,6 +32,9 @@ struct SoulFileScreen: View {
 
             portraitSection
             compassSection
+            personalitySpectrumSection
+            topValuesSection
+            relationalStyleSection
             soulSections
             crystallizedMomentsSection
             openThreadsSection
@@ -47,8 +52,6 @@ struct SoulFileScreen: View {
                 .offset(y: -1)
         }
     }
-
-    // MARK: - Border Lock
 
     private var borderLock: some View {
         HStack(spacing: 12) {
@@ -72,8 +75,6 @@ struct SoulFileScreen: View {
         }
     }
 
-    // MARK: - Title
-
     private var titleSection: some View {
         VStack(spacing: 8) {
             Text("Soul File")
@@ -89,8 +90,6 @@ struct SoulFileScreen: View {
         }
     }
 
-    // MARK: - Loading Notice
-
     private var loadingNotice: some View {
         VStack(spacing: 10) {
             ProgressView()
@@ -101,7 +100,7 @@ struct SoulFileScreen: View {
                 .font(Theme.sans(15, weight: .medium))
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("This can take a few minutes after a deeper conversation.")
+            Text("This can take a few minutes after a deeper conversation. If it looks still, leave the app open a little longer and it should settle into place.")
                 .font(Theme.sans(14, weight: .light))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -113,8 +112,6 @@ struct SoulFileScreen: View {
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
-
-    // MARK: - Privacy Sheet
 
     private var privacySheet: some View {
         ZStack {
@@ -157,8 +154,6 @@ struct SoulFileScreen: View {
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - Portrait
-
     private var portraitSection: some View {
         Group {
             if let portrait = model.visibleSoulFile.portrait, !portrait.isEmpty {
@@ -181,8 +176,6 @@ struct SoulFileScreen: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Soul Compass
-
     private var compassSection: some View {
         Group {
             if let scores = model.visibleSoulFile.compassScores,
@@ -192,94 +185,136 @@ struct SoulFileScreen: View {
         }
     }
 
-    // MARK: - 7 Soul Sections
+    private var personalitySpectrumSection: some View {
+        Group {
+            if let spectrum = model.visibleSoulFile.personalitySpectrum,
+               spectrum.hasAnyEntry {
+                PersonalitySpectrumView(spectrum: spectrum)
+            }
+        }
+    }
+
+    private var topValuesSection: some View {
+        Group {
+            if let values = model.visibleSoulFile.topValues,
+               !values.isEmpty {
+                TopValuesView(values: values)
+            }
+        }
+    }
+
+    private var relationalStyleSection: some View {
+        Group {
+            if let relationalStyle = model.visibleSoulFile.relationalStyle,
+               !relationalStyle.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Relational Style")
+                        .font(Theme.sans(12, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .textCase(.uppercase)
+                        .tracking(1.5)
+
+                    Text(relationalStyle)
+                        .font(Theme.serif(18))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
 
     private var soulSectionItems: [(title: String, content: String)] {
-        let s = model.visibleSoulFile.sections
+        let sections = model.visibleSoulFile.sections
         return [
-            ("How You Move", s.howYouMove),
-            ("How You Think", s.howYouThink),
-            ("How You Connect", s.howYouConnect),
-            ("What You Carry", s.whatYouCarry),
-            ("What Lights You Up", s.whatLightsYouUp),
-            ("Your Contradictions", s.yourContradictions),
-            ("Your Voice", s.yourVoice),
+            ("How You Move", sections.howYouMove),
+            ("How You Think", sections.howYouThink),
+            ("How You Connect", sections.howYouConnect),
+            ("What You Carry", sections.whatYouCarry),
+            ("What Lights You Up", sections.whatLightsYouUp),
+            ("Your Contradictions", sections.yourContradictions),
+            ("Your Voice", sections.yourVoice)
         ].filter { !$0.content.isEmpty }
     }
 
     private var soulSections: some View {
         Group {
             if !soulSectionItems.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(soulSectionItems.enumerated()), id: \.offset) { index, item in
-                        if index > 0 {
-                            Divider()
-                                .frame(height: 0.5)
-                                .overlay(Theme.divider)
-                                .padding(.vertical, 12)
-                        }
-                        soulSectionView(title: item.title, content: item.content)
+                VStack(spacing: 10) {
+                    ForEach(soulSectionItems, id: \.title) { item in
+                        DisclosureGroup(
+                            isExpanded: binding(for: item.title),
+                            content: {
+                                Text(item.content)
+                                    .font(Theme.serif(18))
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .multilineTextAlignment(.leading)
+                                    .lineSpacing(4)
+                                    .padding(.top, 8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            },
+                            label: {
+                                Text(item.title)
+                                    .font(Theme.sans(12, weight: .medium))
+                                    .foregroundStyle(Theme.accent)
+                                    .textCase(.uppercase)
+                                    .tracking(1.5)
+                            }
+                        )
+                        .tint(Theme.accentBright)
+                        .padding(14)
+                        .background(Theme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
             }
         }
     }
 
-    private func soulSectionView(title: String, content: String) -> some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(Theme.sans(12, weight: .medium))
-                .foregroundStyle(Theme.accent)
-                .textCase(.uppercase)
-                .tracking(1.5)
-
-            Text(content)
-                .font(Theme.serif(18))
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-        }
-    }
-
-    // MARK: - Crystallized Moments
-
     private var crystallizedMomentsSection: some View {
         Group {
             if !model.visibleSoulFile.crystallizedMoments.isEmpty {
-                VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("Crystallized Moments")
                         .font(Theme.sans(12, weight: .medium))
                         .foregroundStyle(Theme.accent)
                         .textCase(.uppercase)
                         .tracking(1.5)
 
-                    ForEach(Array(model.visibleSoulFile.crystallizedMoments.enumerated()), id: \.offset) { _, moment in
-                        VStack(spacing: 6) {
-                            Text("\"\(moment.quote)\"")
-                                .font(Theme.serifItalic(17))
-                                .foregroundStyle(Theme.textSecondary)
-                                .multilineTextAlignment(.center)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Array(model.visibleSoulFile.crystallizedMoments.enumerated()), id: \.offset) { _, moment in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("\"\(moment.quote)\"")
+                                        .font(Theme.serifItalic(16))
+                                        .foregroundStyle(Theme.textPrimary)
+                                        .multilineTextAlignment(.leading)
 
-                            if !moment.reflection.isEmpty {
-                                Text(moment.reflection)
-                                    .font(Theme.serif(15))
-                                    .foregroundStyle(Theme.textTertiary)
-                                    .multilineTextAlignment(.center)
+                                    Text(moment.reflection)
+                                        .font(Theme.serif(14))
+                                        .foregroundStyle(Theme.textSecondary)
+                                        .multilineTextAlignment(.leading)
+                                        .lineSpacing(3)
+                                }
+                                .frame(width: 220, alignment: .leading)
+                                .padding(16)
+                                .background(Theme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 4)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
-    // MARK: - Open Threads
-
     private var openThreadsSection: some View {
         Group {
             if !model.visibleSoulFile.openThreads.isEmpty {
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Open Threads")
                         .font(Theme.sans(12, weight: .medium))
                         .foregroundStyle(Theme.accent)
@@ -290,11 +325,25 @@ struct SoulFileScreen: View {
                         Text(thread)
                             .font(Theme.serif(17, weight: .light))
                             .foregroundStyle(Theme.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
+                            .multilineTextAlignment(.leading)
+                            .lineSpacing(3)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+    }
+
+    private func binding(for title: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedSections.contains(title) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedSections.insert(title)
+                } else {
+                    expandedSections.remove(title)
+                }
+            }
+        )
     }
 }

@@ -27,4 +27,65 @@ final class BackendClientTests: XCTestCase {
 
         XCTAssertEqual(response.messages, [])
     }
+
+    func testVisibleSoulFileDecodesDashboardV2Fields() throws {
+        let json = """
+        {
+          "version": 2,
+          "lastUpdated": "2026-03-30T00:00:00Z",
+          "portrait": "You move through the world like someone protecting a quiet interior room.",
+          "sections": {
+            "howYouMove": "With care.",
+            "howYouThink": "In patterns.",
+            "howYouConnect": "Slowly.",
+            "whatYouCarry": "Expectation.",
+            "whatLightsYouUp": "Creative flow.",
+            "yourContradictions": "You want closeness but brace against it.",
+            "yourVoice": "Measured."
+          },
+          "crystallizedMoments": [],
+          "openThreads": [],
+          "compassScores": { "openness": 72 },
+          "personalitySpectrum": {
+            "openness": { "position": 78, "label": "Curious beneath the guard.", "evidence": "Keeps reaching for bigger frames." }
+          },
+          "topValues": [
+            { "value": "Self-Direction", "description": "You need room to choose your own way." }
+          ],
+          "relationalStyle": "You open through shared perspective first."
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(VisibleSoulFile.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.personalitySpectrum?.openness?.position, 78)
+        XCTAssertEqual(decoded.topValues?.first?.value, "Self-Direction")
+        XCTAssertEqual(decoded.relationalStyle, "You open through shared perspective first.")
+    }
+
+    func testVisibleSoulFileDecodesWhenDashboardV2FieldsAreAbsent() throws {
+        let json = """
+        {
+          "version": 1,
+          "lastUpdated": "2026-03-30T00:00:00Z",
+          "portrait": null,
+          "sections": {
+            "howYouMove": "",
+            "howYouThink": "",
+            "howYouConnect": "",
+            "whatYouCarry": "",
+            "whatLightsYouUp": "",
+            "yourContradictions": "",
+            "yourVoice": ""
+          },
+          "crystallizedMoments": [],
+          "openThreads": [],
+          "compassScores": {}
+        }
+        """
+
+        let decoded = try JSONDecoder().decode(VisibleSoulFile.self, from: Data(json.utf8))
+        XCTAssertNil(decoded.personalitySpectrum)
+        XCTAssertNil(decoded.topValues)
+        XCTAssertNil(decoded.relationalStyle)
+    }
 }

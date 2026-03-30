@@ -7,6 +7,46 @@ struct CrystallizedMoment: Codable, Equatable {
     let reflection: String
 }
 
+struct SpectrumEntry: Codable, Equatable {
+    let position: Double
+    let label: String
+    let evidence: String
+}
+
+struct PersonalitySpectrum: Codable, Equatable {
+    var openness: SpectrumEntry?
+    var conscientiousness: SpectrumEntry?
+    var extraversion: SpectrumEntry?
+    var agreeableness: SpectrumEntry?
+    var emotionalSensitivity: SpectrumEntry?
+
+    enum CodingKeys: String, CodingKey {
+        case openness
+        case conscientiousness
+        case extraversion
+        case agreeableness
+        case emotionalSensitivity
+    }
+
+    static let empty = PersonalitySpectrum(
+        openness: nil,
+        conscientiousness: nil,
+        extraversion: nil,
+        agreeableness: nil,
+        emotionalSensitivity: nil
+    )
+
+    var hasAnyEntry: Bool {
+        openness != nil || conscientiousness != nil || extraversion != nil
+        || agreeableness != nil || emotionalSensitivity != nil
+    }
+}
+
+struct TopValue: Codable, Equatable {
+    let value: String
+    let description: String
+}
+
 struct VisibleSoulFileSections: Codable, Equatable {
     var howYouMove: String
     var howYouThink: String
@@ -40,6 +80,9 @@ struct VisibleSoulFile: Codable, Equatable {
     var crystallizedMoments: [CrystallizedMoment]
     var openThreads: [String]
     var compassScores: [String: Double?]?
+    var personalitySpectrum: PersonalitySpectrum?
+    var topValues: [TopValue]?
+    var relationalStyle: String?
 
     enum CodingKeys: String, CodingKey {
         case version
@@ -49,6 +92,9 @@ struct VisibleSoulFile: Codable, Equatable {
         case crystallizedMoments
         case openThreads
         case compassScores
+        case personalitySpectrum
+        case topValues
+        case relationalStyle
     }
 
     static let empty = VisibleSoulFile(
@@ -58,12 +104,18 @@ struct VisibleSoulFile: Codable, Equatable {
         sections: .empty,
         crystallizedMoments: [],
         openThreads: [],
-        compassScores: nil
+        compassScores: nil,
+        personalitySpectrum: .empty,
+        topValues: [],
+        relationalStyle: nil
     )
 
     var isEmpty: Bool {
         portrait == nil && crystallizedMoments.isEmpty &&
         sections.howYouMove.isEmpty && sections.howYouThink.isEmpty
+        && !(personalitySpectrum?.hasAnyEntry ?? false)
+        && (topValues?.isEmpty ?? true)
+        && (relationalStyle?.isEmpty ?? true)
     }
 }
 
@@ -162,6 +214,43 @@ struct ReflectionNote: Codable {
     let domainCoverage: [DomainCoverageEntry]
     let recentAssistantQuestions: [String]
     let openLoops: [String]
+    let inferredBigFive: ReflectionInferredBigFive
+    let attachmentSignals: [AttachmentSignal]
+    let valueSignals: [ValueSignal]
+    let moralFoundationSignals: [MoralFoundationSignal]
+    let conflictStyle: String
+    let meaningOrientation: String
+}
+
+struct ReflectionTraitEstimate: Codable {
+    let score: Double
+    let confidence: String
+    let evidence: String
+}
+
+struct ReflectionInferredBigFive: Codable {
+    let openness: ReflectionTraitEstimate?
+    let conscientiousness: ReflectionTraitEstimate?
+    let extraversion: ReflectionTraitEstimate?
+    let agreeableness: ReflectionTraitEstimate?
+    let neuroticism: ReflectionTraitEstimate?
+}
+
+struct AttachmentSignal: Codable {
+    let dimension: String
+    let signal: String
+    let strength: String
+}
+
+struct ValueSignal: Codable {
+    let value: String
+    let evidence: String
+    let direction: String
+}
+
+struct MoralFoundationSignal: Codable {
+    let foundation: String
+    let signal: String
 }
 
 struct CoreDriver: Codable {
@@ -211,6 +300,46 @@ struct HiddenSoulFile: Codable {
     let voice: VoiceProfile
     let depthMap: DepthMap
     let analystNotes: [String]
+    let bigFiveScores: HiddenBigFiveScores
+    let schwartzProfile: [SchwartzValueProfileEntry]
+    let attachmentScores: HiddenAttachmentScores
+    let moralFoundations: HiddenMoralFoundations
+    let meaningOrientation: String?
+}
+
+struct HiddenTraitScore: Codable {
+    let score: Double
+    let confidence: Double
+    let evidence: String
+}
+
+struct HiddenBigFiveScores: Codable {
+    let openness: HiddenTraitScore?
+    let conscientiousness: HiddenTraitScore?
+    let extraversion: HiddenTraitScore?
+    let agreeableness: HiddenTraitScore?
+    let neuroticism: HiddenTraitScore?
+}
+
+struct SchwartzValueProfileEntry: Codable {
+    let value: String
+    let priority: Int
+    let evidence: String
+}
+
+struct HiddenAttachmentScores: Codable {
+    let anxiety: Double?
+    let avoidance: Double?
+    let style: String?
+    let evidence: String
+}
+
+struct HiddenMoralFoundations: Codable {
+    let care: Double?
+    let fairness: Double?
+    let loyalty: Double?
+    let authority: Double?
+    let purity: Double?
 }
 
 struct SteeringPreview: Codable {

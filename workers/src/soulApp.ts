@@ -1,14 +1,24 @@
 import type { NeonSQL } from "./db.ts";
 import type { VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
-import { hiddenSoulFileSchema, reflectionNoteSchema } from "../../src/domain/schemas.ts";
 import {
+  hiddenSoulFileSchema,
+  reflectionNoteSchema,
+  visibleSoulFileSchema
+} from "../../src/domain/schemas.ts";
+import {
+  buildAssessmentPrompt,
+  buildHiddenClinicalPrompt,
   buildReflectionPrompt,
   buildSoulSynthesisPrompt,
+  buildVisibleNarrativePrompt,
   emptyVisibleSoulFile,
   mergeHiddenSoulFile,
   mergeVisibleSoulFile,
+  parseAssessment,
+  parseHiddenClinical,
   parseReflectionNote,
-  parseSoulSynthesis
+  parseSoulSynthesis,
+  parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
 import { callClaude, streamClaude } from "./claude.ts";
 import { recordClaudeDebugTrace } from "./debugTraces.ts";
@@ -30,6 +40,9 @@ interface VisibleSoulFileRow {
   crystallized_moments: Json;
   open_threads: Json;
   compass_scores: Json;
+  personality_spectrum: Json;
+  top_values: Json;
+  relational_style: string | null;
 }
 
 interface HiddenSoulFileRow {
@@ -43,6 +56,11 @@ interface HiddenSoulFileRow {
   voice: Json;
   depth_map: Json;
   analyst_notes: Json;
+  big_five_scores: Json;
+  schwartz_profile: Json;
+  attachment_scores: Json;
+  moral_foundations: Json;
+  meaning_orientation: string | null;
 }
 
 interface ReflectionSnapshotRow {
@@ -83,7 +101,7 @@ export type SynthesisStatus = "ready" | "pending" | "failed";
 export type ReflectionSnapshotStatus = "ready" | "pending" | "failed";
 
 function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
-  return {
+  const parsed = visibleSoulFileSchema.safeParse({
     version: row.version,
     lastUpdated: normalizeTimestamp(row.last_updated),
     portrait: row.portrait,
@@ -98,8 +116,36 @@ function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
     },
     crystallizedMoments: (row.crystallized_moments as VisibleSoulFile["crystallizedMoments"]) ?? [],
     openThreads: (row.open_threads as string[]) ?? [],
-    compassScores: (row.compass_scores as Record<string, number | null>) ?? {}
-  };
+    compassScores: (row.compass_scores as Record<string, number | null>) ?? {},
+    personalitySpectrum: row.personality_spectrum ?? {},
+    topValues: row.top_values ?? [],
+    relationalStyle: row.relational_style
+  });
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  return visibleSoulFileSchema.parse({
+    version: row.version,
+    lastUpdated: normalizeTimestamp(row.last_updated),
+    portrait: row.portrait,
+    sections: {
+      howYouMove: row.how_you_move ?? "",
+      howYouThink: row.how_you_think ?? "",
+      howYouConnect: row.how_you_connect ?? "",
+      whatYouCarry: row.what_you_carry ?? "",
+      whatLightsYouUp: row.what_lights_you_up ?? "",
+      yourContradictions: row.your_contradictions ?? "",
+      yourVoice: row.your_voice ?? ""
+    },
+    crystallizedMoments: row.crystallized_moments ?? [],
+    openThreads: row.open_threads ?? [],
+    compassScores: row.compass_scores ?? {},
+    personalitySpectrum: row.personality_spectrum ?? {},
+    topValues: row.top_values ?? [],
+    relationalStyle: row.relational_style
+  });
 }
 
 function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
@@ -112,7 +158,12 @@ function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
     coreValues: (row.core_values as string[]) ?? [],
     voice: (row.voice as HiddenSoulFile["voice"]) ?? { register: "casual", density: "moderate", humorStyle: "", conflictStyle: "", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
     depthMap: (row.depth_map as HiddenSoulFile["depthMap"]) ?? { safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: [] },
-    analystNotes: (row.analyst_notes as string[]) ?? []
+    analystNotes: (row.analyst_notes as string[]) ?? [],
+    bigFiveScores: row.big_five_scores ?? {},
+    schwartzProfile: row.schwartz_profile ?? [],
+    attachmentScores: row.attachment_scores ?? {},
+    moralFoundations: row.moral_foundations ?? {},
+    meaningOrientation: row.meaning_orientation
   });
 
   if (parsed.success) {
@@ -128,7 +179,12 @@ function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
     coreValues: [],
     voice: {},
     depthMap: row.depth_map ?? {},
-    analystNotes: row.analyst_notes ?? []
+    analystNotes: row.analyst_notes ?? [],
+    bigFiveScores: row.big_five_scores ?? {},
+    schwartzProfile: row.schwartz_profile ?? [],
+    attachmentScores: row.attachment_scores ?? {},
+    moralFoundations: row.moral_foundations ?? {},
+    meaningOrientation: row.meaning_orientation
   });
 }
 
@@ -151,7 +207,13 @@ function parseReflectionSnapshotNote(note: unknown): ReflectionNote | null {
     emotionalArc: "",
     domainCoverage: [],
     recentAssistantQuestions: [],
-    openLoops: []
+    openLoops: [],
+    inferredBigFive: {},
+    attachmentSignals: [],
+    valueSignals: [],
+    moralFoundationSignals: [],
+    conflictStyle: "",
+    meaningOrientation: ""
   });
 }
 
@@ -170,6 +232,7 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       how_you_move, how_you_think, how_you_connect, what_you_carry,
       what_lights_you_up, your_contradictions, your_voice,
       crystallized_moments, open_threads, compass_scores,
+      personality_spectrum, top_values, relational_style,
       status, synthesis_started_at
     ) VALUES (
       ${userId}, ${file.version}, ${file.lastUpdated}, ${file.portrait},
@@ -179,6 +242,9 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       ${file.sections.yourVoice},
       ${JSON.stringify(file.crystallizedMoments)}, ${JSON.stringify(file.openThreads)},
       ${JSON.stringify(file.compassScores ?? {})},
+      ${JSON.stringify(file.personalitySpectrum ?? {})},
+      ${JSON.stringify(file.topValues ?? [])},
+      ${file.relationalStyle},
       'ready', NULL
     )
     ON CONFLICT (user_id) DO UPDATE SET
@@ -195,6 +261,9 @@ export async function upsertVisibleSoulFile(sql: NeonSQL, userId: string, file: 
       crystallized_moments = EXCLUDED.crystallized_moments,
       open_threads = EXCLUDED.open_threads,
       compass_scores = EXCLUDED.compass_scores,
+      personality_spectrum = EXCLUDED.personality_spectrum,
+      top_values = EXCLUDED.top_values,
+      relational_style = EXCLUDED.relational_style,
       status = 'ready',
       synthesis_started_at = NULL
   `;
@@ -213,12 +282,19 @@ export async function upsertHiddenSoulFile(sql: NeonSQL, userId: string, file: H
     INSERT INTO hidden_soul_files (
       user_id, version, last_updated, confidence,
       expert_reflections, core_drivers, core_values,
-      voice, depth_map, analyst_notes
+      voice, depth_map, analyst_notes,
+      big_five_scores, schwartz_profile, attachment_scores,
+      moral_foundations, meaning_orientation
     ) VALUES (
       ${userId}, ${file.version}, ${file.lastUpdated}, ${file.confidence},
       ${JSON.stringify(file.expertReflections)}, ${JSON.stringify(file.coreDrivers)},
       ${JSON.stringify(file.coreValues)}, ${JSON.stringify(file.voice)},
-      ${JSON.stringify(file.depthMap)}, ${JSON.stringify(file.analystNotes)}
+      ${JSON.stringify(file.depthMap)}, ${JSON.stringify(file.analystNotes)},
+      ${JSON.stringify(file.bigFiveScores ?? {})},
+      ${JSON.stringify(file.schwartzProfile ?? [])},
+      ${JSON.stringify(file.attachmentScores ?? {})},
+      ${JSON.stringify(file.moralFoundations ?? {})},
+      ${file.meaningOrientation}
     )
     ON CONFLICT (user_id) DO UPDATE SET
       version = EXCLUDED.version,
@@ -229,7 +305,12 @@ export async function upsertHiddenSoulFile(sql: NeonSQL, userId: string, file: H
       core_values = EXCLUDED.core_values,
       voice = EXCLUDED.voice,
       depth_map = EXCLUDED.depth_map,
-      analyst_notes = EXCLUDED.analyst_notes
+      analyst_notes = EXCLUDED.analyst_notes,
+      big_five_scores = EXCLUDED.big_five_scores,
+      schwartz_profile = EXCLUDED.schwartz_profile,
+      attachment_scores = EXCLUDED.attachment_scores,
+      moral_foundations = EXCLUDED.moral_foundations,
+      meaning_orientation = EXCLUDED.meaning_orientation
   `;
 }
 
@@ -514,7 +595,7 @@ export async function runReflectionSnapshot(
     const rawResponse = await callClaude(
       reflectionSystemPrompt,
       [{ role: "user", content: prompt }],
-      { apiKey, model: reflectionModel, maxTokens: 1400, temperature: 0.2 }
+      { apiKey, model: reflectionModel, maxTokens: 4000, temperature: 0.2 }
     );
 
     const parsed = parseReflectionNote(rawResponse);
@@ -568,13 +649,43 @@ export async function runReflectionSnapshot(
   }
 }
 
+async function collectClaudeStream(
+  systemPrompt: string,
+  prompt: string,
+  options: {
+    apiKey: string;
+    model: string;
+    maxTokens: number;
+    temperature: number;
+  }
+): Promise<string> {
+  let fullText = "";
+  for await (const chunk of streamClaude(
+    systemPrompt,
+    [{ role: "user", content: prompt }],
+    options
+  )) {
+    fullText += chunk;
+  }
+  return fullText;
+}
+
 export async function runSoulSynthesis(
   sql: NeonSQL,
   apiKey: string,
   userId: string
 ): Promise<{ visible: VisibleSoulFile | null; hidden: HiddenSoulFile | null }> {
-  const synthesisModel = "claude-opus-4-20250514";
-  const synthesisSystemPrompt =
+  const assessmentModel = "claude-opus-4-20250514";
+  const visibleModel = "claude-opus-4-20250514";
+  const hiddenModel = "claude-haiku-4-5-20251001";
+  const fallbackSynthesisModel = "claude-opus-4-20250514";
+  const assessmentSystemPrompt =
+    "You are a careful psychometric analyst. Output valid JSON only.";
+  const visibleSystemPrompt =
+    "You are a gifted soul writer. Output valid JSON only.";
+  const hiddenSystemPrompt =
+    "You are a careful internal soul analyst. Output valid JSON only.";
+  const fallbackSynthesisSystemPrompt =
     "You are a multi-expert soul analyst. Follow the analysis procedure exactly. Output only the two JSON objects separated by <<<SPLIT>>>.";
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingVisible = await getVisibleSoulFile(sql, userId);
@@ -586,91 +697,201 @@ export async function runSoulSynthesis(
     content: m.content
   }));
 
-  try {
-    const synthesisPromptText = buildSoulSynthesisPrompt(
+  const traceMetaBase = {
+    message_count: extractionMessages.length,
+    has_existing_visible: Boolean(existingVisible),
+    has_existing_hidden: Boolean(existingHidden),
+    has_reflection_snapshot: Boolean(reflectionNote)
+  };
+
+  const recordSynthesisTrace = async (
+    inputMessages: Array<{ role: string; content: string }>,
+    rawResponse: string | null,
+    meta: Record<string, Json>
+  ) => {
+    await recordClaudeDebugTrace(sql, {
+      userId,
+      traceKind: "synthesis",
+      model: [assessmentModel, visibleModel, hiddenModel].join(" | "),
+      systemPrompt: "dashboard-v2 synthesis pipeline",
+      inputMessages,
+      rawResponse,
+      meta
+    }).catch((traceError) => {
+      console.error("Failed to record synthesis debug trace:", traceError);
+    });
+  };
+
+  const runFallbackSynthesis = async (reason: string, cause?: unknown) => {
+    const fallbackPromptText = buildSoulSynthesisPrompt(
       extractionMessages,
       reflectionNote,
       existingVisible,
       existingHidden
     );
 
-    let synthesisRaw = "";
-    for await (const chunk of streamClaude(
-      synthesisSystemPrompt,
-      [{ role: "user", content: synthesisPromptText }],
-      { apiKey, model: synthesisModel, maxTokens: 8192, temperature: 0.5 }
-    )) {
-      synthesisRaw += chunk;
+    try {
+      const fallbackRaw = await collectClaudeStream(
+        fallbackSynthesisSystemPrompt,
+        fallbackPromptText,
+        {
+          apiKey,
+          model: fallbackSynthesisModel,
+          maxTokens: 8192,
+          temperature: 0.5
+        }
+      );
+
+      const fallbackResult = parseSoulSynthesis(fallbackRaw);
+      await recordSynthesisTrace(
+        [{ role: "user", content: fallbackPromptText }],
+        fallbackRaw,
+        {
+          ...traceMetaBase,
+          pipeline: "fallback_single_call",
+          fallback_reason: reason,
+          parse_success: Boolean(fallbackResult),
+          error: cause instanceof Error ? cause.message : cause ? String(cause) : null
+        }
+      );
+
+      if (!fallbackResult) {
+        await markSynthesisFailed(sql, userId);
+        return { visible: existingVisible, hidden: existingHidden };
+      }
+
+      const mergedVisible = mergeVisibleSoulFile(existingVisible, {
+        portrait: fallbackResult.visible.portrait ?? undefined,
+        sections: fallbackResult.visible.sections,
+        crystallizedMoments: fallbackResult.visible.crystallizedMoments,
+        openThreads: fallbackResult.visible.openThreads,
+        compassScores: fallbackResult.visible.compassScores,
+        personalitySpectrum: fallbackResult.visible.personalitySpectrum,
+        topValues: fallbackResult.visible.topValues,
+        relationalStyle: fallbackResult.visible.relationalStyle
+      });
+      const mergedHidden = mergeHiddenSoulFile(existingHidden, fallbackResult.hidden);
+
+      await upsertVisibleSoulFile(sql, userId, mergedVisible);
+      await upsertHiddenSoulFile(sql, userId, mergedHidden);
+
+      return { visible: mergedVisible, hidden: mergedHidden };
+    } catch (fallbackError) {
+      await recordSynthesisTrace(
+        [{ role: "user", content: fallbackPromptText }],
+        null,
+        {
+          ...traceMetaBase,
+          pipeline: "fallback_single_call",
+          fallback_reason: reason,
+          parse_success: false,
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        }
+      );
+      console.error("Soul synthesis fallback failed:", fallbackError);
+      await markSynthesisFailed(sql, userId).catch((markError) =>
+        console.error("Failed to mark synthesis as failed:", markError)
+      );
+      return { visible: existingVisible, hidden: existingHidden };
+    }
+  };
+
+  try {
+    const assessmentPromptText = buildAssessmentPrompt(
+      extractionMessages,
+      reflectionNote,
+      existingHidden
+    );
+    const assessmentRaw = await callClaude(
+      assessmentSystemPrompt,
+      [{ role: "user", content: assessmentPromptText }],
+      { apiKey, model: assessmentModel, maxTokens: 4096, temperature: 0.2 }
+    );
+    const assessment = parseAssessment(assessmentRaw);
+
+    if (!assessment) {
+      console.error("Assessment parsing failed, using fallback synthesis");
+      return runFallbackSynthesis("assessment_parse_failed");
     }
 
-    const result = parseSoulSynthesis(synthesisRaw);
-    await recordClaudeDebugTrace(sql, {
-      userId,
-      traceKind: "synthesis",
-      model: synthesisModel,
-      systemPrompt: synthesisSystemPrompt,
-      inputMessages: [{ role: "user", content: synthesisPromptText }],
-      rawResponse: synthesisRaw,
-      meta: {
-        message_count: extractionMessages.length,
-        has_existing_visible: Boolean(existingVisible),
-        has_existing_hidden: Boolean(existingHidden),
-        has_reflection_snapshot: Boolean(reflectionNote),
-        parse_success: Boolean(result)
-      }
-    }).catch((traceError) => {
-      console.error("Failed to record synthesis debug trace:", traceError);
-    });
+    const visiblePromptText = buildVisibleNarrativePrompt(
+      extractionMessages,
+      reflectionNote,
+      assessment,
+      existingVisible
+    );
+    const hiddenPromptText = buildHiddenClinicalPrompt(
+      extractionMessages,
+      reflectionNote,
+      assessment,
+      existingHidden
+    );
 
-    if (!result) {
-      console.error("Soul synthesis parsing failed");
-      await markSynthesisFailed(sql, userId);
-      return { visible: existingVisible, hidden: existingHidden };
+    const [visibleRaw, hiddenRaw] = await Promise.all([
+      collectClaudeStream(visibleSystemPrompt, visiblePromptText, {
+        apiKey,
+        model: visibleModel,
+        maxTokens: 6144,
+        temperature: 0.5
+      }),
+      callClaude(
+        hiddenSystemPrompt,
+        [{ role: "user", content: hiddenPromptText }],
+        { apiKey, model: hiddenModel, maxTokens: 3072, temperature: 0.2 }
+      )
+    ]);
+
+    const visibleResult = parseVisibleNarrative(visibleRaw);
+    const hiddenResult = parseHiddenClinical(hiddenRaw);
+
+    await recordSynthesisTrace(
+      [
+        { role: "user", content: `ASSESSMENT PROMPT\n\n${assessmentPromptText}` },
+        { role: "user", content: `VISIBLE NARRATIVE PROMPT\n\n${visiblePromptText}` },
+        { role: "user", content: `HIDDEN CLINICAL PROMPT\n\n${hiddenPromptText}` }
+      ],
+      JSON.stringify(
+        {
+          assessmentRaw,
+          visibleRaw,
+          hiddenRaw
+        },
+        null,
+        2
+      ),
+      {
+        ...traceMetaBase,
+        pipeline: "assessment_visible_hidden",
+        assessment_parse_success: true,
+        visible_parse_success: Boolean(visibleResult),
+        hidden_parse_success: Boolean(hiddenResult)
+      }
+    );
+
+    if (!visibleResult || !hiddenResult) {
+      console.error("Visible or hidden synthesis parsing failed, using fallback synthesis");
+      return runFallbackSynthesis("visible_or_hidden_parse_failed");
     }
 
     const mergedVisible = mergeVisibleSoulFile(existingVisible, {
-      portrait: result.visible.portrait ?? undefined,
-      sections: result.visible.sections,
-      crystallizedMoments: result.visible.crystallizedMoments,
-      openThreads: result.visible.openThreads,
-      compassScores: result.visible.compassScores
+      portrait: visibleResult.portrait ?? undefined,
+      sections: visibleResult.sections,
+      crystallizedMoments: visibleResult.crystallizedMoments,
+      openThreads: visibleResult.openThreads,
+      compassScores: visibleResult.compassScores,
+      personalitySpectrum: visibleResult.personalitySpectrum,
+      topValues: visibleResult.topValues,
+      relationalStyle: visibleResult.relationalStyle
     });
-    const mergedHidden = mergeHiddenSoulFile(existingHidden, result.hidden);
+    const mergedHidden = mergeHiddenSoulFile(existingHidden, hiddenResult);
 
     await upsertVisibleSoulFile(sql, userId, mergedVisible);
     await upsertHiddenSoulFile(sql, userId, mergedHidden);
 
     return { visible: mergedVisible, hidden: mergedHidden };
   } catch (error) {
-    const failedPromptText = buildSoulSynthesisPrompt(
-      extractionMessages,
-      reflectionNote,
-      existingVisible,
-      existingHidden
-    );
-    await recordClaudeDebugTrace(sql, {
-      userId,
-      traceKind: "synthesis",
-      model: synthesisModel,
-      systemPrompt: synthesisSystemPrompt,
-      inputMessages: [{ role: "user", content: failedPromptText }],
-      rawResponse: null,
-      meta: {
-        message_count: extractionMessages.length,
-        has_existing_visible: Boolean(existingVisible),
-        has_existing_hidden: Boolean(existingHidden),
-        has_reflection_snapshot: Boolean(reflectionNote),
-        parse_success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
-      }
-    }).catch((traceError) => {
-      console.error("Failed to record failed synthesis debug trace:", traceError);
-    });
-    console.error("Soul synthesis failed:", error);
-    await markSynthesisFailed(sql, userId).catch((markError) =>
-      console.error("Failed to mark synthesis as failed:", markError)
-    );
-    return { visible: existingVisible, hidden: existingHidden };
+    console.error("Soul synthesis pipeline failed:", error);
+    return runFallbackSynthesis("assessment_or_parallel_call_failed", error);
   }
 }
 

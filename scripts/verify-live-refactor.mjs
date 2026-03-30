@@ -53,7 +53,6 @@ async function converse(body, token) {
           currentEvent = line.slice(7).trim();
           continue;
         }
-
         if (!line.startsWith("data: ")) {
           continue;
         }
@@ -79,13 +78,11 @@ function assert(condition, message) {
 
 async function waitFor(condition, { attempts, delayMs }) {
   let lastValue = null;
-
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     lastValue = await condition();
     if (lastValue.done) {
       return lastValue.value;
     }
-
     if (attempt < attempts - 1) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
@@ -94,6 +91,36 @@ async function waitFor(condition, { attempts, delayMs }) {
   const error = new Error(lastValue?.error || "Timed out");
   error.lastValue = lastValue?.value ?? null;
   throw error;
+}
+
+function countSpectrumTraits(visibleSoulFile) {
+  const spectrum = visibleSoulFile?.personalitySpectrum;
+  if (!spectrum || typeof spectrum !== "object") return 0;
+  return Object.values(spectrum).filter(Boolean).length;
+}
+
+function hasHiddenProfiles(hiddenSoulFile) {
+  if (!hiddenSoulFile) return false;
+  const bigFive = hiddenSoulFile.bigFiveScores && Object.values(hiddenSoulFile.bigFiveScores).some(Boolean);
+  const schwartz = Array.isArray(hiddenSoulFile.schwartzProfile) && hiddenSoulFile.schwartzProfile.length > 0;
+  const attachment = hiddenSoulFile.attachmentScores
+    && (hiddenSoulFile.attachmentScores.style
+      || typeof hiddenSoulFile.attachmentScores.anxiety === "number"
+      || typeof hiddenSoulFile.attachmentScores.avoidance === "number");
+  const moral = hiddenSoulFile.moralFoundations && Object.values(hiddenSoulFile.moralFoundations).some((value) => typeof value === "number");
+  const meaning = typeof hiddenSoulFile.meaningOrientation === "string" && hiddenSoulFile.meaningOrientation.length > 0;
+  return Boolean(bigFive || schwartz || attachment || moral || meaning);
+}
+
+function hasReflectionSignals(reflectionNote) {
+  if (!reflectionNote) return false;
+  const bigFive = reflectionNote.inferredBigFive && Object.values(reflectionNote.inferredBigFive).some(Boolean);
+  const attachment = Array.isArray(reflectionNote.attachmentSignals) && reflectionNote.attachmentSignals.length > 0;
+  const values = Array.isArray(reflectionNote.valueSignals) && reflectionNote.valueSignals.length > 0;
+  const moral = Array.isArray(reflectionNote.moralFoundationSignals) && reflectionNote.moralFoundationSignals.length > 0;
+  const conflict = typeof reflectionNote.conflictStyle === "string" && reflectionNote.conflictStyle.length > 0;
+  const meaning = typeof reflectionNote.meaningOrientation === "string" && reflectionNote.meaningOrientation.length > 0;
+  return Boolean(bigFive || attachment || values || moral || conflict || meaning);
 }
 
 async function main() {
@@ -161,15 +188,16 @@ async function main() {
 
   const readySoulFile = await waitFor(async () => {
     const result = await post("get-soul-file", {}, token);
-    const ready = !!result.json.visible_soul_file?.portrait && result.json.synthesis_pending === false;
+    const visible = result.json.visible_soul_file;
+    const ready = !!visible?.portrait && result.json.synthesis_pending === false;
     return {
       done: ready,
       value: result.json,
       error: "Soul file did not become ready within the polling window"
     };
-  }, { attempts: 48, delayMs: 5000 });
+  }, { attempts: 96, delayMs: 5000 });
 
-  const dump = await waitFor(async () => {
+  const debugDump = await waitFor(async () => {
     const result = await post("debug-dump", {}, token);
     const ready = !!result.json.reflection_note
       && !!result.json.latest_conversation_trace
@@ -178,9 +206,21 @@ async function main() {
     return {
       done: ready,
       value: result.json,
-      error: "Debug dump traces/reflection note were not ready within the polling window"
+      error: "Debug dump traces or reflection note were not ready within the polling window"
     };
-  }, { attempts: 24, delayMs: 5000 });
+  }, { attempts: 48, delayMs: 5000 });
+
+  const debugInfo = await post("get-debug-info", {}, token);
+  assert(debugInfo.status === 200, `Fresh get-debug-info failed: ${debugInfo.status}`);
+
+  const visibleSoulFile = readySoulFile.visible_soul_file;
+  const hiddenSoulFile = debugInfo.json.hidden_soul_file;
+
+  assert(countSpectrumTraits(visibleSoulFile) >= 2, "Visible soul file did not populate enough personality spectrum traits");
+  assert(Array.isArray(visibleSoulFile.topValues) && visibleSoulFile.topValues.length >= 1, "Visible soul file did not populate top values");
+  assert(typeof visibleSoulFile.relationalStyle === "string" && visibleSoulFile.relationalStyle.length > 0, "Visible soul file did not populate relational style");
+  assert(hasHiddenProfiles(hiddenSoulFile), "Hidden soul file did not populate structured profile fields");
+  assert(hasReflectionSignals(debugDump.reflection_note), "Reflection snapshot did not populate new signal fields");
 
   summary.freshConversation = {
     device: deviceId,
@@ -188,12 +228,16 @@ async function main() {
     replyPreviews,
     syncedMessages: synced.json.messages.length,
     firstSoulFilePending: initialSoulFile.json.synthesis_pending,
-    soulFilePortrait: readySoulFile.visible_soul_file.portrait,
-    hasReflectionNote: !!dump.reflection_note,
-    reflectionThroughCount: dump.reflection_snapshot_row?.through_message_count ?? null,
-    conversationTraceModel: dump.latest_conversation_trace?.model ?? null,
-    synthesisTraceModel: dump.latest_synthesis_trace?.model ?? null,
-    reflectionTraceModel: dump.latest_reflection_trace?.model ?? null
+    soulFilePortrait: visibleSoulFile.portrait,
+    spectrumTraits: countSpectrumTraits(visibleSoulFile),
+    topValues: visibleSoulFile.topValues?.length ?? 0,
+    hasRelationalStyle: !!visibleSoulFile.relationalStyle,
+    hasHiddenProfiles: hasHiddenProfiles(hiddenSoulFile),
+    hasReflectionSignals: hasReflectionSignals(debugDump.reflection_note),
+    reflectionThroughCount: debugDump.reflection_snapshot_row?.through_message_count ?? null,
+    conversationTraceModel: debugDump.latest_conversation_trace?.model ?? null,
+    synthesisTraceModel: debugDump.latest_synthesis_trace?.model ?? null,
+    reflectionTraceModel: debugDump.latest_reflection_trace?.model ?? null
   };
 
   console.log(JSON.stringify(summary, null, 2));

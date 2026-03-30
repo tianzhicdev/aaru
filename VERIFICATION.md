@@ -73,3 +73,33 @@ Production smoke test helper:
 ```bash
 pnpm verify:live
 ```
+
+Note: dashboard-v2 synthesis is a multi-call background pipeline and can take several minutes to complete. The verifier should allow a multi-minute polling window before treating `synthesis_pending` as a failure.
+
+Expected live verification for dashboard-v2:
+1. Existing-device `POST /sync-messages` returns the full transcript, not a last-10 slice.
+2. Fresh-device `POST /soul-converse` with `{"mode":"opening"}` returns a non-empty streamed opener.
+3. After several `mode:"reply"` turns, `POST /get-soul-file` first returns `synthesis_pending: true`, then later returns a visible soul file with:
+   - non-empty `portrait`
+   - at least 2 populated `personalitySpectrum` traits
+   - at least 1 `topValues` entry
+   - non-empty `relationalStyle`
+4. `POST /get-debug-info` returns a hidden soul file with at least one populated structured hidden-profile field.
+5. `POST /debug-dump` returns:
+   - `reflection_note`
+   - `latest_conversation_trace`
+   - `latest_synthesis_trace`
+   - `latest_reflection_trace`
+
+## 8. Simulation (required after prompt or dashboard-v2 changes)
+Run at least one live character simulation:
+```bash
+npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only fred-rogers
+```
+
+Expected:
+1. The conversation reaches the target exchange count without SSE failure.
+2. The generated visible soul file contains dashboard-v2 fields (`personalitySpectrum`, `topValues`, `relationalStyle`).
+3. The hidden soul file contains structured profile data.
+4. The debug dump contains a reflection snapshot with the new signal fields.
+5. The readable report in `dry-run-output/<character>/soul-file-readable.md` marks the run as passing.

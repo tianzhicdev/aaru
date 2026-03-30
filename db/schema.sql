@@ -75,6 +75,9 @@ CREATE TABLE public.visible_soul_files (
   crystallized_moments jsonb DEFAULT '[]'::jsonb,
   open_threads jsonb DEFAULT '[]'::jsonb,
   compass_scores jsonb DEFAULT '{}'::jsonb,
+  personality_spectrum jsonb DEFAULT '{}'::jsonb,
+  top_values jsonb DEFAULT '[]'::jsonb,
+  relational_style text DEFAULT NULL,
   status text NOT NULL DEFAULT 'ready'
     CHECK (status IN ('ready', 'pending', 'failed')),
   synthesis_started_at timestamptz,
@@ -95,6 +98,11 @@ CREATE TABLE public.hidden_soul_files (
   voice jsonb DEFAULT '{}'::jsonb,
   depth_map jsonb DEFAULT '{}'::jsonb,
   analyst_notes jsonb DEFAULT '[]'::jsonb,
+  big_five_scores jsonb DEFAULT '{}'::jsonb,
+  schwartz_profile jsonb DEFAULT '[]'::jsonb,
+  attachment_scores jsonb DEFAULT '{}'::jsonb,
+  moral_foundations jsonb DEFAULT '{}'::jsonb,
+  meaning_orientation text DEFAULT NULL,
   status text NOT NULL DEFAULT 'ready'
     CHECK (status IN ('ready', 'pending', 'failed')),
   synthesis_started_at timestamptz,

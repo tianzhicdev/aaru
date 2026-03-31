@@ -309,48 +309,22 @@ describe("soul synthesis", () => {
     expect(result.hidden?.attachmentScores.style).toBe("dismissive");
   });
 
-  it("falls back to the single-call synthesis when assessment parsing fails", async () => {
+  it("returns the existing state when assessment parsing fails", async () => {
     mockSQL
       .mockResolvedValueOnce([
         { id: "m1", user_id: "user-1", role: "user", content: "test", created_at: "2026-03-26" }
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([]);
 
     vi.mocked(callClaude).mockResolvedValueOnce("not valid json");
-    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
-      yield `${JSON.stringify({
-        version: 1,
-        lastUpdated: "2026-03-27",
-        portrait: "Fallback portrait",
-        sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
-        crystallizedMoments: [],
-        openThreads: [],
-        compassScores: {},
-        personalitySpectrum: {},
-        topValues: [],
-        relationalStyle: null
-      })}\n<<<SPLIT>>>\n${JSON.stringify({
-        version: 1,
-        lastUpdated: "2026-03-27",
-        confidence: "low",
-        expertReflections: { psychologist: [], sociologist: [], linguist: [], narrativeAnalyst: [] },
-        coreDrivers: [],
-        coreValues: [],
-        voice: { register: "casual", density: "moderate", humorStyle: "", conflictStyle: "", disclosureRate: "gradual", signaturePatterns: [], voiceExamples: [] },
-        depthMap: { safeEntryPoints: [], unlockTopics: [], avoidEarly: [], currentlyLiveTopics: [], domainCoverage: [] },
-        analystNotes: [],
-        bigFiveScores: {},
-        schwartzProfile: [],
-        attachmentScores: {},
-        moralFoundations: {},
-        meaningOrientation: null
-      })}`;
-    })());
 
     const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
-    expect(result.visible?.portrait).toBe("Fallback portrait");
+    expect(result.visible).toBeNull();
+    expect(result.hidden).toBeNull();
+    expect(streamClaude).not.toHaveBeenCalled();
   });
 
   it("handles total synthesis failure gracefully", async () => {
@@ -360,12 +334,10 @@ describe("soul synthesis", () => {
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([]);
 
     vi.mocked(callClaude).mockRejectedValueOnce(new Error("API error"));
-    vi.mocked(streamClaude).mockReturnValue((async function* () {
-      throw new Error("fallback error");
-    })());
 
     const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
     expect(result.visible).toBeNull();
@@ -379,10 +351,30 @@ describe("synthesis status helpers", () => {
   });
 
   it("returns pending true when a non-stale pending synthesis exists", async () => {
-    mockSQL.mockResolvedValueOnce([{ synthesis_started_at: new Date().toISOString() }]);
+    mockSQL.mockResolvedValueOnce([{ status: "pending", synthesis_started_at: new Date().toISOString(), last_updated: null }]);
     const result = await checkSynthesisNeeded(mockSQL, "user-1");
     expect(result.needed).toBe(false);
     expect(result.pending).toBe(true);
+  });
+
+  it("does not auto-retry a failed synthesis until new messages arrive", async () => {
+    const startedAt = "2026-03-30T20:00:00Z";
+    mockSQL
+      .mockResolvedValueOnce([{ status: "failed", synthesis_started_at: startedAt, last_updated: "2026-03-30T19:55:00Z" }])
+      .mockResolvedValueOnce([]);
+
+    const result = await checkSynthesisNeeded(mockSQL, "user-1");
+    expect(result).toEqual({ needed: false, pending: false });
+  });
+
+  it("retries a failed synthesis once newer messages exist", async () => {
+    const startedAt = "2026-03-30T20:00:00Z";
+    mockSQL
+      .mockResolvedValueOnce([{ status: "failed", synthesis_started_at: startedAt, last_updated: "2026-03-30T19:55:00Z" }])
+      .mockResolvedValueOnce([{ "?column?": 1 }]);
+
+    const result = await checkSynthesisNeeded(mockSQL, "user-1");
+    expect(result).toEqual({ needed: true, pending: false });
   });
 
   it("marks synthesis rows pending and failed", async () => {

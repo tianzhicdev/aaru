@@ -184,7 +184,12 @@ All additive. Old clients ignore unknown fields. Old data parses with Zod defaul
 
 ### Current state
 
-One Opus call produces both visible + hidden soul files via `<<<SPLIT>>>` delimiter. One prompt does 4-expert analysis + poetic writing + clinical analysis + compass scoring. ~8192 max tokens.
+Implemented as a three-step pipeline:
+- assessment call on Opus
+- visible narrative call on Opus
+- hidden clinical call on Haiku
+
+The legacy `<<<SPLIT>>>` single-call path has been removed.
 
 ### Problem
 
@@ -311,14 +316,14 @@ const [visibleRaw, hiddenRaw] = await Promise.all([
   callClaude(
     hiddenSystemPrompt,
     [{ role: "user", content: buildHiddenClinicalPrompt(..., assessment, ...) }],
-    { apiKey, model: "claude-haiku-4-5-20251001", maxTokens: 3072, temperature: 0.2 }
+    { apiKey, model: "claude-haiku-4-5-20251001", maxTokens: 6144, temperature: 0.2 }
   )
 ]);
 ```
 
-### Fallback
+### Failure behavior
 
-If assessment call fails → fall back to current single-call synthesis (backward compatible). The existing `buildSoulSynthesisPrompt` and `parseSoulSynthesis` remain as fallback path.
+If any synthesis step fails, mark the synthesis as failed, keep serving the last ready soul file, and only retry after newer messages arrive.
 
 ### Cost estimate
 

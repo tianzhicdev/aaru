@@ -100,7 +100,7 @@ struct SoulFileScreen: View {
                 .font(Theme.sans(15, weight: .medium))
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("This can take a few minutes after a deeper conversation. If it looks still, leave the app open a little longer and it should settle into place.")
+            Text("This can take a few minutes after a deeper conversation.")
                 .font(Theme.sans(14, weight: .light))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)

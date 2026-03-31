@@ -9,7 +9,6 @@ import {
   buildAssessmentPrompt,
   buildHiddenClinicalPrompt,
   buildReflectionPrompt,
-  buildSoulSynthesisPrompt,
   buildVisibleNarrativePrompt,
   emptyVisibleSoulFile,
   mergeHiddenSoulFile,
@@ -17,7 +16,6 @@ import {
   parseAssessment,
   parseHiddenClinical,
   parseReflectionNote,
-  parseSoulSynthesis,
   parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
 import { callClaude, streamClaude } from "./claude.ts";
@@ -501,12 +499,15 @@ export async function checkSynthesisNeeded(
   sql: NeonSQL,
   userId: string
 ): Promise<{ needed: boolean; pending: boolean }> {
-  const pendingRows = await sql`
-    SELECT synthesis_started_at FROM visible_soul_files
-    WHERE user_id = ${userId} AND status = 'pending'
+  const statusRows = await sql`
+    SELECT status, synthesis_started_at, last_updated
+    FROM visible_soul_files
+    WHERE user_id = ${userId}
   `;
-  if (pendingRows[0]?.synthesis_started_at) {
-    const startedAt = new Date(pendingRows[0].synthesis_started_at).getTime();
+  const fileState = statusRows[0];
+
+  if (fileState?.status === "pending" && fileState.synthesis_started_at) {
+    const startedAt = new Date(fileState.synthesis_started_at).getTime();
     const isStale = Date.now() - startedAt > SYNTHESIS_STALE_PENDING_MS;
     if (!isStale) {
       return { needed: false, pending: true };
@@ -516,6 +517,15 @@ export async function checkSynthesisNeeded(
       UPDATE visible_soul_files SET status = 'failed'
       WHERE user_id = ${userId} AND status = 'pending'
     `;
+  }
+
+  if (fileState?.status === "failed" && fileState.synthesis_started_at) {
+    const newMsgRows = await sql`
+      SELECT 1 FROM soul_messages
+      WHERE user_id = ${userId} AND created_at > ${fileState.synthesis_started_at}
+      LIMIT 1
+    `;
+    return { needed: newMsgRows.length > 0, pending: false };
   }
 
   const countRows = await sql`
@@ -560,7 +570,7 @@ export async function markSynthesisPending(sql: NeonSQL, userId: string): Promis
 
 export async function markSynthesisFailed(sql: NeonSQL, userId: string): Promise<void> {
   await sql`
-    UPDATE visible_soul_files SET status = 'failed', synthesis_started_at = NULL
+    UPDATE visible_soul_files SET status = 'failed'
     WHERE user_id = ${userId}
   `;
 }
@@ -678,15 +688,12 @@ export async function runSoulSynthesis(
   const assessmentModel = "claude-opus-4-20250514";
   const visibleModel = "claude-opus-4-20250514";
   const hiddenModel = "claude-haiku-4-5-20251001";
-  const fallbackSynthesisModel = "claude-opus-4-20250514";
   const assessmentSystemPrompt =
     "You are a careful psychometric analyst. Output valid JSON only.";
   const visibleSystemPrompt =
     "You are a gifted soul writer. Output valid JSON only.";
   const hiddenSystemPrompt =
     "You are a careful internal soul analyst. Output valid JSON only.";
-  const fallbackSynthesisSystemPrompt =
-    "You are a multi-expert soul analyst. Follow the analysis procedure exactly. Output only the two JSON objects separated by <<<SPLIT>>>.";
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingVisible = await getVisibleSoulFile(sql, userId);
   const existingHidden = await getHiddenSoulFile(sql, userId);
@@ -722,80 +729,6 @@ export async function runSoulSynthesis(
     });
   };
 
-  const runFallbackSynthesis = async (reason: string, cause?: unknown) => {
-    const fallbackPromptText = buildSoulSynthesisPrompt(
-      extractionMessages,
-      reflectionNote,
-      existingVisible,
-      existingHidden
-    );
-
-    try {
-      const fallbackRaw = await collectClaudeStream(
-        fallbackSynthesisSystemPrompt,
-        fallbackPromptText,
-        {
-          apiKey,
-          model: fallbackSynthesisModel,
-          maxTokens: 8192,
-          temperature: 0.5
-        }
-      );
-
-      const fallbackResult = parseSoulSynthesis(fallbackRaw);
-      await recordSynthesisTrace(
-        [{ role: "user", content: fallbackPromptText }],
-        fallbackRaw,
-        {
-          ...traceMetaBase,
-          pipeline: "fallback_single_call",
-          fallback_reason: reason,
-          parse_success: Boolean(fallbackResult),
-          error: cause instanceof Error ? cause.message : cause ? String(cause) : null
-        }
-      );
-
-      if (!fallbackResult) {
-        await markSynthesisFailed(sql, userId);
-        return { visible: existingVisible, hidden: existingHidden };
-      }
-
-      const mergedVisible = mergeVisibleSoulFile(existingVisible, {
-        portrait: fallbackResult.visible.portrait ?? undefined,
-        sections: fallbackResult.visible.sections,
-        crystallizedMoments: fallbackResult.visible.crystallizedMoments,
-        openThreads: fallbackResult.visible.openThreads,
-        compassScores: fallbackResult.visible.compassScores,
-        personalitySpectrum: fallbackResult.visible.personalitySpectrum,
-        topValues: fallbackResult.visible.topValues,
-        relationalStyle: fallbackResult.visible.relationalStyle
-      });
-      const mergedHidden = mergeHiddenSoulFile(existingHidden, fallbackResult.hidden);
-
-      await upsertVisibleSoulFile(sql, userId, mergedVisible);
-      await upsertHiddenSoulFile(sql, userId, mergedHidden);
-
-      return { visible: mergedVisible, hidden: mergedHidden };
-    } catch (fallbackError) {
-      await recordSynthesisTrace(
-        [{ role: "user", content: fallbackPromptText }],
-        null,
-        {
-          ...traceMetaBase,
-          pipeline: "fallback_single_call",
-          fallback_reason: reason,
-          parse_success: false,
-          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
-        }
-      );
-      console.error("Soul synthesis fallback failed:", fallbackError);
-      await markSynthesisFailed(sql, userId).catch((markError) =>
-        console.error("Failed to mark synthesis as failed:", markError)
-      );
-      return { visible: existingVisible, hidden: existingHidden };
-    }
-  };
-
   try {
     const assessmentPromptText = buildAssessmentPrompt(
       extractionMessages,
@@ -810,8 +743,18 @@ export async function runSoulSynthesis(
     const assessment = parseAssessment(assessmentRaw);
 
     if (!assessment) {
-      console.error("Assessment parsing failed, using fallback synthesis");
-      return runFallbackSynthesis("assessment_parse_failed");
+      await recordSynthesisTrace(
+        [{ role: "user", content: `ASSESSMENT PROMPT\n\n${assessmentPromptText}` }],
+        JSON.stringify({ assessmentRaw }, null, 2),
+        {
+          ...traceMetaBase,
+          pipeline: "assessment_visible_hidden",
+          assessment_parse_success: false,
+          error: "assessment_parse_failed"
+        }
+      );
+      await markSynthesisFailed(sql, userId);
+      return { visible: existingVisible, hidden: existingHidden };
     }
 
     const visiblePromptText = buildVisibleNarrativePrompt(
@@ -837,7 +780,7 @@ export async function runSoulSynthesis(
       callClaude(
         hiddenSystemPrompt,
         [{ role: "user", content: hiddenPromptText }],
-        { apiKey, model: hiddenModel, maxTokens: 3072, temperature: 0.2 }
+        { apiKey, model: hiddenModel, maxTokens: 6144, temperature: 0.2 }
       )
     ]);
 
@@ -869,8 +812,8 @@ export async function runSoulSynthesis(
     );
 
     if (!visibleResult || !hiddenResult) {
-      console.error("Visible or hidden synthesis parsing failed, using fallback synthesis");
-      return runFallbackSynthesis("visible_or_hidden_parse_failed");
+      await markSynthesisFailed(sql, userId);
+      return { visible: existingVisible, hidden: existingHidden };
     }
 
     const mergedVisible = mergeVisibleSoulFile(existingVisible, {
@@ -891,7 +834,20 @@ export async function runSoulSynthesis(
     return { visible: mergedVisible, hidden: mergedHidden };
   } catch (error) {
     console.error("Soul synthesis pipeline failed:", error);
-    return runFallbackSynthesis("assessment_or_parallel_call_failed", error);
+    await recordSynthesisTrace(
+      [],
+      null,
+      {
+        ...traceMetaBase,
+        pipeline: "assessment_visible_hidden",
+        assessment_parse_success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    );
+    await markSynthesisFailed(sql, userId).catch((markError) =>
+      console.error("Failed to mark synthesis as failed:", markError)
+    );
+    return { visible: existingVisible, hidden: existingHidden };
   }
 }
 

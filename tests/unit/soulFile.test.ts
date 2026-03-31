@@ -3,7 +3,6 @@ import {
   buildAssessmentPrompt,
   buildHiddenClinicalPrompt,
   buildReflectionPrompt,
-  buildSoulSynthesisPrompt,
   buildVisibleNarrativePrompt,
   emptyHiddenSoulFile,
   emptyVisibleSoulFile,
@@ -12,7 +11,6 @@ import {
   parseAssessment,
   parseHiddenClinical,
   parseReflectionNote,
-  parseSoulSynthesis,
   parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
 import type { HiddenSoulFile, ReflectionNote, VisibleSoulFile } from "../../src/domain/schemas.ts";
@@ -188,12 +186,6 @@ describe("prompt builders", () => {
     expect(hiddenPrompt).toContain("meaningOrientation");
   });
 
-  it("keeps the fallback single-call synthesis prompt available", () => {
-    const prompt = buildSoulSynthesisPrompt(messages, null, null, null);
-    expect(prompt).toContain("<<<SPLIT>>>");
-    expect(prompt).toContain("personalitySpectrum");
-    expect(prompt).toContain("bigFiveScores");
-  });
 });
 
 describe("parsers", () => {
@@ -344,26 +336,6 @@ describe("parsers", () => {
     expect(hidden?.meaningOrientation).toBe("meaning_seeking");
   });
 
-  it("parses split synthesis output", () => {
-    const visible = makeVisibleSoulFile({
-      portrait: "You move carefully through thresholds.",
-      topValues: [{ value: "Self-Direction", description: "You need space to choose." }]
-    });
-    const hidden = makeHiddenSoulFile({
-      bigFiveScores: {
-        openness: { score: 80, confidence: 0.7, evidence: "Sees patterns" },
-        conscientiousness: null,
-        extraversion: null,
-        agreeableness: null,
-        neuroticism: null
-      }
-    });
-
-    const result = parseSoulSynthesis(`${JSON.stringify(visible)}\n<<<SPLIT>>>\n${JSON.stringify(hidden)}`);
-    expect(result).not.toBeNull();
-    expect(result?.visible.topValues[0]?.value).toBe("Self-Direction");
-    expect(result?.hidden.bigFiveScores.openness?.score).toBe(80);
-  });
 });
 
 describe("merge functions", () => {

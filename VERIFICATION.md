@@ -74,7 +74,7 @@ Production smoke test helper:
 pnpm verify:live
 ```
 
-Note: dashboard-v2 synthesis is a multi-call background pipeline and can take several minutes to complete. The verifier should allow a multi-minute polling window before treating `synthesis_pending` as a failure.
+Note: dashboard-v2 synthesis is a multi-call background pipeline and can take several minutes to complete. The verifier should allow a multi-minute polling window before treating `synthesis_pending` as a failure. If synthesis fails, the API should stop reporting `synthesis_pending: true` for that unchanged transcript and continue serving the last ready soul file until newer messages arrive.
 
 Expected live verification for dashboard-v2:
 1. Existing-device `POST /sync-messages` returns the full transcript, not a last-10 slice.

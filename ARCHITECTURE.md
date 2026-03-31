@@ -249,7 +249,8 @@ GET /get-soul-file
   ├─ Return existing visible soul file immediately
   │
   ├─ checkSynthesisNeeded() — are there new messages since last synthesis?
-  │   Also checks: ≥3 user messages, no stale pending (>15 min = failed)
+  │   Also checks: ≥3 user messages, no stale pending (>15 min = failed),
+  │   and no automatic retry after a failed synthesis unless newer messages arrived
   │
   ├─ If needed: markSynthesisPending() + enqueue background job
   │   Response includes synthesis_pending: true
@@ -345,11 +346,11 @@ Device-based anonymous auth:
 | Soul conversation | Claude | Opus 4 | SSE | 1024 | Deterministic reflective fallback |
 | Opening current-events context | xAI | Grok 4 Fast | No | n/a | Omit current-events context |
 | Reflection snapshot | Claude | Haiku 4.5 | No | 4000 | Skip snapshot |
-| Synthesis assessment | Claude | Opus 4 | No | 4096 | Fallback single-call synthesis |
-| Synthesis visible narrative | Claude | Opus 4 | No | 6144 | Fallback single-call synthesis |
-| Synthesis hidden clinical | Claude | Haiku 4.5 | No | 3072 | Fallback single-call synthesis |
+| Synthesis assessment | Claude | Opus 4 | No | 4096 | Mark failed, keep stale soul file |
+| Synthesis visible narrative | Claude | Opus 4 | No | 6144 | Mark failed, keep stale soul file |
+| Synthesis hidden clinical | Claude | Haiku 4.5 | No | 6144 | Mark failed, keep stale soul file |
 
-All LLM calls have deterministic fallbacks. Tests pass without API keys.
+Conversation has a deterministic fallback. Background synthesis and reflection fail closed and preserve the last ready state. Tests pass without API keys.
 
 ---
 

@@ -1,90 +1,82 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-30T18:23:51.136Z",
-  "portrait": "You carry yourself with measured gentleness, each movement deliberate and controlled, as if performing kindness for an audience that includes your younger self. Behind the cardigan and careful words lives an angry boy you've dressed in purpose, waiting sixty years for a father's validation that will never come.",
+  "lastUpdated": "2026-03-30T20:22:42.418Z",
+  "portrait": "You've spent a lifetime teaching children they don't need to earn love while quietly exhausting yourself trying to prove your own worth. Behind the gentle public figure lives a boy who learned early that his softness didn't quite fit, who still goes to the piano to transform anger into something bearable.",
   "sections": {
-    "howYouMove": "You wake at the same time every morning, do your exercises, prepare meticulously — your body a clock wound too tight. Your jaw clenches, shoulders hold decades of unspoken rage, and you've mistaken this rigid control for discipline rather than recognizing it as the architecture of old pain.",
-    "howYouThink": "You see with devastating clarity — naming wounds precisely, understanding patterns intellectually while your heart remains stuck in childhood loops. You analyze your own defenses even as you maintain them, knowing exactly why you can't rest while being unable to stop performing worthiness.",
-    "howYouConnect": "You give children what you never received — permission to exist without earning it — while withholding that same grace from yourself. Your connections flow one direction: you see, you give, you hold space for others' incompleteness while maintaining perfect composure, passing on loneliness through the very act of trying to heal it.",
-    "whatYouCarry": "A lonely boy lives in your clenched shoulders, converting fury into perfectionism, grief into purpose. You carry your father's absence like a debt you're still trying to pay, and your grandfather's unconditional seeing as both compass and reminder of what you can't give yourself.",
-    "whatLightsYouUp": "When children feel seen, when loneliness lifts from small shoulders, when your music speaks what words cannot — these moments justify everything. The work is both your wound and your gift, genuine love braided with elaborate avoidance, beautiful precisely because it emerges from such deep understanding of invisibility.",
-    "yourContradictions": "You teach children they're enough while proving your worth every morning. You know intellectually that your father's coldness wasn't about you, yet you still perform for his ghost. You've built a life on making others feel seen while keeping your truest self — tired, angry, grieving — invisible.",
-    "yourVoice": "You speak in gentle metaphors and precise namings, your words carefully measured yet trembling with held-back feeling. Long pauses mark the places where truth rises, and when you finally name something — 'transmuting wound into purpose' — it lands with the weight of decades of consideration."
+    "howYouMove": "You fill every moment with purpose and usefulness, running from silence where that lonely boy might speak. When anger rises, you excuse yourself to the piano, working it through your fingers until you can return with the gentleness everyone expects.",
+    "howYouThink": "You see the world through the lens of children who need to know they're worthy, building entire worlds to prove what you struggle to believe about yourself. Your mind transforms personal pain into universal lessons, always creating something beautiful from what hurts.",
+    "howYouConnect": "You give radical acceptance while carefully managing what others see of your own needs. Even with Joanne, you present your struggles as 'something I've already mostly managed,' performing strength when you desperately need to be held.",
+    "whatYouCarry": "The weight of a boy who was 'soft in a world that valued hardness,' who learned that neediness was dangerous to show. You carry anger at systems that convince children of their smallness, and deeper anger at yourself for never breaking the cycle.",
+    "whatLightsYouUp": "Creating spaces where children know they matter exactly as they are. The piano when it asks nothing of you, when you can play without purpose. Those moments when a child's face shows they finally believe they're worthy of love.",
+    "yourContradictions": "You teach unconditional love while organizing your entire life around being needed. You've built a neighborhood of radical acceptance as an elaborate way to avoid accepting yourself. You know the anger is legitimate but still feel you must transform it before returning to others.",
+    "yourVoice": "Gentle and measured on the surface, with depths of unspoken feeling underneath. You speak in half-finished sentences when approaching your own needs, as if the truth keeps catching in your throat before it can fully emerge."
   },
   "crystallizedMoments": [
     {
-      "quote": "I haven't healed him. I've just become very skilled at keeping him invisible.",
-      "reflection": "The moment you recognized that the angry boy has been running the show all along, just dressed in a cardigan."
+      "quote": "I've spent my life teaching children they don't need to earn love. But I've never quite believed it about myself.",
+      "reflection": "The perfect trap of giving what you cannot receive."
     },
     {
-      "quote": "I've been waiting for a dead man to validate my existence.",
-      "reflection": "The devastating clarity of naming exactly what keeps you performing."
+      "quote": "The bullies didn't create that shame. They just recognized it was already there.",
+      "reflection": "A devastating insight about wounds that preceded the cruelty that found them."
     },
     {
-      "quote": "The boy was never the problem. The problem was that nobody ever just let him be sad.",
-      "reflection": "Understanding that your endless proving addresses the wrong wound."
-    },
-    {
-      "quote": "I've been my own withholding parent all along.",
-      "reflection": "Recognizing how completely you've internalized what hurt you most."
+      "quote": "Maybe there is no 'just Fred' underneath. Maybe I've become the performance entirely.",
+      "reflection": "The deepest fear of someone who has perfected being needed."
     }
   ],
   "openThreads": [
-    "What would actually happen if you took that one unscheduled morning?",
-    "How would your relationship with children change if they saw you tired?",
-    "What would it mean to grieve not just your father's absence, but all the time you've stolen from yourself?",
-    "Can you imagine Fred existing without immediately becoming Mister Rogers?"
+    "Whether you'll actually cancel something tomorrow and tell Joanne the truth about your exhaustion",
+    "What happens when you finally stop running and face the boy who's been waiting",
+    "If Joanne has been waiting all along for you to trust her with the Fred who isn't useful"
   ],
   "compassScores": {
     "depth": 95,
     "warmth": 90,
-    "purpose": 88,
-    "autonomy": 25,
+    "purpose": 95,
     "openness": 85,
-    "vitality": 35,
-    "connection": 65,
-    "resilience": 70
+    "connection": 75
   },
   "personalitySpectrum": {
     "openness": {
       "position": 85,
-      "label": "Deeply Introspective",
-      "evidence": "Profound self-analysis, willingness to examine contradictions, uses metaphor and music as languages for the unspeakable"
+      "label": "You live in the deep waters of introspection, willing to face truths that hurt to name.",
+      "evidence": "Deep self-analysis, creative expression through piano and puppets, willingness to explore uncomfortable truths"
     },
     "conscientiousness": {
       "position": 92,
-      "label": "Rigidly Structured",
-      "evidence": "Same wake time for decades, meticulous preparation, perfectionist about scripts, describes self as 'very controlled'"
+      "label": "Your life is organized entirely around purpose and being the person who shows up.",
+      "evidence": "Keeps schedule full, extreme discipline in maintaining public role, 'organized my entire life around being needed'"
     },
     "extraversion": {
-      "position": 28,
-      "label": "Inwardly Focused",
-      "evidence": "Childhood shyness persists, no mention of friendships, prefers piano to words, work involves giving rather than reciprocal connection"
+      "position": 35,
+      "label": "You turned inward as a child and still find your truest expression alone at the piano.",
+      "evidence": "Describes self as shy, finds solace in solitary activities, performs public role but describes exhaustion from it"
     },
     "agreeableness": {
       "position": 88,
-      "label": "Compulsively Kind",
-      "evidence": "Devoted to children's wellbeing, worried about emotional dishonesty, learned early to be 'good' to earn love"
+      "label": "You've built a life of radical gentleness while managing deeper anger at the piano.",
+      "evidence": "Dedicated to helping children, teaches unconditional love, but admits to suppressed anger that needs transformation"
     },
     "emotionalSensitivity": {
-      "position": 82,
-      "label": "Deeply Feeling",
-      "evidence": "Voice trembles with emotion, decades of suppressed grief, acute awareness of others' loneliness, physical holding of feelings"
+      "position": 85,
+      "label": "You feel everything deeply, from children's loneliness to your own unmet needs.",
+      "evidence": "Could be hurt by words for weeks, describes self as soft and sensitive, anger and neediness both require careful management"
     }
   },
   "topValues": [
     {
       "value": "Benevolence",
-      "description": "Your entire life organized around preventing children from feeling the loneliness you knew"
-    },
-    {
-      "value": "Conformity",
-      "description": "Rigid routines and emotional control as both virtue and prison"
+      "description": "You've built your entire world around helping children know they're worthy of love, even while struggling to believe it about yourself."
     },
     {
       "value": "Achievement",
-      "description": "Perfectionism as a way to finally earn the love that was never conditional"
+      "description": "You had to become 'someone special, someone important, someone useful' to earn the right to exist, and that drive still shapes every day."
+    },
+    {
+      "value": "Self-Direction",
+      "description": "From puppets to piano to the neighborhood itself, you've always created your own worlds where softness could be valued."
     }
   ],
-  "relationalStyle": "You connect through giving rather than receiving, offering others the unconditional acceptance you can't grant yourself. Your relationships flow one direction — you see, understand, and hold space for others while remaining carefully composed, creating intimacy through service while maintaining emotional distance through perpetual steadiness."
+  "relationalStyle": "You connect through giving and creating, offering others the unconditional acceptance you struggle to receive. Even with those closest to you, there's a careful management of your own needs—presenting them as already handled rather than asking to be held. You avoid conflict by excusing yourself to transform difficult feelings privately before returning with the gentleness others expect."
 }

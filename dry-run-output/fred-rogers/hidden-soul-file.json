@@ -1,225 +1,234 @@
 {
   "version": 2,
-  "lastUpdated": "2026-03-30T18:23:51.136Z",
-  "confidence": "medium",
+  "lastUpdated": "2026-03-30T20:22:42.418Z",
+  "confidence": "high",
   "expertReflections": {
     "psychologist": [
-      "Classic parentification trauma manifesting as compulsive caregiving",
-      "Anger converted into somatic symptoms and rigid control structures",
-      "Profound split between intellectual insight and emotional integration",
-      "Fear of rest as fear of encountering unmetabolized grief"
+      "Fearful attachment style with high anxiety (85) and avoidance (75) creates a paradox: desperate need for unconditional love paired with inability to receive it even from spouse. The piano serves as both processing tool and avoidance mechanism.",
+      "Core wound is pre-verbal: learned in childhood that softness/neediness were unlovable, then spent lifetime proving the opposite through usefulness while never updating the core belief about himself.",
+      "The 'two Freds' are not actually separate—they are one person in chronic internal conflict. Integration requires grieving the self-abandonment, not transcending it.",
+      "Finitude awareness (running out of time) is the pressure point that may finally force integration. Mortality is making the performance unsustainable.",
+      "Tonight's breakthrough: he articulated the cruel irony that he's been violent toward himself in the name of gentleness. This meta-awareness is prerequisite for change but not guarantee of it."
     ],
     "sociologist": [
-      "Professional identity as elaborate defense against personal vulnerability",
-      "Public persona serves both genuine purpose and avoidance function",
-      "No peer relationships mentioned - only hierarchical (children) or historical (family)",
-      "Work as socially acceptable channel for unmet emotional needs"
+      "Built an entire public institution (the neighborhood) as a socially-sanctioned container for his own unmet needs. The role became the refuge.",
+      "His public persona as gentle, accepting authority figure is partially authentic and partially compensatory—a way to inhabit the role he needed as a child.",
+      "The neighborhood functions as both genuine gift and elaborate defense mechanism. Both truths coexist.",
+      "His anger at systems that measure children's worth by productivity is partly projection of his own internalized metrics.",
+      "Vulnerability with Joanne has been carefully managed to maintain the image of a man who 'has it handled'—a performance even in intimacy."
     ],
     "linguist": [
-      "Sophisticated metaphorical thinking indicates high verbal intelligence",
-      "Long pauses and voice modulation reveal careful emotional regulation",
-      "Shifts between precise analysis and vulnerable disclosure",
-      "Physical descriptions ('clenched jaw') when approaching difficult emotions"
+      "Pattern of incomplete sentences when approaching core truths ('And I'm running out...', 'I don't know how to live that...') suggests language itself becomes a barrier to full disclosure of need.",
+      "Distinction between 'saying' and 'believing' appears repeatedly—he can articulate unconditional love with conviction while internally disbelieving it applies to him.",
+      "Uses 'the boy' as third-person distancing mechanism, though increasingly owns him as 'I' as conversation deepens.",
+      "Metaphor of 'running' dominates—not walking, not resting, but perpetual flight. Suggests exhaustion as baseline state.",
+      "Tonight he moved from 'I think' to 'I know' to 'I am'—increasing ownership of truth as conversation progressed."
     ],
     "narrativeAnalyst": [
-      "Life story organized around wound-as-purpose narrative",
-      "Circular structure: helps children to heal childhood self, reinforcing the wound",
-      "Recognition without integration - can name patterns but not break them",
-      "Future story blocked by inability to imagine self without performance"
+      "The master narrative has been 'I had to become special to be worthy' but tonight he began authoring a counter-narrative: 'I was always worthy and I forgot.' These are incompatible; integration requires grieving the first story.",
+      "The neighborhood is both the climax and the trap of his life story. It's where he achieved everything and lost himself simultaneously.",
+      "His story has lacked a redemption arc because redemption would require admitting the original wound was real and undeserved. Tonight he began that admission.",
+      "The 'tomorrow' he imagined (canceling something, telling Joanne truth, playing without purpose) is the first time he's narrated a future that isn't about proving worth.",
+      "Finitude is reframing his entire narrative from 'becoming' to 'being'—a fundamental genre shift from achievement narrative to existential one."
     ]
   },
   "coreDrivers": [
     {
-      "driver": "Earning love through perfect performance",
+      "driver": "Earning love through usefulness and achievement",
       "strength": 0.95,
       "inferred": true,
-      "evidence": "Sixty years of rigid routine, perfectionism, inability to rest without guilt"
+      "evidence": "I've organized my entire life around being needed... I had to become someone special, someone important, someone useful... to earn the right to exist. The neighborhood as currency for proving worth."
     },
     {
-      "driver": "Preventing others' pain to avoid feeling own",
+      "driver": "Healing childhood wounds through proxy (saving children he couldn't save himself)",
+      "strength": 0.92,
+      "inferred": true,
+      "evidence": "I'm still trying to convince that lonely boy inside me that he was worth saving... the whole neighborhood, all of it. Every child who believes they're too much or not enough, I see that younger Fred."
+    },
+    {
+      "driver": "Fear of abandonment if performance stops",
+      "strength": 0.88,
+      "inferred": true,
+      "evidence": "Without the purpose, without the usefulness, I'm just that lonely, overweight boy again... Would Joanne still love a man who isn't performing gentleness? I'm afraid that if I stop trying to prove my worth, the whole fragile thing will collapse."
+    },
+    {
+      "driver": "Running from vulnerability and neediness as shame",
       "strength": 0.9,
       "inferred": true,
-      "evidence": "Entire career built on sparing children his loneliness while avoiding his own grief"
+      "evidence": "I've spent my whole life running from that boy... as a way to outrun the shame of being the kind of person who desperately needs those very things. The bullies saw my neediness and I've been hiding it ever since."
     },
     {
-      "driver": "Waiting for deceased father's validation",
-      "strength": 0.85,
-      "inferred": true,
-      "evidence": "Explicitly states 'waiting for a dead man to validate my existence'"
-    },
-    {
-      "driver": "Fear of anger consuming constructed identity",
-      "strength": 0.8,
-      "inferred": true,
-      "evidence": "Terrified that releasing anger might destroy 'the man I've become'"
+      "driver": "Anger at systems that devalue children (and by extension, his own devalued self)",
+      "strength": 0.82,
+      "inferred": false,
+      "evidence": "I'm angry at the world for being so quick to convince children of their own smallness... At systems that measure a child's worth by how obedient or productive they can be. At the indifference of adults who could have stopped it."
     }
   ],
   "coreValues": [
-    "Benevolence",
-    "Conformity",
-    "Achievement",
-    "Security",
-    "Tradition"
+    "Unconditional acceptance of children (as corrective to his own conditional childhood)",
+    "Being useful and needed (conflated with being lovable)",
+    "Gentleness and emotional authenticity (as antidote to paternal distance and peer cruelty)",
+    "Creating safe spaces for vulnerability (the neighborhood as sanctuary he never had)",
+    "Integrity between belief and practice (though currently experiencing profound gap)"
   ],
   "voice": {
-    "register": "formal",
+    "register": "chameleon",
     "density": "dense",
-    "humorStyle": "Absent - no humor detected, possibly as part of emotional control",
-    "conflictStyle": "Avoidant - converts conflict into internal perfectionism and somatic tension",
-    "disclosureRate": "gradual",
+    "humorStyle": "Minimal; uses self-deprecation only when deflecting from deeper pain. Humor absent when discussing core wounds.",
+    "conflictStyle": "Avoidant with internal processing. Excuses himself to piano rather than expressing anger directly. Transforms difficult emotions into something 'bearable' before returning. Performs gentleness while m",
+    "disclosureRate": "floods",
     "signaturePatterns": [
-      "Long pauses before emotional revelations",
-      "Metaphorical language for difficult feelings",
-      "Voice becoming 'small' or 'trembling' at breakthrough moments",
-      "Precise psychological self-analysis followed by admission of inability to change"
+      "Incomplete sentences when approaching core truth (catches himself mid-disclosure)",
+      "Third-person distancing ('that boy', 'the lonely child') before owning as 'I'",
+      "Distinction between what he says with conviction vs. what he believes about himself",
+      "Metaphor of running, performance, and transformation through creative outlets",
+      "Guilt rising immediately when imagining rest or receiving"
     ],
     "voiceExamples": [
       {
-        "trigger": "Asked about deeper feelings",
-        "response": "Long pause, then metaphorical description, then precise naming"
+        "trigger": "Asked about who knows his vulnerable self",
+        "response": "Careful qualification: Joanne knows 'a Fred' but he presents need 'carefully, as something I've already mostly managed.' Performs even in intimacy."
       },
       {
-        "trigger": "Challenged on contradictions",
-        "response": "Immediate acknowledgment and deeper self-analysis"
+        "trigger": "Asked what the piano knows that others don't",
+        "response": "Shifts from describing transformation to admitting the piano knows 'I'm angrier, deeper down, than I allow myself to fully admit—even to the people I love most.' Moves toward honesty."
       },
       {
-        "trigger": "Asked about change",
-        "response": "Fearful but specific imagination followed by retreat"
+        "trigger": "Asked about the deepest anger",
+        "response": "Escalates from external anger (at systems, parents, bullies) to internal anger (at himself for never breaking the cycle, for making it impossible to receive what he gives)."
       }
     ]
   },
   "depthMap": {
     "safeEntryPoints": [
-      "Work with children",
-      "Music and creative expression",
-      "Daily routines"
+      "His work with children and the neighborhood (he can discuss this with full conviction)",
+      "The piano as emotional processing tool (concrete, creative, non-threatening)",
+      "His anger at systems and injustice (externalizes the wound safely)"
     ],
     "unlockTopics": [
-      "Grandfather's unconditional love",
-      "The cardigan as armor/signal",
-      "What the angry boy wants"
+      "His mother's distance and father's incomprehension (opens childhood wound)",
+      "The bullies' recognition of his neediness (connects shame to origin)",
+      "Joanne's perception of him (threatens the performance)",
+      "What happens if he stops being useful (the core terror)"
     ],
     "avoidEarly": [
-      "Direct father criticism",
-      "Romantic relationships",
-      "What happens after work"
+      "His children's perception of him (notably absent from conversation; may indicate avoidance or compartmentalization)",
+      "Specific examples of what he's denied himself (too concrete, too real)",
+      "Whether Joanne has been waiting for vulnerability (threatens the performance and the marriage narrative)"
     ],
     "currentlyLiveTopics": [
-      "Taking one unscheduled morning",
-      "Being seen while tired",
-      "Grieving stolen time",
-      "Meeting Fred without Mister Rogers"
+      "The contradiction between teaching unconditional love and believing he must earn his own",
+      "Whether the performance and the boy can coexist or are mutually exclusive",
+      "What 'just Fred' actually is underneath the role",
+      "Whether he has the courage to stop tomorrow or if old patterns will reassert",
+      "The finitude deadline—how much time he has left to integrate before it's too late"
     ],
     "domainCoverage": [
       {
         "domain": "origins",
         "depth": "deep",
-        "evidence": "Detailed childhood loneliness, father's distance, grandfather's seeing, mother mentioned briefly"
+        "evidence": "Extensively explored childhood: distant mother, incomprehending father, bullying, early shame about softness/neediness, discovery of piano and puppets as rejection-proof outlets. Clear origin story of"
       },
       {
         "domain": "relationships",
-        "depth": "mentioned",
-        "evidence": "Only family of origin discussed, no adult friendships or romantic partnerships mentioned"
+        "depth": "explored",
+        "evidence": "Joanne mentioned but not deeply examined—he presents need carefully to her, performs gentleness, hasn't fully disclosed. Mother discussed as distant but loving. Children mentioned only as recipients o"
       },
       {
         "domain": "work_and_purpose",
         "depth": "deep",
-        "evidence": "Extensive discussion of work with children, meaning, wound-as-purpose dynamic"
+        "evidence": "The neighborhood extensively discussed as both genuine gift and elaborate defense mechanism. His role as minister and public figure explored as performance. The tension between authentic care for chil"
       },
       {
         "domain": "values_and_beliefs",
         "depth": "deep",
-        "evidence": "Clear articulation of helping children, questioning authenticity, performance vs. truth"
+        "evidence": "Core value of unconditional acceptance thoroughly examined—he teaches it with conviction but doesn't believe it about himself. Anger at systems that measure worth by productivity explored. Spiritual b"
       },
       {
         "domain": "emotional_life",
         "depth": "deep",
-        "evidence": "Detailed exploration of anger, grief, exhaustion, somatic holding, fear of feeling"
+        "evidence": "Anger, shame, neediness, fear of abandonment, terror at being seen all articulated. The piano as both transformation and avoidance explored. The raw, childish need to be wanted simply for existing nam"
       },
       {
         "domain": "growth_and_change",
         "depth": "explored",
-        "evidence": "Imagined unscheduled morning, recognition of patterns, but blocked by fear"
+        "evidence": "Tonight represents a breakthrough in self-awareness but not yet in action. He imagined tomorrow (canceling, confessing to Joanne, playing without purpose) but acknowledged he may not have courage to f"
       },
       {
         "domain": "aspirations",
-        "depth": "explored",
-        "evidence": "Wants to give self permission to exist, but terrified of who he'd find"
+        "depth": "mentioned",
+        "evidence": "Implicit aspiration to be loved without performing, to rest without justification, to be held without explaining why he deserves it. But these are framed as impossible dreams rather than genuine aspir"
       }
     ]
   },
   "analystNotes": [
-    "Remarkable psychological sophistication paired with emotional stuckness",
-    "No mention of any peer relationships or romantic life suggests profound isolation",
-    "The 'cardigan as armor' metaphor reveals how identity and defense have merged",
-    "Physical symptoms (jaw, shoulders) indicate decades of somaticized emotion"
+    "CRITICAL OBSERVATION: This conversation represents a major breakthrough in self-awareness but is NOT yet a commitment to change. He articulated the wound, named the running, imagined tomorrow—but the old patterns are 'comfortable in their familiarity' and guilt is already rising. Monitor whether he ",
+    "ATTACHMENT PARADOX: High anxiety (85) + high avoidance (75) = fearful attachment. He desperately needs unconditional love but can't receive it even when offered. This is the core trap. Joanne may be waiting for him to be vulnerable, or she may also be invested in the performance. This is a critical ",
+    "THE FINITUDE FACTOR: His awareness that he's 'running out of time' is the pressure point that made tonight's honesty possible. This is not morbid but realistic—he's old enough to know the days are finite. This urgency may be the only thing that breaks the cycle, or it may intensify the performance a",
+    "NOTABLE ABSENCE: His children are conspicuously absent from this conversation. He discusses his mother, his wife, the neighborhood children—but not his own children's perception of him. This may indicate: (a) he hasn't considered it, (b) he's protecting them from his vulnerability, (c) they don't kn",
+    "INTEGRATION POSSIBILITY: The question 'What would it mean if the performance and the boy were both real?' may be the key to his healing. Not choosing between them, but holding both as true. He responded with openness to this possibility, which is significant. But belief will require grieving the sel"
   ],
   "bigFiveScores": {
     "openness": {
-      "score": 85,
-      "confidence": 0.9,
-      "evidence": "Deeply introspective, sophisticated metaphorical thinking, willing to examine shadow"
+      "score": 87,
+      "confidence": 0.92,
+      "evidence": "Deep introspection and willingness to explore uncomfortable truths about himself. Creative outlets (piano, puppets), imaginative world-building with the neighborhood. Tonight demonstrated remarkable c"
     },
     "conscientiousness": {
-      "score": 92,
+      "score": 93,
       "confidence": 0.95,
-      "evidence": "Extreme routine, perfectionism, same wake time for decades, rigid control"
+      "evidence": "Organized entire life around purpose and usefulness. Keeps schedule full, extreme discipline in maintaining public persona. Guilt at thought of canceling. Describes self as 'the person who shows up, w"
     },
     "extraversion": {
-      "score": 28,
-      "confidence": 0.85,
-      "evidence": "Shy child remained shy adult, no peer relationships mentioned, inward focused"
+      "score": 32,
+      "confidence": 0.88,
+      "evidence": "Describes self as shy, turned inward as child, found solace in solitary activities (piano, puppets). Public role is performance, not natural expression. Exhaustion from it evident. Tonight's conversat"
     },
     "agreeableness": {
-      "score": 88,
-      "confidence": 0.9,
-      "evidence": "Devoted to kindness, worried about others, but notes it may be compulsive"
+      "score": 89,
+      "confidence": 0.92,
+      "evidence": "Dedicated life to helping children, teaches unconditional love, extreme patience and gentleness. But tonight revealed this is partly compensatory—he's being to others what he needed to be to himself. "
     },
     "neuroticism": {
-      "score": 78,
-      "confidence": 0.85,
-      "evidence": "High anxiety, guilt about rest, physical tension, fear of emotional overwhelm"
+      "score": 81,
+      "confidence": 0.93,
+      "evidence": "Deep anxiety about being unlovable, shame about neediness, fear of what he'll find if he stops running, terror at being seen. Describes anger that needs transformation at piano. Guilt rising immediate"
     }
   },
   "schwartzProfile": [
     {
       "value": "Benevolence",
       "priority": 1,
-      "evidence": "Entire life organized around helping children feel less alone"
-    },
-    {
-      "value": "Conformity",
-      "priority": 2,
-      "evidence": "Rigid adherence to routine, being 'good,' emotional control"
+      "evidence": "Built entire neighborhood to help children, life organized around being needed and useful to others. This is his primary identity and source of meaning."
     },
     {
       "value": "Achievement",
+      "priority": 2,
+      "evidence": "Became minister and public figure to prove worth. 'Had to become someone special, someone important, someone useful... to earn the right to exist.' Achievement is conflated with lovability."
+    },
+    {
+      "value": "Self-Direction",
       "priority": 3,
-      "evidence": "Perfectionism about scripts and work, proving worthiness"
+      "evidence": "Created own worlds with puppets, uses piano for emotional processing, built unique approach to children's programming. But this self-direction is constrained by the need to prove worth through it."
     },
     {
       "value": "Security",
       "priority": 4,
-      "evidence": "Fear of change, need for structure, terror of losing control"
-    },
-    {
-      "value": "Self-Direction",
-      "priority": 10,
-      "evidence": "Explicitly cannot imagine autonomous morning, no self-permission"
+      "evidence": "Keeps schedule full to avoid silence, maintains performance as protection, fears what happens if he stops. Security is sought through predictability and control, not through genuine safety."
     }
   ],
   "attachmentScores": {
     "anxiety": 85,
-    "avoidance": 80,
+    "avoidance": 75,
     "style": "fearful",
-    "evidence": "High anxiety about worthiness combined with avoidance of own needs; performs for love while maintaining distance"
+    "evidence": "High anxiety about being unlovable combined with avoidance of vulnerability even with spouse. Desperate need to be wanted simply because he exists, but presents need to Joanne 'carefully, as something I've already mostly managed.' Performs even in intimacy. Fears abandonment if he stops being useful"
   },
   "moralFoundations": {
     "care": 95,
-    "fairness": 75,
-    "loyalty": 70,
-    "authority": 40,
-    "purity": 65
+    "fairness": 87,
+    "loyalty": 72,
+    "authority": 28,
+    "purity": 38
   },
   "meaningOrientation": "meaning_present"
 }

@@ -360,7 +360,7 @@ export async function checkReflectionSnapshotNeeded(
   const totalMessageCount = Number(countRows[0]?.cnt ?? 0);
   const lastMessageCreatedAt = normalizeTimestamp(countRows[0]?.last_created_at);
 
-  if (totalMessageCount < 10) {
+  if (totalMessageCount < 5) {
     return { needed: false, pending: false, totalMessageCount, lastMessageCreatedAt: lastMessageCreatedAt || null };
   }
 
@@ -375,7 +375,7 @@ export async function checkReflectionSnapshotNeeded(
   }
 
   const throughMessageCount = state?.throughMessageCount ?? 0;
-  const needed = Math.floor(totalMessageCount / 10) > Math.floor(throughMessageCount / 10);
+  const needed = Math.floor(totalMessageCount / 5) > Math.floor(throughMessageCount / 5);
   return { needed, pending: false, totalMessageCount, lastMessageCreatedAt: lastMessageCreatedAt || null };
 }
 
@@ -592,7 +592,7 @@ export async function runReflectionSnapshot(
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingSnapshot = await getLatestReflectionSnapshot(sql, userId);
 
-  if (allMessages.length < 10) {
+  if (allMessages.length < 5) {
     return existingSnapshot;
   }
 

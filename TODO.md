@@ -25,4 +25,7 @@
 
 - Create a new Cloudflare account for stronger prod/dev isolation.
 - Update `reflection_note` to run every 5 conversation turns.
+- Version `reflection_note` records.
+- Version soul files.
+- Make deletion soft delete instead of hard delete.
 - Get a new Fireworks account and re-run live `value_v1` verification.

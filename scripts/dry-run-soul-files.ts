@@ -206,29 +206,42 @@ ${exchangeNumber <= 7 ? "EARLY: Keep it relatively light, testing the waters. Sh
     content: turn.content
   }));
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      temperature: 0.9,
-      system: systemPrompt,
-      messages: simMessages
-    })
-  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 300,
+          temperature: 0.9,
+          system: systemPrompt,
+          messages: simMessages
+        })
+      });
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Character simulation failed: ${response.status} ${err}`);
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Character simulation failed: ${response.status} ${err}`);
+      }
+
+      const data = await response.json() as { content: Array<{ text: string }> };
+      return data.content[0].text;
+    } catch (err) {
+      if (attempt < 2) {
+        console.error(`\n  [retry] character sim attempt ${attempt + 1} failed: ${err}`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        continue;
+      }
+      throw err;
+    }
   }
 
-  const data = await response.json() as { content: Array<{ text: string }> };
-  return data.content[0].text;
+  throw new Error("Character simulation failed after 3 attempts");
 }
 
 async function waitForSynthesis(
@@ -340,6 +353,39 @@ function hasReflectionSignals(debugDump: unknown): boolean {
   return Boolean(bigFivePresent || attachmentPresent || valuesPresent || moralPresent || conflictPresent || meaningPresent);
 }
 
+async function waitForReflectionSnapshot(
+  token: string,
+  maxWaitMs: number = 90000
+): Promise<boolean> {
+  const start = Date.now();
+
+  while (Date.now() - start < maxWaitMs) {
+    const res = await serverPost("debug-dump", {}, token);
+    if (!res.ok) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      continue;
+    }
+
+    const dump = await res.json() as {
+      reflection_note?: { domainCoverage?: unknown[] };
+      reflection_snapshot_row?: { status?: string };
+    };
+
+    const hasCoverage = Array.isArray(dump.reflection_note?.domainCoverage)
+      && dump.reflection_note!.domainCoverage!.length > 0;
+    const notPending = dump.reflection_snapshot_row?.status !== "pending";
+
+    if (hasCoverage && notPending) {
+      return true;
+    }
+
+    process.stdout.write(".");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  return false;
+}
+
 async function runCharacter(character: Character, exchanges: number): Promise<RunResult> {
   console.log(`\n${"═".repeat(60)}`);
   console.log(`  ${character.displayName}`);
@@ -430,6 +476,13 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
       conversation.push({ role: "assistant", content: thumosResponse, exchange: globalExchange, session: sessionNum });
 
       await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // Wait for reflection snapshot to complete before next session
+    if (sessionIdx < sessionPlan.length - 1) {
+      process.stdout.write("  [reflection] waiting for snapshot");
+      const snapshotReady = await waitForReflectionSnapshot(token);
+      console.log(snapshotReady ? " ready" : " timed out (continuing)");
     }
 
     // Trigger mid-run synthesis after session 3 to get multiple synthesis cycles

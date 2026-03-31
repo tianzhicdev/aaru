@@ -68,7 +68,7 @@ function buildClaudeInputMessages(
   }
 
   const parts: string[] = [
-    "Open with a single directed question."
+    "[New session — time has passed since the last conversation.] You are the guide. Open with a single directed question. Do not speak as or for the user."
   ];
   if (preferredDomain) {
     parts.push(`Steer toward: ${preferredDomain}.`);

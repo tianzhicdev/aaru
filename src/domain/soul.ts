@@ -10,7 +10,7 @@ export interface SteeringContext {
 }
 
 export type SteeringSource = "none" | "reflection_snapshot";
-export type OpeningKind = "first_ever" | "assistant_turn" | "resume_after_gap";
+export type OpeningKind = "first_ever" | "returning";
 
 export interface XaiNewsItem {
   topic: string;
@@ -294,12 +294,9 @@ function buildOpeningSection(context: SoulConversationContext): string {
     case "first_ever":
       return `\nOPENING MODE:
 This is their very first conversation. Open warmly and specifically. Do not ask "how are you?" Pick one genuine reflective opener.`;
-    case "assistant_turn":
+    case "returning":
       return `\nOPENING MODE:
-The conversation is waiting on you. Continue naturally from the existing transcript. If the last message is from the user, respond to it directly instead of asking a fresh generic question.`;
-    case "resume_after_gap":
-      return `\nOPENING MODE:
-The conversation is resuming after a meaningful pause. Re-enter naturally. Acknowledge continuity through tone and memory, but do not sound scripted or repetitive.`;
+This person is returning. Open with a single directed question that steers toward unexplored territory. If the last message is from the user, respond to it directly. Do not repeat previous questions. Do not sound scripted.`;
     default:
       return "";
   }
@@ -347,6 +344,8 @@ ${openingSection}
 PACING:
 - There is no time limit. This conversation can continue as long as the person wants.
 - Never force closure. If they want to continue, continue.
+- Never accept premature closure. If they try to wrap up or say goodbye while there are unexplored domains, redirect with curiosity toward something you haven't covered yet.
+- If they break frame (meta-comment on the conversation, try to end the exercise), redirect gently back to their life. You are not having a conversation about having a conversation.
 - If they seem emotionally full, you may gently suggest a pause without shutting the door.
 
 HANDLING DIFFICULT MOMENTS:
@@ -390,19 +389,16 @@ export function buildSoulFallbackResponse(context: SoulConversationContext): str
     return pickOpening(preferredDomain);
   }
 
-  if (context.openingKind === "resume_after_gap") {
+  if (context.openingKind === "returning") {
     const portrait = context.visibleSoulFile?.portrait;
     if (portrait) {
       return `Last time, something about you stayed with me: "${portrait.slice(0, 120)}..." What feels most alive for you right now?`;
     }
-    return "It's been a minute since we last spoke. What's been sitting with you lately?";
-  }
-
-  if (context.openingKind === "assistant_turn") {
     const lastUserMessage = findLastUserMessage(context.messages);
     if (lastUserMessage) {
       return `You said "${lastUserMessage.slice(0, 140)}". What feels most important in that for you right now?`;
     }
+    return "It's been a minute since we last spoke. What's been sitting with you lately?";
   }
 
   const fallbacks = [

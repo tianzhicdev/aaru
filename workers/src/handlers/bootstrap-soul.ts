@@ -2,7 +2,13 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession } from "../db.ts";
+import {
+  getActiveSessionByTokenHash,
+  touchDeviceSession,
+  ensureUser,
+  createDeviceSession,
+  getUserModelProfileId
+} from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getVisibleSoulFile,
@@ -10,6 +16,7 @@ import {
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
+import { defaultModelProfileIdFromEnv } from "../modelProfiles.ts";
 import { z } from "zod";
 
 const bootstrapSoulRequestSchema = z.object({
@@ -35,7 +42,11 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
   // No valid session — create user + new session
   let token: string | undefined;
   if (!userId) {
-    const user = await ensureUser(sql, body.device_id);
+    const user = await ensureUser(
+      sql,
+      body.device_id,
+      defaultModelProfileIdFromEnv(env)
+    );
     userId = user.id;
 
     // Keep existing device sessions valid. Concurrent bootstraps can otherwise
@@ -47,6 +58,7 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
 
   const visibleSoulFile = await getVisibleSoulFile(sql, userId);
   const reflectionState = await checkReflectionSnapshotNeeded(sql, userId);
+  const modelProfileId = await getUserModelProfileId(sql, userId);
   const hasMessages = reflectionState.totalMessageCount > 0 || visibleSoulFile !== null;
 
   if (reflectionState.needed && !reflectionState.pending) {
@@ -71,6 +83,7 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
     user_id: userId,
     ...(token ? { token } : {}),
     visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
-    has_messages: hasMessages
+    has_messages: hasMessages,
+    model_profile_id: modelProfileId
   });
 }

@@ -74,7 +74,7 @@ export async function handleDebugDump(sql: NeonSQL, _payload: unknown, request: 
     latestReflectionTrace
   ] = await Promise.all([
     sql`
-      SELECT id, device_id, last_active_at, created_at, updated_at
+      SELECT id, device_id, model_profile_id, last_active_at, created_at, updated_at
       FROM users
       WHERE id = ${userId}
       LIMIT 1

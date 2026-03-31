@@ -80,7 +80,7 @@ async function processSoulSynthesisJob(sql: NeonSQL, env: Env, userId: string): 
   }
 
   try {
-    await runSoulSynthesis(sql, env.ANTHROPIC_API_KEY, userId);
+    await runSoulSynthesis(sql, env, userId);
   } catch (error) {
     console.error("Queued soul synthesis failed:", error);
     await markSynthesisFailed(sql, userId).catch((markError) =>
@@ -99,7 +99,7 @@ async function processReflectionSnapshotJob(sql: NeonSQL, env: Env, userId: stri
   }
 
   try {
-    await runReflectionSnapshot(sql, env.ANTHROPIC_API_KEY, userId);
+    await runReflectionSnapshot(sql, env, userId);
   } catch (error) {
     console.error("Queued reflection snapshot failed:", error);
     await markReflectionSnapshotFailed(

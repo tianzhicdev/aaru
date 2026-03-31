@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/db.ts", () => ({
   getActiveSessionByTokenHash: vi.fn(),
+  getUserModelProfileId: vi.fn(),
   touchDeviceSession: vi.fn(),
   ensureUser: vi.fn(),
   createDeviceSession: vi.fn(),
@@ -48,8 +49,8 @@ vi.mock("../../workers/src/auth.ts", () => ({
   issueSessionToken: vi.fn()
 }));
 
-vi.mock("../../workers/src/claude.ts", () => ({
-  streamClaude: vi.fn()
+vi.mock("../../workers/src/llm.ts", () => ({
+  streamLlmText: vi.fn()
 }));
 
 import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
@@ -59,7 +60,13 @@ import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts"
 import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
 import { enqueueReflectionSnapshot, enqueueSoulSynthesis } from "../../workers/src/backgroundJobsQueue.ts";
 import { readBearerToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession, ensureUser, createDeviceSession } from "../../workers/src/db.ts";
+import {
+  getActiveSessionByTokenHash,
+  getUserModelProfileId,
+  touchDeviceSession,
+  ensureUser,
+  createDeviceSession
+} from "../../workers/src/db.ts";
 import {
   checkReflectionSnapshotNeeded,
   checkSynthesisNeeded,
@@ -70,7 +77,7 @@ import {
   markReflectionSnapshotPending,
   markSynthesisPending
 } from "../../workers/src/soulApp.ts";
-import { streamClaude } from "../../workers/src/claude.ts";
+import { streamLlmText } from "../../workers/src/llm.ts";
 
 const mockSQL = vi.fn();
 const mockEnv = {
@@ -108,6 +115,7 @@ describe("bootstrap + sync", () => {
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
       needed: true,
@@ -136,7 +144,8 @@ describe("bootstrap + sync", () => {
     vi.mocked(ensureUser).mockResolvedValue({
       id: "new-user",
       device_id: "new-device",
-      display_name: "Soul abc1"
+      display_name: "Soul abc1",
+      model_profile_id: "frontier_v1"
     });
     vi.mocked(issueSessionToken).mockResolvedValue({
       token: "new-token",
@@ -145,6 +154,7 @@ describe("bootstrap + sync", () => {
     });
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
       needed: false,
       pending: false,
@@ -156,6 +166,8 @@ describe("bootstrap + sync", () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "new-user");
     expect(response.body).toHaveProperty("token", "new-token");
+    expect(response.body).toHaveProperty("model_profile_id", "frontier_v1");
+    expect(ensureUser).toHaveBeenCalledWith(mockSQL, "new-device", "frontier_v1");
   });
 
   it("returns canonical messages from sync-messages", async () => {
@@ -229,6 +241,7 @@ describe("handleSoulConverse", () => {
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(getAllSoulMessages).mockResolvedValue([]);
@@ -241,7 +254,7 @@ describe("handleSoulConverse", () => {
     });
     mockSQL.mockResolvedValue([]);
 
-    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+    vi.mocked(streamLlmText).mockReturnValueOnce((async function* () {
       yield "What part of you has been hardest to say out loud lately?";
     })());
 

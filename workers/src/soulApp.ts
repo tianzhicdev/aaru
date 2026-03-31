@@ -1,4 +1,6 @@
+import type { Env } from "./env.ts";
 import type { NeonSQL } from "./db.ts";
+import { getUserModelProfileId } from "./db.ts";
 import type { VisibleSoulFile, HiddenSoulFile, ReflectionNote } from "../../src/domain/schemas.ts";
 import {
   hiddenSoulFileSchema,
@@ -18,7 +20,9 @@ import {
   parseReflectionNote,
   parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
-import { callClaude, streamClaude } from "./claude.ts";
+import { callLlmText, streamLlmText } from "./llm.ts";
+import type { ModelProfileId, ModelTaskConfig } from "./modelProfiles.ts";
+import { getTaskConfig } from "./modelProfiles.ts";
 import { recordClaudeDebugTrace } from "./debugTraces.ts";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -577,10 +581,12 @@ export async function markSynthesisFailed(sql: NeonSQL, userId: string): Promise
 
 export async function runReflectionSnapshot(
   sql: NeonSQL,
-  apiKey: string,
+  env: Env,
   userId: string
 ): Promise<ReflectionNote | null> {
-  const reflectionModel = "claude-haiku-4-5-20251001";
+  const profileId = await getUserModelProfileId(sql, userId);
+  const reflectionConfig = getTaskConfig(profileId, "reflection_snapshot");
+  const reflectionModel = reflectionConfig.model;
   const reflectionSystemPrompt =
     "You are a careful transcript synthesizer. Output valid JSON only.";
   const allMessages = await getAllSoulMessages(sql, userId);
@@ -602,10 +608,16 @@ export async function runReflectionSnapshot(
   );
 
   try {
-    const rawResponse = await callClaude(
+    const rawResponse = await callLlmText(
+      env,
+      reflectionConfig,
       reflectionSystemPrompt,
       [{ role: "user", content: prompt }],
-      { apiKey, model: reflectionModel, maxTokens: 4000, temperature: 0.2 }
+      {
+        profileId,
+        task: "reflection_snapshot",
+        userId
+      }
     );
 
     const parsed = parseReflectionNote(rawResponse);
@@ -619,7 +631,9 @@ export async function runReflectionSnapshot(
       meta: {
         message_count: messageCount,
         parse_success: Boolean(parsed),
-        has_existing_snapshot: Boolean(existingSnapshot)
+        has_existing_snapshot: Boolean(existingSnapshot),
+        provider: reflectionConfig.provider,
+        model_profile_id: profileId
       }
     }).catch((traceError) => {
       console.error("Failed to record reflection debug trace:", traceError);
@@ -644,7 +658,9 @@ export async function runReflectionSnapshot(
         message_count: messageCount,
         parse_success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-        has_existing_snapshot: Boolean(existingSnapshot)
+        has_existing_snapshot: Boolean(existingSnapshot),
+        provider: reflectionConfig.provider,
+        model_profile_id: profileId
       }
     }).catch((traceError) => {
       console.error("Failed to record failed reflection trace:", traceError);
@@ -659,21 +675,24 @@ export async function runReflectionSnapshot(
   }
 }
 
-async function collectClaudeStream(
+async function collectModelStream(
+  env: Env,
+  config: ModelTaskConfig,
   systemPrompt: string,
   prompt: string,
-  options: {
-    apiKey: string;
-    model: string;
-    maxTokens: number;
-    temperature: number;
+  context: {
+    profileId: ModelProfileId;
+    task: "synthesis_visible";
+    userId: string;
   }
 ): Promise<string> {
   let fullText = "";
-  for await (const chunk of streamClaude(
+  for await (const chunk of streamLlmText(
+    env,
+    config,
     systemPrompt,
     [{ role: "user", content: prompt }],
-    options
+    context
   )) {
     fullText += chunk;
   }
@@ -682,12 +701,16 @@ async function collectClaudeStream(
 
 export async function runSoulSynthesis(
   sql: NeonSQL,
-  apiKey: string,
+  env: Env,
   userId: string
 ): Promise<{ visible: VisibleSoulFile | null; hidden: HiddenSoulFile | null }> {
-  const assessmentModel = "claude-opus-4-20250514";
-  const visibleModel = "claude-opus-4-20250514";
-  const hiddenModel = "claude-haiku-4-5-20251001";
+  const profileId = await getUserModelProfileId(sql, userId);
+  const assessmentConfig = getTaskConfig(profileId, "synthesis_assessment");
+  const visibleConfig = getTaskConfig(profileId, "synthesis_visible");
+  const hiddenConfig = getTaskConfig(profileId, "synthesis_hidden");
+  const assessmentModel = assessmentConfig.model;
+  const visibleModel = visibleConfig.model;
+  const hiddenModel = hiddenConfig.model;
   const assessmentSystemPrompt =
     "You are a careful psychometric analyst. Output valid JSON only.";
   const visibleSystemPrompt =
@@ -708,7 +731,11 @@ export async function runSoulSynthesis(
     message_count: extractionMessages.length,
     has_existing_visible: Boolean(existingVisible),
     has_existing_hidden: Boolean(existingHidden),
-    has_reflection_snapshot: Boolean(reflectionNote)
+    has_reflection_snapshot: Boolean(reflectionNote),
+    model_profile_id: profileId,
+    assessment_provider: assessmentConfig.provider,
+    visible_provider: visibleConfig.provider,
+    hidden_provider: hiddenConfig.provider
   };
 
   const recordSynthesisTrace = async (
@@ -735,10 +762,16 @@ export async function runSoulSynthesis(
       reflectionNote,
       existingHidden
     );
-    const assessmentRaw = await callClaude(
+    const assessmentRaw = await callLlmText(
+      env,
+      assessmentConfig,
       assessmentSystemPrompt,
       [{ role: "user", content: assessmentPromptText }],
-      { apiKey, model: assessmentModel, maxTokens: 4096, temperature: 0.2 }
+      {
+        profileId,
+        task: "synthesis_assessment",
+        userId
+      }
     );
     const assessment = parseAssessment(assessmentRaw);
 
@@ -771,16 +804,21 @@ export async function runSoulSynthesis(
     );
 
     const [visibleRaw, hiddenRaw] = await Promise.all([
-      collectClaudeStream(visibleSystemPrompt, visiblePromptText, {
-        apiKey,
-        model: visibleModel,
-        maxTokens: 6144,
-        temperature: 0.5
+      collectModelStream(env, visibleConfig, visibleSystemPrompt, visiblePromptText, {
+        profileId,
+        task: "synthesis_visible",
+        userId
       }),
-      callClaude(
+      callLlmText(
+        env,
+        hiddenConfig,
         hiddenSystemPrompt,
         [{ role: "user", content: hiddenPromptText }],
-        { apiKey, model: hiddenModel, maxTokens: 6144, temperature: 0.2 }
+        {
+          profileId,
+          task: "synthesis_hidden",
+          userId
+        }
       )
     ]);
 

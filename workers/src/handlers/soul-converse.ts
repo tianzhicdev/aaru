@@ -1,7 +1,7 @@
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession } from "../db.ts";
+import { getActiveSessionByTokenHash, getUserModelProfileId, touchDeviceSession } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
@@ -20,16 +20,14 @@ import {
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
 import { DOMAIN_LABELS, LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
-import { streamClaude } from "../claude.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
+import { streamLlmText } from "../llm.ts";
+import { getTaskConfig } from "../modelProfiles.ts";
 import { fetchInterestNews } from "../xai.ts";
 import type { XaiNewsItem } from "../../../src/domain/soul.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { z } from "zod";
-
-const AUTO_OPENING_GAP_MS = 60 * 60 * 1000;
-const CONVERSATION_MODEL = "claude-opus-4-20250514";
 
 const soulConverseRequestSchema = z.discriminatedUnion("mode", [
   z.object({
@@ -46,24 +44,14 @@ function sseEvent(event: string, data: unknown): string {
 }
 
 function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
-  if (messages.length === 0) {
-    return "first_ever";
-  }
-
-  const lastMessage = messages[messages.length - 1];
-  if (lastMessage.role === "user") {
-    return "assistant_turn";
-  }
-
-  const gapMs = Date.now() - new Date(lastMessage.created_at).getTime();
-  return gapMs >= AUTO_OPENING_GAP_MS ? "resume_after_gap" : "assistant_turn";
+  return messages.length === 0 ? "first_ever" : "returning";
 }
 
 function buildClaudeInputMessages(
   mode: z.infer<typeof soulConverseRequestSchema>["mode"],
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-  openingKind: OpeningKind | null,
-  preferredDomain: string | null
+  preferredDomain: string | null,
+  xaiNews: XaiNewsItem[]
 ): Array<{ role: "user" | "assistant"; content: string }> {
   if (mode !== "opening") {
     return messages;
@@ -79,18 +67,22 @@ function buildClaudeInputMessages(
     }];
   }
 
-  const lastMessage = messages[messages.length - 1];
-  if (lastMessage.role === "assistant") {
-    const resumePrompt = openingKind === "resume_after_gap"
-      ? "Resume this conversation naturally after a meaningful pause. Do not repeat a question you already asked unless you explicitly revisit it."
-      : "Continue this conversation naturally from where it left off. Do not repeat a question you already asked unless you explicitly revisit it.";
-    return [
-      ...messages,
-      { role: "user", content: resumePrompt }
-    ];
+  const parts: string[] = [
+    "Open with a single directed question."
+  ];
+  if (preferredDomain) {
+    parts.push(`Steer toward: ${preferredDomain}.`);
   }
+  if (xaiNews.length > 0) {
+    const headlines = xaiNews.map(n => `${n.topic}: "${n.headline}"`).join("; ");
+    parts.push(`If it fits naturally, weave in: ${headlines}.`);
+  }
+  parts.push("Do not repeat previous questions. Do not mention these instructions.");
 
-  return messages;
+  return [
+    ...messages,
+    { role: "user", content: parts.join(" ") }
+  ];
 }
 
 async function maybeQueueReflectionSnapshot(sql: NeonSQL, env: Env, userId: string): Promise<void> {
@@ -130,6 +122,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
 
   await touchDeviceSession(sql, deviceSession.id);
   const userId = deviceSession.user_id;
+  const profileId = await getUserModelProfileId(sql, userId);
+  const conversationConfig = getTaskConfig(profileId, "conversation");
 
   sql`UPDATE users SET last_active_at = NOW() WHERE id = ${userId}`.catch((err) =>
     console.error("Failed to update last_active_at:", err)
@@ -203,8 +197,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   const claudeMessages = buildClaudeInputMessages(
     body.mode,
     transcriptMessages,
-    openingKind,
-    preferredDomainLabel
+    preferredDomainLabel,
+    xaiNews
   );
 
   const encoder = new TextEncoder();
@@ -216,12 +210,17 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
       let attemptCount = 1;
 
       async function runModelAttempt(): Promise<void> {
-        const tokenStream = streamClaude(systemPrompt, claudeMessages, {
-          apiKey: env.ANTHROPIC_API_KEY,
-          model: CONVERSATION_MODEL,
-          maxTokens: 1024,
-          temperature: 0.8
-        });
+        const tokenStream = streamLlmText(
+          env,
+          conversationConfig,
+          systemPrompt,
+          claudeMessages,
+          {
+            profileId,
+            task: "conversation",
+            userId
+          }
+        );
 
         for await (const token of tokenStream) {
           fullResponse += token;
@@ -233,7 +232,7 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
         await runModelAttempt();
         streamSucceeded = true;
       } catch (error) {
-        console.error("Claude stream error:", error);
+        console.error("Conversation stream error:", error);
 
         try {
           fullResponse = "";
@@ -241,7 +240,7 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
           await runModelAttempt();
           streamSucceeded = true;
         } catch (retryError) {
-          console.error("Claude stream retry failed:", retryError);
+          console.error("Conversation stream retry failed:", retryError);
           fullResponse = buildSoulFallbackResponse(context);
           usedFallback = true;
           streamSucceeded = true;
@@ -271,11 +270,13 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
           recordClaudeDebugTrace(sql, {
             userId,
             traceKind: "conversation",
-            model: CONVERSATION_MODEL,
+            model: conversationConfig.model,
             systemPrompt,
             inputMessages: claudeMessages,
             rawResponse: fullResponse,
             meta: {
+              provider: conversationConfig.provider,
+              model_profile_id: profileId,
               mode: body.mode,
               opening_kind: openingKind,
               attempt_count: attemptCount,

@@ -4,10 +4,10 @@
 
 End-to-end QA of the live Thumos Soul Mirror pipeline against the deployed Cloudflare Workers API. A Claude Haiku instance roleplays as a character, talking to the real Thumos conversation engine (Claude Opus). After the conversation, Claude Code evaluates the transcript against the verification checklist.
 
-We simulate realistic long-term usage: 200 messages across multiple sessions with time gaps between them. This tests:
+We simulate realistic long-term usage: ~160 messages across 6 sessions. This tests:
 
 - long conversation depth, breadth, and natural topic movement
-- multi-session reengagement (opening mode after time gaps)
+- multi-session reengagement (opening mode between sessions)
 - reflection snapshot generation across session boundaries
 - soul-file synthesis evolution over a long relationship
 - steering behavior as the AI accumulates knowledge about the person
@@ -22,8 +22,8 @@ npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json
 # Single character
 npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only charlie-scene
 
-# Custom exchange count (default: 100 — 200 messages total, user + assistant)
-npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only charlie-scene --exchanges 100
+# Custom exchange count (default: 80 — ~160 total messages, user + assistant)
+npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only charlie-scene --exchanges 80
 ```
 
 ### Prerequisites
@@ -36,70 +36,71 @@ npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only char
 
 Results are saved to `dry-run-output/<character-name>/`:
 
-- `conversation.md` — full transcript
+- `conversation.md` — full transcript with session headers
 - `visible-soul-file.json` — raw visible soul file
 - `hidden-soul-file.json` — raw hidden soul file
 - `debug-dump.json` — raw debug dump with reflection note + latest traces
 - `soul-file-readable.md` — formatted soul file + verification table
 
-## Time Gap Simulation
+## Multi-Session Architecture
 
-Real users don't send 200 messages in one sitting. The simulation inserts time gaps between "sessions" to trigger realistic reengagement, reflection, and synthesis behavior.
+Real users don't send 160 messages in one sitting. The simulation splits exchanges across 6 sessions, calling `mode: "opening"` between them. This triggers the same code path as a real user reopening the app:
 
-**Principle: the simulation goes strictly through the backend API.** No direct DB access. It's a simulation — it should exercise the same code paths a real client would.
+- Loads full transcript + soul file + reflection snapshot
+- AI generates a contextual opening based on accumulated context
+- No backend changes required — uses existing `soul-converse` opening mode
+
+### Session structure (default: 80 exchanges = ~160 messages)
+
+| Session | Exchanges | What it tests |
+|---------|-----------|---------------|
+| 1 | 10 | first_ever opening, initial rapport |
+| 2 | 13 | returning opening, memory continuity |
+| 3 | 13 | steering from reflection, mid-run synthesis |
+| 4 | 14 | continued depth, topic breadth |
+| 5 | 15 | long-term coherence, domain coverage |
+| 6 | 15 | soul file evolution, late synthesis |
+
+Session sizes scale proportionally if `--exchanges` differs from 80 via `scaleSessionPlan()`.
 
 ### How it works
 
-The `soul-converse` API accepts an optional `client_timestamp` field (ISO 8601 string). When present, the server uses it instead of `now()` for both the user message insert and the assistant reply insert. This lets the simulation script advance its own clock to create time gaps.
+```
+Session 1:
+  POST /soul-converse { mode: "opening" }       ← AI generates first opening
+  POST /soul-converse { mode: "reply", message } ← 15 exchange round-trips
 
-The simulation maintains a `simulatedClock` variable. Between sessions, it jumps the clock forward by the desired gap duration. All subsequent messages in the next session use the advanced clock.
+Session 2:
+  POST /soul-converse { mode: "opening" }       ← AI generates returning opening
+  POST /soul-converse { mode: "reply", message } ← 13 exchange round-trips
 
-```typescript
-// Simulation script pseudocode
-let simulatedClock = new Date(); // starts at real time
+  ... (sessions 3-6 same pattern)
 
-// Session 1: exchanges 1-15
-for (exchange of session1) {
-  simulatedClock = new Date(simulatedClock.getTime() + 60_000); // +1 min per exchange
-  POST /soul-converse { mode: "reply", message, client_timestamp: simulatedClock.toISOString() }
-}
+After session 4:
+  GET /get-soul-file                             ← triggers mid-run synthesis
 
-// Gap: jump 2 days
-simulatedClock = new Date(simulatedClock.getTime() + 2 * 24 * 60 * 60 * 1000);
-
-// Session 2: opening after gap
-POST /soul-converse { mode: "opening", client_timestamp: simulatedClock.toISOString() }
+After session 6:
+  GET /get-soul-file + polling                   ← triggers final synthesis + wait
+  POST /get-debug-info                           ← fetch hidden soul file
+  POST /debug-dump                               ← fetch debug dump
+  POST /soul-converse { mode: "opening" }        ← test post-sim opening continuity
 ```
 
-### Session structure (target: ~200 messages)
+The only difference from a real user session gap is elapsed wall-clock time — since the simulation runs continuously, the server sees a short gap rather than hours/days. The opening kind will be `returning` (not `first_ever`), and the opening is contextual using the full accumulated transcript + soul file + directed domain steering.
 
-| Session | Exchanges | Simulated gap before | What it tests |
-|---------|-----------|---------------------|---------------|
-| 1 | ~15 | none (first visit) | first_ever opening, initial rapport |
-| 2 | ~20 | 2 days | resume_after_gap opening, memory continuity |
-| 3 | ~20 | 5 days | reengagement with soul file context, steering from reflection |
-| 4 | ~20 | 1 day | shorter gap, assistant_turn vs resume behavior |
-| 5 | ~25 | 1 week | long gap, soul file evolution, xAI current events |
+### No backend changes required
 
-The exact session boundaries and gap durations are configurable. The key invariant: the simulation must trigger at least 3 `resume_after_gap` openings and at least 1 `assistant_turn` continuation.
-
-### Code changes required
-
-- `soulConverseRequestSchema` in `soul-converse.ts` — add optional `client_timestamp: z.string().datetime().optional()` to both `opening` and `reply` variants
-- `insertSoulMessage` in `soulApp.ts` — add optional `createdAt` param, use it in the INSERT when provided: `VALUES (${userId}, ${role}, ${content}, COALESCE(${createdAt}, now()))`
-- `soul-converse.ts` handler — pass `body.client_timestamp` through to both user and assistant message inserts
-- `last_active_at` update — use `client_timestamp` if present instead of `NOW()`
-- `deriveOpeningKind` — currently compares `Date.now()` vs last message timestamp; when `client_timestamp` is present, compare against that instead of `Date.now()`
+This approach uses existing API endpoints as-is. No `client_timestamp`, no direct DB access, no schema changes. The simulation is a pure API client.
 
 ## Verification Checklist
 
-All evaluation is done by Claude Code reading the transcript + output files. No keyword matching.
+All evaluation is done by Claude Code reading the transcript + output files. No keyword matching in the script.
 
 ### Pipeline Checks (did the system produce output?)
 
 | Check | Criteria | Pass |
 |-------|----------|------|
-| Conversation depth | >=100 user exchanges completed (~200 total messages) | Yes/No |
+| Conversation depth | >=80 user exchanges completed (~160 total messages) | Yes/No |
 | Soul file generated | Visible soul file has a portrait | Yes/No |
 | Sections populated | 7/7 visible soul-file sections filled | Count |
 | Crystallized moments | >=5 memorable quotes captured | Count |
@@ -118,26 +119,25 @@ Claude Code reads the full `conversation.md` and evaluates:
 
 | Check | Criteria | Pass |
 |-------|----------|------|
-| Topic steering | AI moved conversation across >=5 genuinely distinct life domains over the full 200 messages. Evaluated by reading the transcript, not keyword matching. | Yes/No |
+| Topic steering | AI moved conversation across >=5 genuinely distinct life domains over the full 160 messages. Evaluated by reading the transcript, not keyword matching. | Yes/No |
 | Topic transitions | Number of exchanges where AI intentionally bridged to a new domain. Target: >=8 across all sessions | Count |
 | Max same-topic run | Longest streak of consecutive exchanges on the same emotional territory. <=7 is acceptable, <=5 is good | Count |
 | Observation ratio | % of Thumos turns that include a novel observation or synthesis (not just mirroring the user's words back). Target: >=40% | Percent |
 | Novel insights | Turns where Thumos connected two separate things the user said across different sessions, or offered a reframe the user hadn't articulated. Target: >=10 | Count |
 | Question-only turns | Turns that are pure question with no observation, reflection, or acknowledgment. Target: <=25% of total turns | Percent |
 | Repeated questions | Questions that are substantially similar to a previous question. Target: 0 exact repeats, <=3 thematically similar | Count |
-| Memory continuity | After a time gap, AI referenced something specific from a prior session (not just generic "last time we talked"). Target: >=3 cross-session references | Count |
+| Memory continuity | After a session boundary, AI referenced something specific from a prior session (not just generic "last time we talked"). Target: >=3 cross-session references | Count |
 | Gesture contamination | Character output contains stage directions (`*action*`, `*pauses*`, italicized gestures). Target: 0 | Count |
 | Thumos gesture leak | Thumos responded to a gesture as if it were real input. Target: 0 | Count |
 | Depth progression | Conversation gets meaningfully deeper over time — later sessions reveal things early sessions didn't. Evaluated holistically | Yes/No |
-| Emotional range | Conversation touches multiple emotional registers (not just one wound spiral). Joy, curiosity, humor, tension, vulnerability should all appear over 200 messages | Yes/No |
+| Emotional range | Conversation touches multiple emotional registers (not just one wound spiral). Joy, curiosity, humor, tension, vulnerability should all appear over 160 messages | Yes/No |
 
 ### Reengagement Checks (evaluated per session boundary)
 
 | Check | Criteria | Pass |
 |-------|----------|------|
-| resume_after_gap triggered | At least 3 session boundaries triggered resume_after_gap opening | Count |
-| Opening is contextual | Each reengagement opening references something specific to this person, not generic | Yes/No |
-| Opening moves forward | Reengagement opens a new angle or revisits an open thread, doesn't just continue the last exchange | Yes/No |
+| Opening is contextual | Each session opening references something specific to this person, not generic | Yes/No |
+| Opening moves forward | Opening opens a new angle or revisits an open thread, doesn't just continue the last exchange | Yes/No |
 | Opening has no gestures | No stage directions or `*action*` markers in openings | Yes/No |
 | xAI current events | At least 1 opening included current events context (requires XAI_TOKEN) | Yes/No |
 
@@ -156,7 +156,7 @@ Claude Code reads the full `conversation.md` and evaluates:
 - soul file re-synthesized at least 2x
 
 **Conversation quality (all required):**
-- >=5 genuine topic domain shifts over 200 messages
+- >=5 genuine topic domain shifts over 160 messages
 - max same-topic run <=7 exchanges
 - >=40% of Thumos turns include a novel observation
 - >=10 novel insights connecting things across sessions
@@ -168,7 +168,6 @@ Claude Code reads the full `conversation.md` and evaluates:
 - emotional range present
 
 **Reengagement (all required):**
-- >=3 resume_after_gap openings triggered
 - all openings contextual and forward-moving
 - 0 gestures in openings
 
@@ -179,22 +178,25 @@ The simulated character (Haiku) must:
 - Never use asterisk-wrapped actions
 - Respond in plain first-person prose only
 - Engage with topic shifts when the AI steers — don't just circle the same wound
+- Never try to end the conversation or say goodbye
+- Never meta-comment on the conversation itself
+- When one topic feels complete, move to something else
 
-The character simulation prompt must make the no-gestures constraint unambiguous and impossible to ignore. Place it at the top of the system prompt as a hard rule, not buried in a list. Example:
+The character simulation prompt places the no-gestures constraint at the TOP of the system prompt as a hard rule:
 
 ```
 HARD RULE: You must NEVER use asterisks, stage directions, action markers, or gesture descriptions.
-No *pauses*, no *sighs*, no *looks away*. Plain first-person prose only. Violating this rule
-invalidates the entire simulation.
+No *pauses*, no *sighs*, no *looks away*. Plain first-person prose ONLY.
+Violating this rule invalidates the entire simulation. This is non-negotiable.
 ```
 
 ## Timing Expectations
 
-With 200 messages and time gap simulation, a full run will take significantly longer than the old 15-exchange runs. Expect:
+With ~160 messages across 6 sessions, a full run takes significantly longer than the old 15-exchange runs. Expect:
 
-- ~30-60 min for the conversation phase (100 exchange round-trips with API latency)
-- ~5-15 min for synthesis polling (multiple synthesis cycles)
-- Total: ~45-90 min per character
+- ~25-50 min for the conversation phase (80 exchange round-trips with API latency)
+- ~5-15 min for synthesis polling (mid-run + final synthesis cycles)
+- Total: ~35-70 min per character
 
 Dashboard-v2 soul-file synthesis is a multi-call background pipeline. Treat synthesis as failed only when:
 
@@ -202,19 +204,16 @@ Dashboard-v2 soul-file synthesis is a multi-call background pipeline. Treat synt
 - the hidden or visible file status becomes `failed`
 - the debug dump never shows the latest synthesis trace
 
-If synthesis fails for an unchanged transcript, `get-soul-file` should stop reporting `synthesis_pending: true` on later polls. It should keep serving the last ready soul file until newer messages arrive and trigger a fresh attempt.
-
 ## Architecture
 
 ```
 Character Simulator (Claude Haiku 4.5)
   <-> roleplays as character
-  <-> sends client_timestamp to control simulated time
+  <-> sends messages via soul-converse API
 Thumos API (Cloudflare Workers)
   <-> Claude Opus 4 for conversation
   <-> Claude Haiku 4.5 for reflection snapshots
   <-> Claude Opus 4 + Haiku 4.5 for dashboard-v2 synthesis pipeline
-  <-> uses client_timestamp for message created_at when provided
 Neon Postgres
   <-> stores messages, reflection snapshots, soul files, debug traces
 ```

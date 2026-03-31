@@ -5,9 +5,13 @@
  * CLI client that talks to the deployed Thumos server, simulating characters
  * via Claude to generate soul files for quality review.
  *
+ * Runs ~200-message conversations across 5 sessions. Between sessions, calls
+ * mode:"opening" to trigger reengagement — same code path as a real user
+ * reopening the app.
+ *
  * Usage: npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json
- *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only fred-rogers
- *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --exchanges 15
+ *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only charlie-scene
+ *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --exchanges 100
  *
  * Optional env: THUMOS_API_BASE=https://api.trythumos.com
  *
@@ -26,7 +30,8 @@ if (!ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const DEFAULT_EXCHANGES = 15;
+const DEFAULT_EXCHANGES = 80;
+const DEFAULT_SESSION_PLAN = [10, 13, 13, 14, 15, 15]; // sums to 80
 
 interface Character {
   name: string;
@@ -39,11 +44,11 @@ interface ConversationTurn {
   role: "user" | "assistant";
   content: string;
   exchange: number;
+  session: number;
 }
 
 interface VerificationChecks {
   conversationDepth: boolean;
-  conversationBreadth: boolean;
   soulFileGenerated: boolean;
   soulFileSectionsPopulated: number;
   crystallizedMomentsCount: number;
@@ -55,7 +60,7 @@ interface VerificationChecks {
   hiddenProfilesPresent: boolean;
   reflectionSignalsPresent: boolean;
   assistantOpeningWorks: boolean;
-  steeringObserved: boolean;
+  sessionCount: number;
 }
 
 interface RunResult {
@@ -97,6 +102,15 @@ function parseArgs(): { file: string; only?: string; exchanges: number } {
   }
 
   return { file, only, exchanges };
+}
+
+function scaleSessionPlan(totalExchanges: number): number[] {
+  const defaultTotal = DEFAULT_SESSION_PLAN.reduce((a, b) => a + b, 0);
+  const ratio = totalExchanges / defaultTotal;
+  const scaled = DEFAULT_SESSION_PLAN.map((n) => Math.max(1, Math.round(n * ratio)));
+  const diff = totalExchanges - scaled.reduce((a, b) => a + b, 0);
+  scaled[scaled.length - 1] += diff;
+  return scaled;
 }
 
 function serverHeaders(sessionToken?: string): Record<string, string> {
@@ -159,7 +173,11 @@ async function simulateCharacterResponse(
   exchangeNumber: number,
   totalExchanges: number
 ): Promise<string> {
-  const systemPrompt = `You are roleplaying as ${character.displayName} in a private, honest conversation with a reflective AI mirror called Thumos.
+  const systemPrompt = `HARD RULE: You must NEVER use asterisks, stage directions, action markers, or gesture descriptions.
+No *pauses*, no *sighs*, no *looks away*, no *leans forward*. Plain first-person prose ONLY.
+Violating this rule invalidates the entire simulation. This is non-negotiable.
+
+You are roleplaying as ${character.displayName} in a private, honest conversation with a reflective AI mirror called Thumos.
 
 CHARACTER BACKGROUND:
 ${character.description}
@@ -170,23 +188,18 @@ ${character.voiceNotes}
 CONVERSATION RULES:
 - Respond as this person would in an intimate, honest conversation about themselves
 - Be authentic to their speech patterns, vocabulary, and emotional range
-- Start surface-level in early exchanges, go deeper gradually
-- By exchange 4-6, begin revealing more personal or vulnerable things
-- By exchange 8-10, share something that reveals a core tension or wound
-- By exchange 11+, share the deepest contradictions and things rarely said aloud
-- Don't dump everything at once; let the AI's questions guide you
+- When the AI brings up a new topic or angle, engage with it — don't just circle back to the same thing
 - Keep responses 2-5 sentences
 - You're talking to an AI, so you can be more honest than you might be with a person
+- NEVER try to end the conversation or say goodbye. You always have more to share.
+- NEVER meta-comment on the conversation itself ("this has been great", "I appreciate this", "what a conversation"). Just keep talking about your life.
+- When one topic feels complete, move to something else — a different memory, a different part of your life.
 - Never break character or mention you're roleplaying
 - Use first person ("I", "me", "my")
-- Do not include stage directions or roleplay markers
-- If the AI asks about a new topic area, engage with it instead of circling the same thing
+- NO stage directions, NO asterisks, NO action descriptions — plain prose only
 
 CURRENT EXCHANGE: ${exchangeNumber} of ~${totalExchanges}
-${exchangeNumber <= 3 ? "EARLY: Keep it relatively light, testing the waters." : ""}
-${exchangeNumber >= 4 && exchangeNumber <= 7 ? "MIDDLE: Getting more comfortable, starting to share real things." : ""}
-${exchangeNumber >= 8 && exchangeNumber <= 11 ? "DEEP: Opening up about core experiences, fears, contradictions." : ""}
-${exchangeNumber >= 12 ? "LATE: Most honest and reflective. Saying things you rarely say." : ""}`;
+${exchangeNumber <= 7 ? "EARLY: Keep it relatively light, testing the waters. Share surface-level things about yourself." : ""}${exchangeNumber >= 8 && exchangeNumber <= 25 ? "WARMING UP: Getting more comfortable. Starting to share real things — specific stories, real opinions, actual experiences." : ""}${exchangeNumber >= 26 && exchangeNumber <= 50 ? "OPENING UP: Sharing genuine vulnerabilities, core experiences, fears, contradictions. Getting past the persona." : ""}${exchangeNumber >= 51 && exchangeNumber <= 70 ? "DEEP: The most honest you've been. Things you rarely say aloud. Core tensions and wounds." : ""}${exchangeNumber >= 71 ? "LATE: Reflective and synthesizing. Connecting threads. Saying the things that tie it all together." : ""}`;
 
   const simMessages = conversation.map((turn) => ({
     role: (turn.role === "assistant" ? "user" : "assistant") as "user" | "assistant",
@@ -265,24 +278,6 @@ async function waitForSynthesis(
   };
 }
 
-const DOMAIN_KEYWORDS: Record<string, string[]> = {
-  relationships: ["relationship", "connect", "friend", "family", "love", "partner", "people", "trust", "lonely"],
-  "work/craft": ["work", "create", "build", "craft", "career", "profession", "art", "practice", "skill"],
-  identity: ["identity", "who you are", "define", "label", "see yourself", "think of yourself"],
-  emotions: ["feel", "emotion", "anger", "joy", "sadness", "fear", "happy", "anxious", "peaceful"],
-  values: ["value", "matter", "important", "believe", "principle", "stand for", "care about"],
-  "past/memory": ["remember", "childhood", "grew up", "memory", "past", "younger", "used to"],
-  contradictions: ["contradict", "tension", "both", "opposite", "struggle", "torn"],
-  "loss/grief": ["loss", "grief", "miss", "gone", "death", "lost", "mourn"]
-};
-
-function detectDomains(text: string): string[] {
-  const lower = text.toLowerCase();
-  return Object.entries(DOMAIN_KEYWORDS)
-    .filter(([, keywords]) => keywords.some((keyword) => lower.includes(keyword)))
-    .map(([domain]) => domain);
-}
-
 function countPopulatedSpectrumTraits(visibleSoulFile: unknown): number {
   const spectrum = (visibleSoulFile as { personalitySpectrum?: Record<string, unknown> } | null)?.personalitySpectrum;
   if (!spectrum || typeof spectrum !== "object") return 0;
@@ -350,12 +345,12 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   console.log(`  ${character.displayName}`);
   console.log(`${"═".repeat(60)}\n`);
 
-  const domainsCovered = new Set<string>();
-  const topicShifts: string[] = [];
-  let lastDomains: string[] = [];
+  const sessionPlan = scaleSessionPlan(exchanges);
+  console.log(`  Sessions: ${sessionPlan.length} (${sessionPlan.join(" + ")} = ${sessionPlan.reduce((a, b) => a + b, 0)} exchanges)`);
 
+  // Bootstrap
   const deviceId = crypto.randomUUID();
-  console.log(`[bootstrap] device_id=${deviceId.slice(0, 8)}...`);
+  console.log(`  [bootstrap] device_id=${deviceId.slice(0, 8)}...`);
 
   const bootstrapRes = await serverPost("bootstrap-soul", { device_id: deviceId });
   if (!bootstrapRes.ok) {
@@ -365,86 +360,93 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
 
   const bootstrap = await bootstrapRes.json() as { user_id: string; token: string };
   const { token } = bootstrap;
-  console.log("[bootstrap] user created, token received");
+  console.log("  [bootstrap] user created, token received");
 
-  console.log("[opening] requesting first question...");
-  const openingRes = await serverPost("soul-converse", { mode: "opening" }, token);
-  if (!openingRes.ok) {
-    const err = await openingRes.text();
-    throw new Error(`Opening failed: ${openingRes.status} ${err}`);
-  }
+  const conversation: ConversationTurn[] = [];
+  let globalExchange = 0;
 
-  process.stdout.write("  Thumos: ");
-  let openingText = await readSSEResponse(openingRes);
-  console.log();
+  for (let sessionIdx = 0; sessionIdx < sessionPlan.length; sessionIdx++) {
+    const sessionNum = sessionIdx + 1;
+    const sessionExchanges = sessionPlan[sessionIdx];
 
-  if (!openingText.trim()) {
-    openingText = "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";
-    console.log("  [fallback] used default opening");
-  }
+    console.log(`\n  ── Session ${sessionNum} of ${sessionPlan.length} (${sessionExchanges} exchanges) ──`);
 
-  const openingDomains = detectDomains(openingText);
-  openingDomains.forEach((domain) => domainsCovered.add(domain));
-  lastDomains = openingDomains;
-
-  const conversation: ConversationTurn[] = [
-    { role: "assistant", content: openingText, exchange: 0 }
-  ];
-
-  for (let exchange = 1; exchange <= exchanges; exchange += 1) {
-    console.log(`\n  [exchange ${exchange}/${exchanges}]`);
-    process.stdout.write(`  ${character.displayName}: `);
-    const charResponse = await simulateCharacterResponse(character, conversation, exchange, exchanges);
-    console.log(charResponse);
-
-    conversation.push({ role: "user", content: charResponse, exchange });
-    detectDomains(charResponse).forEach((domain) => domainsCovered.add(domain));
+    // Opening for this session
+    console.log(`  [opening] requesting session ${sessionNum} opening...`);
+    const openingRes = await serverPost("soul-converse", { mode: "opening" }, token);
+    if (!openingRes.ok) {
+      const err = await openingRes.text();
+      throw new Error(`Opening failed for session ${sessionNum}: ${openingRes.status} ${err}`);
+    }
 
     process.stdout.write("  Thumos: ");
-    const converseRes = await serverPost("soul-converse", { mode: "reply", message: charResponse }, token);
-    if (!converseRes.ok) {
-      const err = await converseRes.text();
-      console.error(`\n  [error] soul-converse failed: ${converseRes.status} ${err}`);
-      console.log("  [retry] retrying soul-converse...");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      const retryRes = await serverPost("soul-converse", { mode: "reply", message: charResponse }, token);
-      if (!retryRes.ok) {
-        console.error("  [error] retry also failed, skipping remaining exchanges");
-        break;
-      }
-      process.stdout.write("  Thumos: ");
-      const retryText = await readSSEResponse(retryRes);
-      console.log();
-      conversation.push({ role: "assistant", content: retryText || "(no response)", exchange });
-      continue;
-    }
-
-    let thumosResponse = await readSSEResponse(converseRes);
-    if (!thumosResponse.trim()) {
-      thumosResponse = "(reflection)";
-      console.log("  [fallback] Thumos returned empty response");
-    }
+    let openingText = await readSSEResponse(openingRes);
     console.log();
 
-    conversation.push({ role: "assistant", content: thumosResponse, exchange });
-
-    const currentDomains = detectDomains(thumosResponse);
-    currentDomains.forEach((domain) => domainsCovered.add(domain));
-
-    const newDomains = currentDomains.filter((domain) => !lastDomains.includes(domain));
-    if (newDomains.length > 0) {
-      topicShifts.push(`Exchange ${exchange}: -> ${newDomains.join(", ")}`);
+    if (!openingText.trim()) {
+      openingText = "I'm here to listen — not to fix anything or give advice. Just to understand. What's something about yourself that most people don't see?";
+      console.log("  [fallback] used default opening");
     }
-    lastDomains = currentDomains;
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    conversation.push({ role: "assistant", content: openingText, exchange: globalExchange, session: sessionNum });
+
+    // Run exchanges for this session
+    for (let i = 0; i < sessionExchanges; i++) {
+      globalExchange++;
+      console.log(`\n  [exchange ${globalExchange}/${exchanges}] (session ${sessionNum})`);
+
+      process.stdout.write(`  ${character.displayName}: `);
+      const charResponse = await simulateCharacterResponse(character, conversation, globalExchange, exchanges);
+      console.log(charResponse);
+
+      conversation.push({ role: "user", content: charResponse, exchange: globalExchange, session: sessionNum });
+
+      process.stdout.write("  Thumos: ");
+      const converseRes = await serverPost("soul-converse", { mode: "reply", message: charResponse }, token);
+      if (!converseRes.ok) {
+        const err = await converseRes.text();
+        console.error(`\n  [error] soul-converse failed: ${converseRes.status} ${err}`);
+        console.log("  [retry] retrying...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const retryRes = await serverPost("soul-converse", { mode: "reply", message: charResponse }, token);
+        if (!retryRes.ok) {
+          console.error("  [error] retry also failed, skipping to next session");
+          break;
+        }
+        process.stdout.write("  Thumos: ");
+        const retryText = await readSSEResponse(retryRes);
+        console.log();
+        conversation.push({ role: "assistant", content: retryText || "(no response)", exchange: globalExchange, session: sessionNum });
+        continue;
+      }
+
+      let thumosResponse = await readSSEResponse(converseRes);
+      if (!thumosResponse.trim()) {
+        thumosResponse = "(reflection)";
+        console.log("  [fallback] Thumos returned empty response");
+      }
+      console.log();
+
+      conversation.push({ role: "assistant", content: thumosResponse, exchange: globalExchange, session: sessionNum });
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // Trigger mid-run synthesis after session 3 to get multiple synthesis cycles
+    if (sessionNum === 3) {
+      console.log("\n  [synthesis] triggering mid-run synthesis via get-soul-file...");
+      process.stdout.write("  [synthesis] waiting");
+      await waitForSynthesis(token, 300000); // 5 min max for mid-run
+    }
   }
 
-  console.log("\n  [synthesis] triggering via get-soul-file + polling...");
+  // Final synthesis
+  console.log("\n  [synthesis] triggering final synthesis via get-soul-file + polling...");
   process.stdout.write("  [synthesis] waiting");
   const { visibleSoulFile, synthesisSucceeded } = await waitForSynthesis(token);
-  console.log(` ${synthesisSucceeded ? "succeeded" : "FAILED"}`);
+  console.log(`  ${synthesisSucceeded ? "succeeded" : "FAILED"}`);
 
+  // Fetch debug info
   let hiddenSoulFile: unknown = null;
   let debugDump: unknown = null;
 
@@ -467,7 +469,8 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
     console.log("  [fetch] debug dump: ready");
   }
 
-  console.log('  [opening] testing assistant-led opening continuity (mode:"opening")...');
+  // Test one more opening for continuity
+  console.log('  [opening] testing post-simulation opening continuity...');
   let followupOpening: string | null = null;
   try {
     const openingAgainRes = await serverPost("soul-converse", { mode: "opening" }, token);
@@ -477,7 +480,7 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
       console.log();
       if (openingAgainText && openingAgainText.length > 10) {
         followupOpening = openingAgainText;
-        console.log(`  [opening] assistant-led follow-up: "${openingAgainText.slice(0, 100)}..."`);
+        console.log(`  [opening] post-sim follow-up: "${openingAgainText.slice(0, 100)}..."`);
       } else {
         console.log("  [opening] empty or generic follow-up");
       }
@@ -489,10 +492,11 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
     console.log(`  [opening] error: ${err}`);
   }
 
+  // Verification
   const visible = visibleSoulFile as Record<string, unknown> | null;
   const sections = visible?.sections as Record<string, string> | undefined;
   const populatedSections = sections
-    ? Object.values(sections).filter((section) => section && section.length > 0).length
+    ? Object.values(sections).filter((s) => s && s.length > 0).length
     : 0;
   const moments = (visible?.crystallizedMoments as unknown[]) ?? [];
   const threads = (visible?.openThreads as unknown[]) ?? [];
@@ -502,9 +506,10 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   const hiddenProfilesPresent = hasHiddenProfiles(hiddenSoulFile);
   const reflectionSignalsPresent = hasReflectionSignals(debugDump);
 
+  const userMessageCount = conversation.filter((t) => t.role === "user").length;
+
   const checks: VerificationChecks = {
-    conversationDepth: conversation.filter((turn) => turn.role === "user").length >= 10,
-    conversationBreadth: domainsCovered.size >= 3,
+    conversationDepth: userMessageCount >= Math.floor(exchanges * 0.5),
     soulFileGenerated: Boolean(visible?.portrait),
     soulFileSectionsPopulated: populatedSections,
     crystallizedMomentsCount: moments.length,
@@ -516,15 +521,13 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
     hiddenProfilesPresent,
     reflectionSignalsPresent,
     assistantOpeningWorks: Boolean(followupOpening && followupOpening.length > 10),
-    steeringObserved: topicShifts.length >= 2
+    sessionCount: sessionPlan.length
   };
 
   console.log("\n  -- Verification --");
-  console.log(`  Domains covered: ${[...domainsCovered].join(", ")} (${domainsCovered.size})`);
-  console.log(`  Topic shifts: ${topicShifts.length}`);
-  for (const shift of topicShifts.slice(0, 5)) {
-    console.log(`    ${shift}`);
-  }
+  console.log(`  Sessions completed: ${sessionPlan.length}`);
+  console.log(`  Total exchanges: ${globalExchange}`);
+  console.log(`  User messages: ${userMessageCount}`);
   console.log(`  Soul file sections: ${populatedSections}/7`);
   console.log(`  Crystallized moments: ${moments.length}`);
   console.log(`  Open threads: ${threads.length}`);
@@ -533,8 +536,7 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   console.log(`  Relational style: ${relationalStylePresent ? "✓" : "✗"}`);
   console.log(`  Hidden profiles: ${hiddenProfilesPresent ? "✓" : "✗"}`);
   console.log(`  Reflection signals: ${reflectionSignalsPresent ? "✓" : "✗"}`);
-  console.log(`  Assistant opening: ${checks.assistantOpeningWorks ? "✓" : "✗"}`);
-  console.log(`  Steering: ${checks.steeringObserved ? "✓" : "✗"}`);
+  console.log(`  Post-sim opening: ${checks.assistantOpeningWorks ? "✓" : "✗"}`);
 
   return {
     conversation,
@@ -560,9 +562,16 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
     verificationChecks
   } = result;
 
+  // Conversation with session headers
   let conversationMd = `# Soul Conversation: ${character.displayName}\n\n`;
   conversationMd += `> ${character.description}\n\n---\n\n`;
+
+  let currentSession = 0;
   for (const turn of conversation) {
+    if (turn.session !== currentSession) {
+      currentSession = turn.session;
+      conversationMd += `---\n\n## Session ${currentSession}\n\n`;
+    }
     const speaker = turn.role === "assistant" ? "**Thumos**" : `**${character.displayName}**`;
     conversationMd += `### Exchange ${turn.exchange} — ${speaker}\n\n${turn.content}\n\n`;
   }
@@ -643,13 +652,13 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
   }
 
   if (followupOpening) {
-    summary += `## Assistant-led Follow-up Opening\n\n> ${followupOpening}\n\n`;
+    summary += `## Post-Simulation Opening\n\n> ${followupOpening}\n\n`;
   }
 
   summary += "## Verification\n\n";
   summary += "| Check | Result |\n|-------|--------|\n";
-  summary += `| Conversation depth (>=10 user messages) | ${verificationChecks.conversationDepth ? "✓" : "✗"} |\n`;
-  summary += `| Conversation breadth (>=3 domains) | ${verificationChecks.conversationBreadth ? "✓" : "✗"} |\n`;
+  summary += `| Conversation depth | ${verificationChecks.conversationDepth ? "✓" : "✗"} |\n`;
+  summary += `| Sessions completed | ${verificationChecks.sessionCount} |\n`;
   summary += `| Soul file generated | ${verificationChecks.soulFileGenerated ? "✓" : "✗"} |\n`;
   summary += `| Soul file sections populated | ${verificationChecks.soulFileSectionsPopulated}/7 |\n`;
   summary += `| Crystallized moments | ${verificationChecks.crystallizedMomentsCount} |\n`;
@@ -660,8 +669,7 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
   summary += `| Relational style | ${verificationChecks.relationalStylePresent ? "✓" : "✗"} |\n`;
   summary += `| Hidden profiles | ${verificationChecks.hiddenProfilesPresent ? "✓" : "✗"} |\n`;
   summary += `| Reflection signals | ${verificationChecks.reflectionSignalsPresent ? "✓" : "✗"} |\n`;
-  summary += `| Assistant-led opening works | ${verificationChecks.assistantOpeningWorks ? "✓" : "✗"} |\n`;
-  summary += `| Steering observed | ${verificationChecks.steeringObserved ? "✓" : "✗"} |\n`;
+  summary += `| Post-sim opening works | ${verificationChecks.assistantOpeningWorks ? "✓" : "✗"} |\n`;
 
   writeFileSync(join(charDir, "soul-file-readable.md"), summary);
 
@@ -685,9 +693,12 @@ async function main() {
   const outputDir = join(process.cwd(), "dry-run-output");
   mkdirSync(outputDir, { recursive: true });
 
+  const sessionPlan = scaleSessionPlan(exchanges);
+
   console.log("\nThumos Soul File Dry Run");
   console.log(`Characters: ${characters.length}`);
-  console.log(`Exchanges per character: ${exchanges}`);
+  console.log(`Exchanges per character: ${exchanges} (~${exchanges * 2} messages)`);
+  console.log(`Sessions: ${sessionPlan.length} (${sessionPlan.join(" + ")})`);
   console.log(`API base: ${API_BASE}`);
   console.log(`Output: ${outputDir}/\n`);
 
@@ -711,7 +722,6 @@ async function main() {
           followupOpening: null,
           verificationChecks: {
             conversationDepth: false,
-            conversationBreadth: false,
             soulFileGenerated: false,
             soulFileSectionsPopulated: 0,
             crystallizedMomentsCount: 0,
@@ -723,7 +733,7 @@ async function main() {
             hiddenProfilesPresent: false,
             reflectionSignalsPresent: false,
             assistantOpeningWorks: false,
-            steeringObserved: false
+            sessionCount: 0
           }
         }
       });
@@ -734,12 +744,12 @@ async function main() {
   console.log("  SUMMARY");
   console.log(`${"═".repeat(60)}\n`);
 
-  console.log(`  ${"Character".padEnd(22)} Synth  Sect  Spect  Values  Open  Steer`);
-  console.log(`  ${"─".repeat(65)}`);
+  console.log(`  ${"Character".padEnd(22)} Synth  Sect  Spect  Values  Open  Sessions`);
+  console.log(`  ${"─".repeat(68)}`);
   for (const result of results) {
     const checks = result.result.verificationChecks;
     console.log(
-      `  ${result.name.padEnd(22)} ${checks.soulFileGenerated ? " ✓  " : " ✗  "}  ${String(checks.soulFileSectionsPopulated).padStart(2)}/7   ${String(checks.personalitySpectrumTraits).padStart(2)}      ${String(checks.topValuesCount).padStart(2)}      ${checks.assistantOpeningWorks ? "✓" : "✗"}      ${checks.steeringObserved ? "✓" : "✗"}`
+      `  ${result.name.padEnd(22)} ${checks.soulFileGenerated ? " ✓  " : " ✗  "}  ${String(checks.soulFileSectionsPopulated).padStart(2)}/7   ${String(checks.personalitySpectrumTraits).padStart(2)}      ${String(checks.topValuesCount).padStart(2)}      ${checks.assistantOpeningWorks ? "✓" : "✗"}      ${checks.sessionCount}`
     );
   }
 

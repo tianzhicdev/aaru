@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../workers/src/claude.ts", () => ({
-  callClaude: vi.fn(),
-  streamClaude: vi.fn()
+vi.mock("../../workers/src/llm.ts", () => ({
+  callLlmText: vi.fn(),
+  streamLlmText: vi.fn()
 }));
 
 const mockSQL = vi.fn();
@@ -10,7 +10,8 @@ vi.mock("../../workers/src/db.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../workers/src/db.ts")>();
   return {
     ...actual,
-    createSQL: vi.fn(() => mockSQL)
+    createSQL: vi.fn(() => mockSQL),
+    getUserModelProfileId: vi.fn().mockResolvedValue("frontier_v1")
   };
 });
 
@@ -26,7 +27,7 @@ import {
   runReflectionSnapshot,
   runSoulSynthesis
 } from "../../workers/src/soulApp.ts";
-import { callClaude, streamClaude } from "../../workers/src/claude.ts";
+import { callLlmText, streamLlmText } from "../../workers/src/llm.ts";
 
 describe("reflection snapshots", () => {
   beforeEach(() => {
@@ -108,7 +109,7 @@ describe("reflection snapshots", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
-    vi.mocked(callClaude).mockResolvedValueOnce(JSON.stringify({
+    vi.mocked(callLlmText).mockResolvedValueOnce(JSON.stringify({
       updatedAt: "2026-03-26T00:10:00Z",
       factualAnchors: { art: "When I paint." },
       tensions: ["Wants freedom but protects time with walls"],
@@ -128,7 +129,7 @@ describe("reflection snapshots", () => {
       meaningOrientation: "Painting feels like the clearest path to meaning."
     }));
 
-    const note = await runReflectionSnapshot(mockSQL, "test-api-key", "user-1");
+    const note = await runReflectionSnapshot(mockSQL, {} as never, "user-1");
     expect(note).not.toBeNull();
     expect(note?.openLoops).toContain("Why painting feels dangerous now");
     expect(note?.inferredBigFive.openness?.score).toBe(74);
@@ -240,7 +241,7 @@ describe("soul synthesis", () => {
       .mockResolvedValue([])
       .mockResolvedValue([]);
 
-    vi.mocked(callClaude)
+    vi.mocked(callLlmText)
       .mockResolvedValueOnce(JSON.stringify({
         bigFive: {
           openness: { score: 80, confidence: 0.8, evidence: "Thinks in symbols" },
@@ -280,7 +281,7 @@ describe("soul synthesis", () => {
         meaningOrientation: "meaning_seeking"
       }));
 
-    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+    vi.mocked(streamLlmText).mockReturnValueOnce((async function* () {
       yield JSON.stringify({
         version: 1,
         lastUpdated: "2026-03-27",
@@ -301,7 +302,7 @@ describe("soul synthesis", () => {
       });
     })());
 
-    const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
+    const result = await runSoulSynthesis(mockSQL, {} as never, "user-1");
 
     expect(result.visible?.portrait).toContain("distance");
     expect(result.visible?.personalitySpectrum.openness?.position).toBe(76);
@@ -319,12 +320,12 @@ describe("soul synthesis", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValue([]);
 
-    vi.mocked(callClaude).mockResolvedValueOnce("not valid json");
+    vi.mocked(callLlmText).mockResolvedValueOnce("not valid json");
 
-    const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
+    const result = await runSoulSynthesis(mockSQL, {} as never, "user-1");
     expect(result.visible).toBeNull();
     expect(result.hidden).toBeNull();
-    expect(streamClaude).not.toHaveBeenCalled();
+    expect(streamLlmText).not.toHaveBeenCalled();
   });
 
   it("handles total synthesis failure gracefully", async () => {
@@ -337,9 +338,9 @@ describe("soul synthesis", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValue([]);
 
-    vi.mocked(callClaude).mockRejectedValueOnce(new Error("API error"));
+    vi.mocked(callLlmText).mockRejectedValueOnce(new Error("API error"));
 
-    const result = await runSoulSynthesis(mockSQL, "test-api-key", "user-1");
+    const result = await runSoulSynthesis(mockSQL, {} as never, "user-1");
     expect(result.visible).toBeNull();
     expect(result.hidden).toBeNull();
   });

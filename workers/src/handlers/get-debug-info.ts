@@ -1,7 +1,7 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { NeonSQL } from "../db.ts";
 import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash } from "../db.ts";
+import { getActiveSessionByTokenHash, getUserModelProfileId } from "../db.ts";
 import { getHiddenSoulFile, getVisibleSoulFile, getLatestReflectionSnapshot } from "../soulApp.ts";
 import { deriveConversationSteering } from "../../../src/domain/soul.ts";
 
@@ -18,6 +18,7 @@ export async function handleGetDebugInfo(sql: NeonSQL, _payload: unknown, reques
   }
 
   const userId = session.user_id;
+  const modelProfileId = await getUserModelProfileId(sql, userId);
 
   const [hiddenSoulFile, visibleSoulFile, reflectionNote] = await Promise.all([
     getHiddenSoulFile(sql, userId),
@@ -29,6 +30,7 @@ export async function handleGetDebugInfo(sql: NeonSQL, _payload: unknown, reques
   return jsonResponse(200, {
     user_id: userId,
     device_id: session.device_id,
+    model_profile_id: modelProfileId,
     hidden_soul_file: hiddenSoulFile,
     visible_soul_file: visibleSoulFile,
     reflection_note: reflectionNote,

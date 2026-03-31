@@ -193,23 +193,37 @@ describe("buildSoulFallbackResponse", () => {
     expect(response).toMatch(/\?$/);
   });
 
-  it("returns a resume response with portrait when resuming after gap", () => {
+  it("returns a resume response with portrait for returning user", () => {
     const response = buildSoulFallbackResponse(makeContext({
-      openingKind: "resume_after_gap",
+      openingKind: "returning",
       visibleSoulFile: makeVisibleSoulFile({ portrait: "A dreamer who builds alone" })
     }));
     expect(response).toContain("A dreamer");
   });
 
-  it("returns a reply-shaped fallback when the assistant turn is pending", () => {
+  it("returns a reply-shaped fallback for returning user with no portrait", () => {
     const response = buildSoulFallbackResponse(makeContext({
-      openingKind: "assistant_turn",
+      openingKind: "returning",
       messages: [
         { role: "assistant", content: "Earlier you said work feels thin." },
         { role: "user", content: "I keep thinking about leaving." }
       ]
     }));
     expect(response).toContain("I keep thinking about leaving");
+  });
+});
+
+describe("anti-closure and returning opening", () => {
+  it("includes anti-closure rules in PACING section", () => {
+    const prompt = buildSoulSystemPrompt(makeContext());
+    expect(prompt).toContain("Never accept premature closure");
+    expect(prompt).toContain("redirect gently back to their life");
+  });
+
+  it("includes returning opening guidance", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({ openingKind: "returning" }));
+    expect(prompt).toContain("OPENING MODE");
+    expect(prompt).toContain("unexplored territory");
   });
 });
 

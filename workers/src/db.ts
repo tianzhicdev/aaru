@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { normalizeModelProfileId, type ModelProfileId } from "./modelProfiles.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type NeonSQL = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
@@ -15,6 +16,7 @@ export interface UserRow {
   id: string;
   device_id: string;
   display_name: string;
+  model_profile_id: string;
 }
 
 export interface DeviceSessionRow {
@@ -29,14 +31,32 @@ export interface DeviceSessionRow {
 
 // ── User & Device Session CRUD ────────────────────────────────
 
-export async function ensureUser(sql: NeonSQL, deviceId: string): Promise<UserRow> {
+export async function ensureUser(
+  sql: NeonSQL,
+  deviceId: string,
+  modelProfileId: ModelProfileId = "frontier_v1"
+): Promise<UserRow> {
   const rows = await sql`
-    INSERT INTO users (device_id, display_name)
-    VALUES (${deviceId}, ${"Soul " + deviceId.slice(-4)})
+    INSERT INTO users (device_id, display_name, model_profile_id)
+    VALUES (${deviceId}, ${"Soul " + deviceId.slice(-4)}, ${modelProfileId})
     ON CONFLICT (device_id) DO UPDATE SET device_id = EXCLUDED.device_id
-    RETURNING id, device_id, display_name
+    RETURNING id, device_id, display_name, model_profile_id
   `;
   return rows[0] as UserRow;
+}
+
+export async function getUserModelProfileId(
+  sql: NeonSQL,
+  userId: string
+): Promise<ModelProfileId> {
+  const rows = await sql`
+    SELECT model_profile_id
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+
+  return normalizeModelProfileId(rows[0]?.model_profile_id);
 }
 
 export async function createDeviceSession(

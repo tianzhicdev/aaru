@@ -67,6 +67,8 @@ Required worker secrets:
 
 Optional worker secrets:
 
+- `FIREWORKS_API_KEY` or `FIREWORKS_API` for the `value_v1` open-model profile
+- `DEFAULT_MODEL_PROFILE_ID` to choose the default profile for newly created users (`frontier_v1` by default)
 - `XAI_TOKEN` for opening-mode current-events context
 
 Deployment also requires Wrangler auth, typically via `CLOUDFLARE_API_TOKEN`.

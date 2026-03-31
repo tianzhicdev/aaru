@@ -80,7 +80,7 @@ describe("processBackgroundJobsBatch", () => {
       messages: [{ body: { kind: "soul_synthesis", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
     });
 
-    expect(runSoulSynthesis).toHaveBeenCalledWith(mockSQL, "test-key", "user-1");
+    expect(runSoulSynthesis).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
     expect(checkSynthesisNeeded).not.toHaveBeenCalled();
   });
 
@@ -96,7 +96,7 @@ describe("processBackgroundJobsBatch", () => {
       messages: [{ body: { kind: "reflection_snapshot", jobId: "job-2", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z", throughMessageCount: 20 } }]
     });
 
-    expect(runReflectionSnapshot).toHaveBeenCalledWith(mockSQL, "test-key", "user-1");
+    expect(runReflectionSnapshot).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
     expect(checkReflectionSnapshotNeeded).not.toHaveBeenCalled();
   });
 

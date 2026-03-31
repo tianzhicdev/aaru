@@ -1,15 +1,30 @@
-name = "thumos-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
-account_id = "8dec2b1d93b5b5be6cbbacb723b74fc3"
+name = "thumos-api"
 
 [observability]
 enabled = true
 
-[[queues.producers]]
+[env.dev]
+name = "thumos-api-dev"
+workers_dev = true
+
+[[env.dev.queues.producers]]
+binding = "BACKGROUND_QUEUE"
+queue = "thumos-soul-synthesis-dev"
+
+[[env.dev.queues.consumers]]
+queue = "thumos-soul-synthesis-dev"
+max_batch_size = 1
+
+[env.production]
+name = "thumos-api"
+workers_dev = true
+
+[[env.production.queues.producers]]
 binding = "BACKGROUND_QUEUE"
 queue = "thumos-soul-synthesis"
 
-[[queues.consumers]]
+[[env.production.queues.consumers]]
 queue = "thumos-soul-synthesis"
 max_batch_size = 1

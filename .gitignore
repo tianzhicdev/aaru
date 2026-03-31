@@ -5,8 +5,9 @@ dist
 .DS_Store
 .build
 DerivedData
-.env
-.dev.vars
+.env*
+!.env.example
+.dev.vars*
 tmp
 *.xcuserstate
 xcuserdata
@@ -19,3 +20,4 @@ generate_avatars.py
 TestResults/
 TestResults.xcresult/
 .gstack/
+.secrets/

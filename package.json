@@ -9,11 +9,12 @@
     "test:watch": "vitest",
     "lint": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "node scripts/apply-db-migrations.mjs",
+    "db:migrate:dev": "node scripts/apply-db-migrations.mjs --env dev",
     "verify:live": "node scripts/verify-live-refactor.mjs",
     "ios:generate": "xcodegen generate",
     "ios:list": "xcodebuild -list -project Thumos.xcodeproj",
     "workers:dev": "pnpm --dir workers run dev",
-    "workers:deploy": "pnpm --dir workers run deploy"
+    "workers:deploy": "./deploy.sh"
   },
   "devDependencies": {
     "@neondatabase/serverless": "^1.0.2",

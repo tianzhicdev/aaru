@@ -16,18 +16,19 @@ Backend-first scaffold for the Thumos POC described in [VISION.md](VISION.md), n
 ```bash
 pnpm install
 pnpm db:migrate
+pnpm db:migrate:dev
 pnpm test
 pnpm lint
 pnpm verify:live
 pnpm ios:generate
 pnpm ios:list
 pnpm workers:dev
-pnpm workers:deploy
+./deploy.sh
 ```
 
 ## Deployment note
 
-The production API is deployed with Cloudflare Workers plus a Cloudflare Queue for background jobs.
+The API is deployed with Cloudflare Workers plus a Cloudflare Queue for background jobs.
 
 Current server flow:
 
@@ -35,7 +36,7 @@ Current server flow:
 - `sync-messages` — fetch the full canonical transcript
 - `soul-converse` — unified SSE conversation endpoint for both `mode: "opening"` and `mode: "reply"`
 - `get-soul-file` — returns the current visible soul file and enqueues async synthesis when needed
-- background queue — runs reflection snapshots every 10 messages and dashboard-v2 soul-file synthesis after 3+ user messages
+- background queue — runs reflection snapshots every 5 messages and dashboard-v2 soul-file synthesis after 3+ user messages
 
 Dashboard-v2 visible fields:
 
@@ -59,7 +60,7 @@ Dashboard-v2 hidden fields:
 - `moralFoundations`
 - `meaningOrientation`
 
-Required worker secrets:
+Required Worker runtime secrets:
 
 - `DATABASE_URL`
 - `ANTHROPIC_API_KEY`
@@ -71,19 +72,9 @@ Optional worker secrets:
 - `DEFAULT_MODEL_PROFILE_ID` to choose the default profile for newly created users (`frontier_v1` by default)
 - `XAI_TOKEN` for opening-mode current-events context
 
-Deployment also requires Wrangler auth, typically via `CLOUDFLARE_API_TOKEN`.
+See [DEPLOY.md](DEPLOY.md) for the dev/prod split, root-owned prod secrets, the `workers.dev` dev URL, and the exact deploy commands.
 
-Create the queue once before the first deploy, either in Cloudflare or with Wrangler:
-
-```bash
-wrangler queues create thumos-soul-synthesis
-```
-
-Apply Neon schema changes before deploying backend changes that touch persistence:
-
-```bash
-pnpm db:migrate
-```
+After the prod secrets file is in place, keep the repo-local `.env` dev-only.
 
 Optional production smoke test:
 

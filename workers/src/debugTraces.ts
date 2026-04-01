@@ -37,10 +37,20 @@ export interface ClaudeDebugTraceInput {
   meta?: Record<string, Json>;
 }
 
+export function debugTracesEnabled(env: { ENABLE_DEBUG_TRACES?: string }): boolean {
+  const value = env.ENABLE_DEBUG_TRACES?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
+}
+
 export async function recordClaudeDebugTrace(
   sql: NeonSQL,
+  env: { ENABLE_DEBUG_TRACES?: string },
   trace: ClaudeDebugTraceInput
 ): Promise<void> {
+  if (!debugTracesEnabled(env)) {
+    return;
+  }
+
   await sql`
     INSERT INTO claude_debug_traces (
       user_id,

@@ -1,10 +1,8 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { readBearerToken, hashSessionToken, issueSessionToken } from "../auth.ts";
+import { issueSessionToken } from "../auth.ts";
 import {
-  getActiveSessionByTokenHash,
-  touchDeviceSession,
   ensureUser,
   createDeviceSession,
   getUserModelProfileId
@@ -17,6 +15,7 @@ import {
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
 import { defaultModelProfileIdFromEnv } from "../modelProfiles.ts";
+import { requireDeviceSession } from "../requestAuth.ts";
 import { z } from "zod";
 
 const bootstrapSoulRequestSchema = z.object({
@@ -27,16 +26,11 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
   const body = bootstrapSoulRequestSchema.parse(payload);
 
   // Try existing session first
-  const bearerToken = readBearerToken(request);
   let userId: string | null = null;
+  const auth = await requireDeviceSession(sql, request);
 
-  if (bearerToken) {
-    const tokenHash = await hashSessionToken(bearerToken);
-    const session = await getActiveSessionByTokenHash(sql, tokenHash);
-    if (session && new Date(session.expires_at) > new Date()) {
-      await touchDeviceSession(sql, session.id);
-      userId = session.user_id;
-    }
+  if (auth.ok) {
+    userId = auth.session.user_id;
   }
 
   // No valid session — create user + new session

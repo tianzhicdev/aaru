@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type, x-thumos-session",
+  "Access-Control-Allow-Headers": "content-type, x-thumos-debug-token, x-thumos-session",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 

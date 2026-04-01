@@ -58,12 +58,12 @@ export default {
 
       case "get-debug-info":
         return withErrorHandling(request, (payload, req) =>
-          handleGetDebugInfo(sql, payload, req)
+          handleGetDebugInfo(sql, env, payload, req)
         );
 
       case "debug-dump":
         return withErrorHandling(request, (payload, req) =>
-          handleDebugDump(sql, payload, req)
+          handleDebugDump(sql, env, payload, req)
         );
 
       default:

@@ -7,12 +7,12 @@ vi.mock("../../workers/src/db.ts", () => ({
 }));
 
 vi.mock("../../workers/src/auth.ts", () => ({
-  readBearerToken: vi.fn(),
+  readSessionToken: vi.fn(),
   hashSessionToken: vi.fn()
 }));
 
 import { handleDeleteAccount } from "../../workers/src/handlers/delete-account.ts";
-import { readBearerToken, hashSessionToken } from "../../workers/src/auth.ts";
+import { readSessionToken, hashSessionToken } from "../../workers/src/auth.ts";
 import { getActiveSessionByTokenHash, deleteUser } from "../../workers/src/db.ts";
 
 const mockSQL = vi.fn();
@@ -40,7 +40,7 @@ describe("handleDeleteAccount", () => {
   });
 
   it("returns 401 without bearer token", async () => {
-    vi.mocked(readBearerToken).mockReturnValue(null);
+    vi.mocked(readSessionToken).mockReturnValue(null);
 
     const request = makeRequest();
     const response = await handleDeleteAccount(mockSQL, {}, request);
@@ -50,7 +50,7 @@ describe("handleDeleteAccount", () => {
   });
 
   it("returns 401 for expired session", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("expired-token");
+    vi.mocked(readSessionToken).mockReturnValue("expired-token");
     vi.mocked(hashSessionToken).mockResolvedValue("expired-hash");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue({
       ...mockDeviceSession,
@@ -65,7 +65,7 @@ describe("handleDeleteAccount", () => {
   });
 
   it("deletes user and returns success", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(deleteUser).mockResolvedValue(undefined);

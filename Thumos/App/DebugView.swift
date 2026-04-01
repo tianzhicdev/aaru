@@ -5,6 +5,10 @@ struct DebugView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var deviceIDInput = ""
+    @State private var selectedEnvironment = BackendEnvironmentKind.dev
+    @State private var customBaseURLInput = ""
+    @State private var debugTokenInput = ""
+    @State private var backendStatusMessage: String?
 
     var body: some View {
         ZStack {
@@ -16,6 +20,7 @@ struct DebugView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
+                        backendSection
                         identitySection
                         steeringSection
                         reflectionNoteSection
@@ -30,7 +35,10 @@ struct DebugView: View {
         }
         .preferredColorScheme(.dark)
         .task {
-            await model.fetchDebugInfo()
+            syncBackendFormFromModel()
+            if canFetchDebugInfo {
+                await model.fetchDebugInfo()
+            }
         }
     }
 
@@ -54,7 +62,11 @@ struct DebugView: View {
                 ProgressView().scaleEffect(0.7).tint(Theme.accentBright)
             } else {
                 Button {
-                    Task { await model.fetchDebugInfo() }
+                    Task {
+                        if canFetchDebugInfo {
+                            await model.fetchDebugInfo()
+                        }
+                    }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 14))
@@ -66,11 +78,97 @@ struct DebugView: View {
         .frame(height: 52)
     }
 
+    // MARK: - Backend
+
+    private var canFetchDebugInfo: Bool {
+        !debugTokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var backendSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Backend")
+
+            Picker("Endpoint", selection: $selectedEnvironment) {
+                ForEach(BackendEnvironmentKind.allCases) { environment in
+                    Text(environment.title).tag(environment)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(Theme.textPrimary)
+
+            if selectedEnvironment == .custom {
+                TextField("Custom base URL", text: $customBaseURLInput)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            SecureField("Debug token", text: $debugTokenInput)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(Theme.sans(13))
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            debugRow("Current URL", model.backendConfiguration.baseURLString.isEmpty ? "—" : model.backendConfiguration.baseURLString)
+            debugRow("Namespace", model.backendConfiguration.storageNamespace)
+
+            if let backendStatusMessage {
+                Text(backendStatusMessage)
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+
+            Button {
+                Task {
+                    if selectedEnvironment == .custom,
+                       customBaseURLInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        backendStatusMessage = "Enter a custom base URL first."
+                        return
+                    }
+
+                    backendStatusMessage = "Applying backend..."
+                    await model.updateDebugBackend(
+                        environment: selectedEnvironment,
+                        customBaseURLString: customBaseURLInput,
+                        debugApiToken: debugTokenInput
+                    )
+                    syncBackendFormFromModel()
+                    if selectedEnvironment == .custom, model.backendConfiguration.functionBaseURL == nil {
+                        backendStatusMessage = "Custom base URL is invalid."
+                        return
+                    }
+                    backendStatusMessage = "Using \(model.backendConfiguration.baseURLString)"
+                    if canFetchDebugInfo {
+                        await model.fetchDebugInfo()
+                    }
+                }
+            } label: {
+                Text("Apply Backend")
+                    .font(Theme.sans(13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Theme.accentBright)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
     // MARK: - Identity
 
     private var identitySection: some View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Identity")
+            debugRow("Environment", model.backendConfiguration.environment.rawValue)
             debugRow("User ID", model.debugInfo?.userId ?? "—")
             debugRow("Device ID", model.debugInfo?.deviceId ?? model.deviceID)
             debugRow("Session Token", model.backend.sessionToken != nil ? "active" : "none")
@@ -370,6 +468,12 @@ struct DebugView: View {
             Text("Live Topics:").font(Theme.sans(11)).foregroundStyle(Theme.textTertiary).padding(.leading, 8)
             ForEach(map.currentlyLiveTopics, id: \.self) { bulletText($0) }
         }
+    }
+
+    private func syncBackendFormFromModel() {
+        selectedEnvironment = model.backendConfiguration.environment
+        customBaseURLInput = model.backendConfiguration.customBaseURLString ?? ""
+        debugTokenInput = model.backendConfiguration.debugApiToken ?? ""
     }
 }
 #endif

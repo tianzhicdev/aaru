@@ -15,7 +15,7 @@ export interface LlmInvocationContext {
 }
 
 function getFireworksApiKey(env: Env): string {
-  const apiKey = env.FIREWORKS_API_KEY ?? env.FIREWORKS_API;
+  const apiKey = env.FIREWORKS_API_KEY;
   if (!apiKey) {
     throw new Error("Missing Fireworks API key for value_v1 model profile");
   }

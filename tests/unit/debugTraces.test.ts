@@ -15,7 +15,7 @@ describe("claude debug traces", () => {
   it("records a trace and prunes older rows for the same kind", async () => {
     mockSQL.mockResolvedValue([]);
 
-    await recordClaudeDebugTrace(mockSQL, {
+    await recordClaudeDebugTrace(mockSQL, { ENABLE_DEBUG_TRACES: "true" }, {
       userId: "user-1",
       traceKind: "conversation",
       model: "claude-opus-4-20250514",
@@ -26,6 +26,19 @@ describe("claude debug traces", () => {
     });
 
     expect(mockSQL).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips writes when debug traces are disabled", async () => {
+    await recordClaudeDebugTrace(mockSQL, {}, {
+      userId: "user-1",
+      traceKind: "conversation",
+      model: "claude-opus-4-20250514",
+      systemPrompt: "system prompt",
+      inputMessages: [{ role: "user", content: "hello" }],
+      rawResponse: "world"
+    });
+
+    expect(mockSQL).not.toHaveBeenCalled();
   });
 
   it("returns the latest stored trace for a kind", async () => {

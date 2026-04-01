@@ -13,7 +13,7 @@ Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective
 | iOS Client | SwiftUI + Combine, iOS 17+, Swift 5.10 |
 | Backend | Cloudflare Workers (V8), Neon Postgres |
 | Domain Logic | TypeScript (src/domain/), Zod validation |
-| LLM | Claude Opus 4 (conversation + assessment + visible narrative), Haiku 4.5 (reflection snapshots + hidden clinical profile), xAI Grok 4 (web search for current events) |
+| LLM | Model-profile based routing: Anthropic for `frontier_v1`, Fireworks Anthropic-compatible DeepSeek for `value_v1`, optional xAI Grok web search for opening context |
 | Tests | Vitest (TS), XCTest (Swift) |
 | Package Manager | pnpm (TS), XcodeGen + SPM (iOS) |
 
@@ -32,7 +32,7 @@ npx tsc -p tsconfig.json --noEmit
 
 ### iOS unit tests (requires macOS + Xcode + simulator)
 ```bash
-xcodebuild test -scheme Thumos \
+xcodebuild test -project Thumos.xcodeproj -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -resultBundlePath ./TestResults \
   | xcpretty
@@ -40,7 +40,7 @@ xcodebuild test -scheme Thumos \
 
 ### iOS build
 ```bash
-xcodebuild build -scheme Thumos \
+xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -derivedDataPath ./DerivedData \
   | xcpretty
@@ -57,11 +57,14 @@ xcodebuild build -scheme Thumos \
 
 ### Cloudflare Workers (workers/src/)
 - `workers/src/index.ts` — Raw fetch() router
-- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET, XAI_TOKEN)
+- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET, optional FIREWORKS_API_KEY / DEFAULT_MODEL_PROFILE_ID / XAI_TOKEN)
 - `workers/src/xai.ts` — xAI Grok web search client for current events in opening mode
 - `workers/src/db.ts` — Neon serverless driver + user/session CRUD
 - `workers/src/auth.ts` — HMAC SHA-256 session tokens
+- `workers/src/modelProfiles.ts` — Hardcoded model profiles and per-task routing
+- `workers/src/llm.ts` — Provider router
 - `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
+- `workers/src/fireworks.ts` — Fireworks Anthropic-compatible wrapper
 - `workers/src/soulApp.ts` — Soul message CRUD + reflection/synthesis logic
 - `workers/src/backgroundJobsQueue.ts` — Queue producer/consumer helpers
 - `workers/src/debugTraces.ts` — Last-3 Claude trace persistence per user/kind
@@ -119,7 +122,7 @@ A task is complete when ALL of the following are true:
 2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
-5. If iOS code was changed: `xcodebuild build` succeeds (when available)
+5. If iOS code was changed: `xcodebuild build -project Thumos.xcodeproj` succeeds (when available)
 
 ## Known Constraints & Gotchas
 - **No API keys in CI/test** — LLM-dependent code must remain unit-testable without real API calls. The conversation path keeps a fallback; background jobs fail closed.
@@ -131,8 +134,10 @@ A task is complete when ALL of the following are true:
 - **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
 - **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow. Opening mode can fetch current events via xAI web search (Grok 4) for topics from openThreads + recurringThemes, injected as optional "CURRENT CONTEXT" in the system prompt.
 - **xAI integration** — Optional (`XAI_TOKEN` env). Uses `grok-4-fast-non-reasoning` with `web_search` tool. Graceful degradation: returns empty on any failure. Only fires in opening mode when topics exist.
-- **Reflection snapshots** — Reflection notes are async snapshots generated from all persisted messages every 10 total messages and stored in `reflection_snapshots`.
+- **Reflection snapshots** — Reflection notes are async snapshots generated from all persisted messages every 5 total messages and stored in `reflection_snapshots`.
 - **Conversation steering** — Live conversation can include the latest ready reflection snapshot as advisory context, but raw messages remain authoritative.
+- **Debug routes** — `get-debug-info` and `debug-dump` require both the normal session token and `x-thumos-debug-token`.
+- **Debug traces** — Raw prompt/response traces are only written when `ENABLE_DEBUG_TRACES=true`.
 - **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
 
 ## Verify (standard process — run after every change)
@@ -144,14 +149,15 @@ A task is complete when ALL of the following are true:
 
 ## Deployment
 ```bash
-cd workers && wrangler deploy
-wrangler secret put DATABASE_URL
-wrangler secret put ANTHROPIC_API_KEY
-wrangler secret put THUMOS_SESSION_SECRET
-wrangler secret put XAI_TOKEN
+./deploy.sh
+sudo ./deploy.sh --prod --secrets /Users/biubiu/.secrets/prod.env
 ```
 
-Wrangler deploys require Cloudflare auth, typically via `CLOUDFLARE_API_TOKEN`.
+`deploy.sh` is the source of truth for deploys:
+- default target is `dev`
+- production requires root plus a root-owned secrets file
+- dev uses `workers.dev`
+- production secrets stay out of repo-local `.env`
 
 Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, delete-account, get-debug-info, debug-dump
 

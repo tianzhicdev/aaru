@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published var hasAgreedToAI: Bool
 
     // Soul Mirror state
+    @Published var backendConfiguration: BackendConfiguration
     @Published var visibleSoulFile: VisibleSoulFile = .empty
     @Published var hasMessages = false
     @Published var soulMessages: [SoulMessage] = []
@@ -26,7 +27,7 @@ final class AppModel: ObservableObject {
     private var isBootstrapping = false
     private let iso8601Formatter = ISO8601DateFormatter()
     private var hasCompletedFirstSession: Bool {
-        UserDefaults.standard.bool(forKey: "has_completed_first_session")
+        UserDefaults.standard.bool(forKey: storageKey("has_completed_first_session"))
     }
 
     let backend: BackendClient
@@ -42,7 +43,7 @@ final class AppModel: ObservableObject {
             if let override = debugDeviceIDOverride, !override.isEmpty {
                 deviceID = override
             } else {
-                deviceID = DeviceIdentity.current()
+                deviceID = DeviceIdentity.current(namespace: backendConfiguration.storageNamespace)
             }
         }
     }
@@ -50,19 +51,24 @@ final class AppModel: ObservableObject {
 
     init(
         backend: BackendClient = BackendClient(),
-        deviceID: String = DeviceIdentity.current(),
+        deviceID: String? = nil,
         autoBootstrap: Bool = true
     ) {
         self.backend = backend
-        self.deviceID = deviceID
+        self.backendConfiguration = backend.configuration
+        self.deviceID = deviceID ?? DeviceIdentity.current(namespace: backend.configuration.storageNamespace)
         self.hasAgreedToAI = UserDefaults.standard.bool(forKey: "ai_consent_agreed")
-        self.backend.sessionToken = SessionIdentity.current()
+        self.backend.sessionToken = SessionIdentity.current(namespace: backend.configuration.storageNamespace)
 
         if autoBootstrap && hasAgreedToAI {
             Task {
                 await bootstrap()
             }
         }
+    }
+
+    private func storageKey(_ suffix: String) -> String {
+        "\(backendConfiguration.storageNamespace).\(suffix)"
     }
 
     func bootstrap() async {
@@ -116,14 +122,15 @@ final class AppModel: ObservableObject {
         }
 
         // Always clear local state
-        DeviceIdentity.clear()
-        SessionIdentity.clear()
+        DeviceIdentity.clear(namespace: backendConfiguration.storageNamespace)
+        SessionIdentity.clear(namespace: backendConfiguration.storageNamespace)
         backend.sessionToken = nil
 
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: "ai_consent_agreed")
-        defaults.removeObject(forKey: "cached_visible_soul_file")
-        defaults.removeObject(forKey: "cached_soul_messages")
+        defaults.removeObject(forKey: storageKey("cached_visible_soul_file"))
+        defaults.removeObject(forKey: storageKey("cached_soul_messages"))
+        defaults.removeObject(forKey: storageKey("has_completed_first_session"))
 
         // Reset in-memory state
         hasAgreedToAI = false
@@ -144,7 +151,7 @@ final class AppModel: ObservableObject {
     /// Mark first session as completed (called when synthesis succeeds).
     func markFirstSessionCompleted() {
         if !hasCompletedFirstSession {
-            UserDefaults.standard.set(true, forKey: "has_completed_first_session")
+            UserDefaults.standard.set(true, forKey: storageKey("has_completed_first_session"))
         }
     }
 
@@ -184,7 +191,7 @@ final class AppModel: ObservableObject {
             userID = response.userId
             if let token = response.token {
                 backend.sessionToken = token
-                SessionIdentity.save(token)
+                SessionIdentity.save(token, namespace: backendConfiguration.storageNamespace)
             }
             visibleSoulFile = response.visibleSoulFile ?? .empty
             hasMessages = response.hasMessages ?? false
@@ -359,12 +366,12 @@ final class AppModel: ObservableObject {
 
     private func cacheVisibleSoulFile(_ file: VisibleSoulFile) {
         if let data = try? JSONEncoder().encode(file) {
-            UserDefaults.standard.set(data, forKey: "cached_visible_soul_file")
+            UserDefaults.standard.set(data, forKey: storageKey("cached_visible_soul_file"))
         }
     }
 
     private func loadCachedVisibleSoulFile() -> VisibleSoulFile? {
-        guard let data = UserDefaults.standard.data(forKey: "cached_visible_soul_file") else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: storageKey("cached_visible_soul_file")) else { return nil }
         return try? JSONDecoder().decode(VisibleSoulFile.self, from: data)
     }
 
@@ -378,14 +385,14 @@ final class AppModel: ObservableObject {
                     content: $0.content,
                     createdAt: $0.createdAt ?? iso8601Formatter.string(from: Date())
                 )
-            }
+        }
         if let data = try? JSONEncoder().encode(payloads) {
-            UserDefaults.standard.set(data, forKey: "cached_soul_messages")
+            UserDefaults.standard.set(data, forKey: storageKey("cached_soul_messages"))
         }
     }
 
     private func loadCachedSoulMessages() -> [SoulMessage]? {
-        guard let data = UserDefaults.standard.data(forKey: "cached_soul_messages") else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: storageKey("cached_soul_messages")) else { return nil }
         guard let payloads = try? JSONDecoder().decode([SoulMessagePayload].self, from: data) else { return nil }
         return payloads.map {
             SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
@@ -431,6 +438,24 @@ final class AppModel: ObservableObject {
         await beginSoulConversation()
     }
 
+    private func resetLocalConversationState() {
+        backend.sessionToken = SessionIdentity.current(namespace: backendConfiguration.storageNamespace)
+        #if DEBUG
+        deviceID = debugDeviceIDOverride ?? DeviceIdentity.current(namespace: backendConfiguration.storageNamespace)
+        #else
+        deviceID = DeviceIdentity.current(namespace: backendConfiguration.storageNamespace)
+        #endif
+        userID = nil
+        visibleSoulFile = .empty
+        hasMessages = false
+        soulMessages = []
+        soulStreamingText = ""
+        isSoulStreaming = false
+        isSoulFileUpdating = false
+        lastSoulFileSynthesisRequest = nil
+        errorMessage = nil
+    }
+
     // MARK: - Debug
 
     #if DEBUG
@@ -444,14 +469,33 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func updateDebugBackend(
+        environment: BackendEnvironmentKind,
+        customBaseURLString: String?,
+        debugApiToken: String?
+    ) async {
+        backendConfiguration = BackendSettingsStore.save(
+            environment: environment,
+            customBaseURLString: customBaseURLString,
+            debugApiToken: debugApiToken
+        )
+        backend.updateConfiguration(backendConfiguration)
+        debugDeviceIDOverride = nil
+        debugInfo = nil
+        resetLocalConversationState()
+
+        guard hasAgreedToAI else { return }
+        await bootstrap()
+    }
+
     func impersonateDevice(_ newDeviceID: String) async {
         debugDeviceIDOverride = newDeviceID.isEmpty ? nil : newDeviceID
         // Clear current state and re-bootstrap with new device ID
+        debugInfo = nil
         backend.sessionToken = nil
         soulMessages = []
         visibleSoulFile = .empty
         hasMessages = false
-        debugInfo = nil
         await bootstrap()
     }
     #endif

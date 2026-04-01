@@ -16,6 +16,13 @@ interface AnthropicCompatibleOptions {
   temperature?: number;
 }
 
+function extractSseData(line: string): string | null {
+  if (!line.startsWith("data:")) {
+    return null;
+  }
+  return line.slice(5).trim();
+}
+
 export async function* streamAnthropicCompatible(
   systemPrompt: string,
   messages: AnthropicCompatibleMessage[],
@@ -57,8 +64,8 @@ export async function* streamAnthropicCompatible(
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const data = line.slice(6).trim();
+        const data = extractSseData(line);
+        if (data === null) continue;
         if (data === "[DONE]") return;
 
         try {

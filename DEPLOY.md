@@ -20,6 +20,8 @@ ANTHROPIC_API_KEY=
 FIREWORKS_API_KEY=
 XAI_TOKEN=
 DEFAULT_MODEL_PROFILE_ID=frontier_v1
+DEBUG_API_TOKEN_DEV=
+ENABLE_DEBUG_TRACES_DEV=true
 ```
 
 Deploy dev:
@@ -51,6 +53,8 @@ ANTHROPIC_API_KEY=
 FIREWORKS_API_KEY=
 XAI_TOKEN=
 DEFAULT_MODEL_PROFILE_ID=frontier_v1
+DEBUG_API_TOKEN=
+ENABLE_DEBUG_TRACES=false
 ```
 
 Recommended file permissions:
@@ -95,3 +99,5 @@ curl -sS -X POST https://api.trythumos.com/bootstrap-soul \
 - The deploy script uses 24-hour queue retention so it works on Cloudflare Workers Free accounts.
 - `--prod` is blocked unless the script is run as root.
 - Cloudflare Workers environments create separate Workers. `dev` deploys as `thumos-api-dev`, while production deploys as `thumos-api`.
+- Debug routes require both the normal session token and `x-thumos-debug-token`.
+- Raw prompt/response traces are only stored when `ENABLE_DEBUG_TRACES=true`.

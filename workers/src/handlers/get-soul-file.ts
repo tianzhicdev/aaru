@@ -1,8 +1,6 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash } from "../db.ts";
 import {
   getVisibleSoulFile,
   checkSynthesisNeeded,
@@ -11,6 +9,7 @@ import {
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { enqueueSoulSynthesis } from "../backgroundJobsQueue.ts";
+import { requireDeviceSession } from "../requestAuth.ts";
 
 export async function handleGetSoulFile(
   sql: NeonSQL,
@@ -18,18 +17,12 @@ export async function handleGetSoulFile(
   _payload: unknown,
   request: Request
 ) {
-  const bearerToken = readBearerToken(request);
-  if (!bearerToken) {
-    return jsonResponse(401, { code: 401, message: "Missing device session" });
+  const auth = await requireDeviceSession(sql, request, { touch: false });
+  if (!auth.ok) {
+    return auth.error;
   }
 
-  const tokenHash = await hashSessionToken(bearerToken);
-  const session = await getActiveSessionByTokenHash(sql, tokenHash);
-  if (!session || new Date(session.expires_at) <= new Date()) {
-    return jsonResponse(401, { code: 401, message: "Invalid device session" });
-  }
-
-  const userId = session.user_id;
+  const userId = auth.session.user_id;
   const visibleSoulFile = await getVisibleSoulFile(sql, userId);
   const { needed, pending } = await checkSynthesisNeeded(sql, userId);
 

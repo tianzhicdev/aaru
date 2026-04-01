@@ -59,9 +59,14 @@ enum SecureStore {
 
 enum DeviceIdentity {
     private static let service = "com.trythumos.app.device"
-    private static let account = "primary"
+    private static let baseAccount = "primary"
 
-    static func current() -> String {
+    private static func account(for namespace: String) -> String {
+        "\(baseAccount).\(namespace)"
+    }
+
+    static func current(namespace: String) -> String {
+        let account = account(for: namespace)
         if let existing = SecureStore.read(service: service, account: account) {
             return existing
         }
@@ -70,24 +75,28 @@ enum DeviceIdentity {
         return created
     }
 
-    static func clear() {
-        SecureStore.delete(service: service, account: account)
+    static func clear(namespace: String) {
+        SecureStore.delete(service: service, account: account(for: namespace))
     }
 }
 
 enum SessionIdentity {
     private static let service = "com.trythumos.app.session"
-    private static let account = "primary"
+    private static let baseAccount = "primary"
 
-    static func current() -> String? {
-        SecureStore.read(service: service, account: account)
+    private static func account(for namespace: String) -> String {
+        "\(baseAccount).\(namespace)"
     }
 
-    static func save(_ token: String) {
-        SecureStore.write(token, service: service, account: account)
+    static func current(namespace: String) -> String? {
+        SecureStore.read(service: service, account: account(for: namespace))
     }
 
-    static func clear() {
-        SecureStore.delete(service: service, account: account)
+    static func save(_ token: String, namespace: String) {
+        SecureStore.write(token, service: service, account: account(for: namespace))
+    }
+
+    static func clear(namespace: String) {
+        SecureStore.delete(service: service, account: account(for: namespace))
     }
 }

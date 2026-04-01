@@ -1,14 +1,14 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
+import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash } from "../db.ts";
-import { getLatestClaudeDebugTrace } from "../debugTraces.ts";
+import { debugTracesEnabled, getLatestClaudeDebugTrace } from "../debugTraces.ts";
 import { deriveConversationSteering } from "../../../src/domain/soul.ts";
 import {
   hiddenSoulFileSchema,
   reflectionNoteSchema,
   type HiddenSoulFile
 } from "../../../src/domain/schemas.ts";
+import { requireDebugApiToken, requireDeviceSession } from "../requestAuth.ts";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
@@ -49,19 +49,24 @@ function toHiddenSoulFile(row: HiddenSoulFileDumpRow | null): HiddenSoulFile | n
   return parsed.success ? parsed.data : null;
 }
 
-export async function handleDebugDump(sql: NeonSQL, _payload: unknown, request: Request) {
-  const bearerToken = readBearerToken(request);
-  if (!bearerToken) {
-    return jsonResponse(401, { code: 401, message: "Missing device session" });
+export async function handleDebugDump(
+  sql: NeonSQL,
+  env: Env,
+  _payload: unknown,
+  request: Request
+) {
+  const debugAccess = requireDebugApiToken(request, env);
+  if (debugAccess) {
+    return debugAccess.error;
   }
 
-  const tokenHash = await hashSessionToken(bearerToken);
-  const session = await getActiveSessionByTokenHash(sql, tokenHash);
-  if (!session || new Date(session.expires_at) <= new Date()) {
-    return jsonResponse(401, { code: 401, message: "Invalid device session" });
+  const auth = await requireDeviceSession(sql, request, { touch: false });
+  if (!auth.ok) {
+    return auth.error;
   }
 
-  const userId = session.user_id;
+  const userId = auth.session.user_id;
+  const tracesAllowed = debugTracesEnabled(env);
 
   const [
     userRows,
@@ -103,9 +108,9 @@ export async function handleDebugDump(sql: NeonSQL, _payload: unknown, request: 
       WHERE user_id = ${userId}
       LIMIT 1
     `,
-    getLatestClaudeDebugTrace(sql, userId, "conversation"),
-    getLatestClaudeDebugTrace(sql, userId, "synthesis"),
-    getLatestClaudeDebugTrace(sql, userId, "reflection")
+    tracesAllowed ? getLatestClaudeDebugTrace(sql, userId, "conversation") : Promise.resolve(null),
+    tracesAllowed ? getLatestClaudeDebugTrace(sql, userId, "synthesis") : Promise.resolve(null),
+    tracesAllowed ? getLatestClaudeDebugTrace(sql, userId, "reflection") : Promise.resolve(null)
   ]);
 
   const userRow = (userRows[0] as Record<string, unknown>) ?? null;

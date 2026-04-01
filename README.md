@@ -68,9 +68,11 @@ Required Worker runtime secrets:
 
 Optional worker secrets:
 
-- `FIREWORKS_API_KEY` or `FIREWORKS_API` for the `value_v1` open-model profile
+- `FIREWORKS_API_KEY` for the `value_v1` open-model profile
 - `DEFAULT_MODEL_PROFILE_ID` to choose the default profile for newly created users (`frontier_v1` by default)
 - `XAI_TOKEN` for opening-mode current-events context
+- `DEBUG_API_TOKEN` to unlock the debug endpoints
+- `ENABLE_DEBUG_TRACES=true` to persist raw LLM traces for debug inspection
 
 See [DEPLOY.md](DEPLOY.md) for the dev/prod split, root-owned prod secrets, the `workers.dev` dev URL, and the exact deploy commands.
 

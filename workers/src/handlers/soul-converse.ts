@@ -1,7 +1,6 @@
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash, getUserModelProfileId, touchDeviceSession } from "../db.ts";
+import { getUserModelProfileId } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
@@ -27,6 +26,7 @@ import { getTaskConfig } from "../modelProfiles.ts";
 import { fetchInterestNews } from "../xai.ts";
 import type { XaiNewsItem } from "../../../src/domain/soul.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
+import { requireDeviceSession } from "../requestAuth.ts";
 import { z } from "zod";
 
 const soulConverseRequestSchema = z.discriminatedUnion("mode", [
@@ -109,19 +109,12 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     return new Response("ok", { headers: sseHeaders() });
   }
 
-  const bearerToken = readBearerToken(request);
-  if (!bearerToken) {
-    return jsonResp(401, { code: 401, message: "Missing device session" });
+  const auth = await requireDeviceSession(sql, request);
+  if (!auth.ok) {
+    return jsonResp(auth.error.status, auth.error.body);
   }
 
-  const tokenHash = await hashSessionToken(bearerToken);
-  const deviceSession = await getActiveSessionByTokenHash(sql, tokenHash);
-  if (!deviceSession || new Date(deviceSession.expires_at) <= new Date()) {
-    return jsonResp(401, { code: 401, message: "Invalid device session" });
-  }
-
-  await touchDeviceSession(sql, deviceSession.id);
-  const userId = deviceSession.user_id;
+  const userId = auth.session.user_id;
   const profileId = await getUserModelProfileId(sql, userId);
   const conversationConfig = getTaskConfig(profileId, "conversation");
 
@@ -267,7 +260,7 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
 
         const postStreamTasks = await Promise.allSettled([
           maybeQueueReflectionSnapshot(sql, env, userId),
-          recordClaudeDebugTrace(sql, {
+          recordClaudeDebugTrace(sql, env, {
             userId,
             traceKind: "conversation",
             model: conversationConfig.model,

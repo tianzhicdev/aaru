@@ -621,7 +621,7 @@ export async function runReflectionSnapshot(
     );
 
     const parsed = parseReflectionNote(rawResponse);
-    await recordClaudeDebugTrace(sql, {
+    await recordClaudeDebugTrace(sql, env, {
       userId,
       traceKind: "reflection",
       model: reflectionModel,
@@ -647,7 +647,7 @@ export async function runReflectionSnapshot(
     await upsertReflectionSnapshot(sql, userId, parsed, messageCount, lastMessageCreatedAt);
     return parsed;
   } catch (error) {
-    await recordClaudeDebugTrace(sql, {
+    await recordClaudeDebugTrace(sql, env, {
       userId,
       traceKind: "reflection",
       model: reflectionModel,
@@ -743,7 +743,7 @@ export async function runSoulSynthesis(
     rawResponse: string | null,
     meta: Record<string, Json>
   ) => {
-    await recordClaudeDebugTrace(sql, {
+    await recordClaudeDebugTrace(sql, env, {
       userId,
       traceKind: "synthesis",
       model: [assessmentModel, visibleModel, hiddenModel].join(" | "),

@@ -39,21 +39,11 @@ export async function issueSessionToken(userId: string, deviceId: string, secret
   };
 }
 
-export function readBearerToken(request: Request) {
-  const sessionHeader = request.headers.get("x-thumos-session") ?? request.headers.get("X-Thumos-Session");
-  if (sessionHeader && sessionHeader.trim().length > 0) {
-    return sessionHeader.trim();
-  }
-
-  const header = request.headers.get("authorization") ?? request.headers.get("Authorization");
-  if (!header) {
+export function readSessionToken(request: Request) {
+  const sessionHeader = request.headers.get("x-thumos-session");
+  if (!sessionHeader || sessionHeader.trim().length === 0) {
     return null;
   }
 
-  const [scheme, token] = header.split(" ", 2);
-  if (scheme?.toLowerCase() !== "bearer" || !token) {
-    return null;
-  }
-
-  return token.trim();
+  return sessionHeader.trim();
 }

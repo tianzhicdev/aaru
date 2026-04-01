@@ -1,14 +1,13 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { readBearerToken, hashSessionToken } from "../auth.ts";
-import { getActiveSessionByTokenHash, touchDeviceSession } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
   markReflectionSnapshotPending
 } from "../soulApp.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
+import { requireDeviceSession } from "../requestAuth.ts";
 
 export async function handleSyncMessages(
   sql: NeonSQL,
@@ -16,19 +15,12 @@ export async function handleSyncMessages(
   _payload: unknown,
   request: Request
 ) {
-  const bearerToken = readBearerToken(request);
-  if (!bearerToken) {
-    return jsonResponse(401, { code: 401, message: "Missing device session" });
+  const auth = await requireDeviceSession(sql, request);
+  if (!auth.ok) {
+    return auth.error;
   }
 
-  const tokenHash = await hashSessionToken(bearerToken);
-  const session = await getActiveSessionByTokenHash(sql, tokenHash);
-  if (!session || new Date(session.expires_at) <= new Date()) {
-    return jsonResponse(401, { code: 401, message: "Invalid device session" });
-  }
-
-  await touchDeviceSession(sql, session.id);
-  const userId = session.user_id;
+  const userId = auth.session.user_id;
   const messages = await getAllSoulMessages(sql, userId);
   const reflectionState = await checkReflectionSnapshotNeeded(sql, userId);
 

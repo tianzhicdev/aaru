@@ -48,7 +48,7 @@ describe("llm routing", () => {
         DATABASE_URL: "mock",
         ANTHROPIC_API_KEY: "anthropic-key",
         THUMOS_SESSION_SECRET: "secret",
-        FIREWORKS_API: "fireworks-key",
+        FIREWORKS_API_KEY: "fireworks-key",
         BACKGROUND_QUEUE: { send: vi.fn() }
       },
       {

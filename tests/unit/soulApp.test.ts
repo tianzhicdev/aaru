@@ -32,6 +32,7 @@ import { callLlmText, streamLlmText } from "../../workers/src/llm.ts";
 describe("reflection snapshots", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSQL.mockReset();
   });
 
   it("returns null when no snapshot exists", async () => {
@@ -69,7 +70,7 @@ describe("reflection snapshots", () => {
     expect(note?.inferredBigFive.openness?.score).toBe(70);
   });
 
-  it("flags snapshot work when transcript crossed a new 10-message block", async () => {
+  it("flags snapshot work when transcript crossed a new reflection cadence block", async () => {
     mockSQL.mockResolvedValueOnce([{ cnt: 23, last_created_at: "2026-03-29T20:00:00Z" }]);
     mockSQL.mockResolvedValueOnce([{ status: "ready", through_message_count: 10, started_at: null }]);
 
@@ -139,6 +140,7 @@ describe("reflection snapshots", () => {
 describe("visible/hidden soul files", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSQL.mockReset();
   });
 
   it("normalizes hidden soul file timestamps and new profile fields", async () => {
@@ -209,6 +211,7 @@ describe("visible/hidden soul files", () => {
 describe("soul synthesis", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSQL.mockReset();
   });
 
   it("runs the dashboard-v2 synthesis pipeline using all messages and latest reflection snapshot", async () => {

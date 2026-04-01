@@ -140,6 +140,8 @@ if [[ "$TARGET" == "dev" ]]; then
   FIREWORKS_API_KEY_VALUE="$(pick_first FIREWORKS_API_KEY_DEV FIREWORKS_API_KEY FIREWORKS_API_DEV FIREWORKS_API || true)"
   XAI_TOKEN_VALUE="$(pick_first XAI_TOKEN_DEV XAI_TOKEN || true)"
   DEFAULT_MODEL_PROFILE_ID_VALUE="$(pick_first DEFAULT_MODEL_PROFILE_ID_DEV DEFAULT_MODEL_PROFILE_ID || true)"
+  DEBUG_API_TOKEN_VALUE="$(pick_first DEBUG_API_TOKEN_DEV DEBUG_API_TOKEN || true)"
+  ENABLE_DEBUG_TRACES_VALUE="$(pick_first ENABLE_DEBUG_TRACES_DEV ENABLE_DEBUG_TRACES || true)"
 else
   WRANGLER_ENV="production"
   QUEUE_NAME="thumos-soul-synthesis"
@@ -152,6 +154,8 @@ else
   FIREWORKS_API_KEY_VALUE="$(pick_first FIREWORKS_API_KEY FIREWORKS_API || true)"
   XAI_TOKEN_VALUE="$(pick_first XAI_TOKEN || true)"
   DEFAULT_MODEL_PROFILE_ID_VALUE="$(pick_first DEFAULT_MODEL_PROFILE_ID || true)"
+  DEBUG_API_TOKEN_VALUE="$(pick_first DEBUG_API_TOKEN || true)"
+  ENABLE_DEBUG_TRACES_VALUE="$(pick_first ENABLE_DEBUG_TRACES || true)"
 fi
 
 [[ -n "$CLOUDFLARE_API_TOKEN_VALUE" ]] || die "Missing Cloudflare API token for $TARGET"
@@ -162,6 +166,10 @@ fi
 if [[ -z "$THUMOS_SESSION_SECRET_VALUE" && "$TARGET" == "dev" ]]; then
   THUMOS_SESSION_SECRET_VALUE="$(openssl rand -hex 32)"
   echo "Generated an ephemeral dev THUMOS_SESSION_SECRET for this deploy"
+fi
+
+if [[ -z "$ENABLE_DEBUG_TRACES_VALUE" && "$TARGET" == "dev" ]]; then
+  ENABLE_DEBUG_TRACES_VALUE="true"
 fi
 
 [[ -n "$THUMOS_SESSION_SECRET_VALUE" ]] || die "Missing THUMOS_SESSION_SECRET for $TARGET"
@@ -179,6 +187,8 @@ put_secret "THUMOS_SESSION_SECRET" "$THUMOS_SESSION_SECRET_VALUE"
 put_secret "FIREWORKS_API_KEY" "$FIREWORKS_API_KEY_VALUE"
 put_secret "XAI_TOKEN" "$XAI_TOKEN_VALUE"
 put_secret "DEFAULT_MODEL_PROFILE_ID" "$DEFAULT_MODEL_PROFILE_ID_VALUE"
+put_secret "DEBUG_API_TOKEN" "$DEBUG_API_TOKEN_VALUE"
+put_secret "ENABLE_DEBUG_TRACES" "$ENABLE_DEBUG_TRACES_VALUE"
 
 echo "Deploying Worker"
 (

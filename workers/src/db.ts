@@ -74,14 +74,6 @@ export async function createDeviceSession(
   return rows[0] as DeviceSessionRow;
 }
 
-export async function revokeSessionsForDevice(sql: NeonSQL, userId: string, deviceId: string): Promise<void> {
-  await sql`
-    UPDATE device_sessions
-    SET revoked_at = NOW()
-    WHERE user_id = ${userId} AND device_id = ${deviceId} AND revoked_at IS NULL
-  `;
-}
-
 export async function getActiveSessionByTokenHash(sql: NeonSQL, tokenHash: string): Promise<DeviceSessionRow | null> {
   const rows = await sql`
     SELECT id, user_id, device_id, token_hash, expires_at, last_seen_at, revoked_at

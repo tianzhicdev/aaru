@@ -7,6 +7,7 @@ export interface Env {
   BACKGROUND_QUEUE: BackgroundQueueBinding;
   XAI_TOKEN?: string;
   FIREWORKS_API_KEY?: string;
-  FIREWORKS_API?: string;
   DEFAULT_MODEL_PROFILE_ID?: string;
+  DEBUG_API_TOKEN?: string;
+  ENABLE_DEBUG_TRACES?: string;
 }

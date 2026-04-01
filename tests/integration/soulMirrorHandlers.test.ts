@@ -44,7 +44,7 @@ vi.mock("../../workers/src/backgroundJobsQueue.ts", () => ({
 }));
 
 vi.mock("../../workers/src/auth.ts", () => ({
-  readBearerToken: vi.fn(),
+  readSessionToken: vi.fn(),
   hashSessionToken: vi.fn(),
   issueSessionToken: vi.fn()
 }));
@@ -59,7 +59,7 @@ import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
 import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts";
 import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
 import { enqueueReflectionSnapshot, enqueueSoulSynthesis } from "../../workers/src/backgroundJobsQueue.ts";
-import { readBearerToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
+import { readSessionToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
 import {
   getActiveSessionByTokenHash,
   getUserModelProfileId,
@@ -84,6 +84,8 @@ const mockEnv = {
   DATABASE_URL: "mock",
   ANTHROPIC_API_KEY: "mock",
   THUMOS_SESSION_SECRET: "mock",
+  DEBUG_API_TOKEN: "debug-token",
+  ENABLE_DEBUG_TRACES: "true",
   BACKGROUND_QUEUE: { send: vi.fn().mockResolvedValue(undefined) }
 };
 
@@ -111,7 +113,7 @@ describe("bootstrap + sync", () => {
   });
 
   it("returns bootstrap state and queues a reflection snapshot when needed", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
@@ -140,7 +142,7 @@ describe("bootstrap + sync", () => {
   });
 
   it("creates a new user/session when no bearer token exists", async () => {
-    vi.mocked(readBearerToken).mockReturnValue(null);
+    vi.mocked(readSessionToken).mockReturnValue(null);
     vi.mocked(ensureUser).mockResolvedValue({
       id: "new-user",
       device_id: "new-device",
@@ -171,7 +173,7 @@ describe("bootstrap + sync", () => {
   });
 
   it("returns canonical messages from sync-messages", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
@@ -199,7 +201,7 @@ describe("handleGetSoulFile", () => {
   });
 
   it("returns synthesis_pending true when synthesis is already running", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
@@ -211,7 +213,7 @@ describe("handleGetSoulFile", () => {
   });
 
   it("enqueues synthesis when new messages exist", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
@@ -237,7 +239,7 @@ describe("handleSoulConverse", () => {
   });
 
   it("seeds opening mode with a synthetic prompt when there is no prior conversation", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
@@ -276,7 +278,7 @@ describe("handleDebugDump", () => {
   });
 
   it("returns raw state plus latest debug traces for an authenticated user", async () => {
-    vi.mocked(readBearerToken).mockReturnValue("valid-token");
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
 
@@ -324,10 +326,30 @@ describe("handleDebugDump", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
-    const response = await handleDebugDump(mockSQL, {}, makeRequest({ "x-thumos-session": "valid-token" }));
+    const response = await handleDebugDump(
+      mockSQL,
+      mockEnv,
+      {},
+      makeRequest({
+        "x-thumos-session": "valid-token",
+        "x-thumos-debug-token": "debug-token"
+      })
+    );
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("reflection_snapshot_row");
     expect(response.body).toHaveProperty("reflection_note");
     expect(response.body).toHaveProperty("latest_conversation_trace");
+  });
+
+  it("rejects debug access without the developer token", async () => {
+    const response = await handleDebugDump(
+      mockSQL,
+      mockEnv,
+      {},
+      makeRequest({ "x-thumos-session": "valid-token" })
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.body).toHaveProperty("message", "Invalid debug token");
   });
 });

@@ -1,14 +1,6 @@
 import Foundation
 import OSLog
 
-struct BackendConfiguration {
-    var functionBaseURL: URL? = nil
-
-    static let `default` = BackendConfiguration(
-        functionBaseURL: URL(string: "https://api.trythumos.com/")
-    )
-}
-
 enum BackendError: Error, LocalizedError {
     case missingBaseURL
     case invalidResponse(statusCode: Int, message: String)
@@ -46,7 +38,7 @@ enum SoulConverseMode: String {
 
 final class BackendClient {
     private let logger = Logger(subsystem: "com.trythumos.app", category: "backend")
-    private let configuration: BackendConfiguration
+    private(set) var configuration: BackendConfiguration
     private let session: URLSession
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -59,6 +51,10 @@ final class BackendClient {
         self.configuration = configuration
         self.session = session
         decoder.dateDecodingStrategy = .iso8601
+    }
+
+    func updateConfiguration(_ configuration: BackendConfiguration) {
+        self.configuration = configuration
     }
 
     func bootstrapSoul(deviceID: String) async throws -> SoulBootstrapResponse {
@@ -186,7 +182,8 @@ final class BackendClient {
     func getDebugInfo() async throws -> DebugInfoResponse {
         return try await post(
             "get-debug-info",
-            body: EmptyBody()
+            body: EmptyBody(),
+            includeDebugToken: true
         )
     }
     #endif
@@ -198,7 +195,8 @@ final class BackendClient {
     private func post<ResponseType: Decodable, Body: Encodable>(
         _ name: String,
         body: Body,
-        retryOnServerError: Bool = false
+        retryOnServerError: Bool = false,
+        includeDebugToken: Bool = false
     ) async throws -> ResponseType {
         guard let url = endpoint(named: name) else {
             throw BackendError.missingBaseURL
@@ -210,6 +208,9 @@ final class BackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let sessionToken {
             request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+        if includeDebugToken, let debugApiToken = configuration.debugApiToken, !debugApiToken.isEmpty {
+            request.setValue(debugApiToken, forHTTPHeaderField: "x-thumos-debug-token")
         }
 
         let (data, response) = try await session.data(for: request)

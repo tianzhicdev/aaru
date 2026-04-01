@@ -11,7 +11,7 @@ We simulate realistic long-term usage: ~160 messages across 6 sessions. This tes
 - reflection snapshot generation across session boundaries
 - soul-file synthesis evolution over a long relationship
 - steering behavior as the AI accumulates knowledge about the person
-- dashboard-v2 visible + hidden field richness after extended interaction
+- visible + hidden soul-file richness after extended interaction
 
 ## How To Run
 
@@ -109,7 +109,7 @@ All evaluation is done by Claude Code reading the transcript + output files. No 
 | Personality spectrum | 5/5 visible spectrum traits populated | Count |
 | Top values | >=3 top values generated | Count |
 | Relational style | Visible relational style present and substantive | Yes/No |
-| Hidden profiles | Big Five / Schwartz / attachment / moral / meaning all present | Yes/No |
+| Hidden clinical file | Expert reflections / core drivers / honest insights present | Yes/No |
 | Reflection snapshots | Multiple reflection snapshots generated across sessions | Count |
 | Soul file versions | Soul file was re-synthesized at least 2x as conversation grew | Count |
 
@@ -151,7 +151,7 @@ Claude Code reads the full `conversation.md` and evaluates:
 - 5/5 personality spectrum traits
 - >=3 top values
 - relational style present and substantive
-- all hidden psychometric fields present
+- hidden clinical file populated
 - multiple reflection snapshots generated
 - soul file re-synthesized at least 2x
 
@@ -198,7 +198,7 @@ With ~160 messages across 6 sessions, a full run takes significantly longer than
 - ~5-15 min for synthesis polling (mid-run + final synthesis cycles)
 - Total: ~35-70 min per character
 
-Dashboard-v2 soul-file synthesis is a multi-call background pipeline. Treat synthesis as failed only when:
+Visible and hidden soul-file synthesis run as separate background jobs. Treat synthesis as failed only when:
 
 - `get-soul-file` remains `synthesis_pending: true` for >15 minutes
 - the hidden or visible file status becomes `failed`
@@ -213,7 +213,7 @@ Character Simulator (Claude Haiku 4.5)
 Thumos API (Cloudflare Workers)
   <-> Claude Opus 4 for conversation
   <-> Claude Haiku 4.5 for reflection snapshots
-  <-> Claude Opus 4 + Haiku 4.5 for dashboard-v2 synthesis pipeline
+  <-> Claude Opus 4 + Haiku 4.5 for visible/hidden synthesis jobs
 Neon Postgres
   <-> stores messages, reflection snapshots, soul files, debug traces
 ```

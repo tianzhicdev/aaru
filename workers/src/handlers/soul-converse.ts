@@ -13,8 +13,6 @@ import {
 import {
   buildSoulFallbackResponse,
   buildSoulSystemPrompt,
-  deriveConversationSteering,
-  pickLeastCoveredDomain,
   type OpeningKind,
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
@@ -139,19 +137,14 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     getAllSoulMessages(sql, userId)
   ]);
 
-  const { steering } = deriveConversationSteering(reflectionNote);
   const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
 
-  // For first_ever, randomize the domain — all are untouched, so "least covered" is arbitrary
   let preferredDomainLabel: string | null = null;
   if (openingKind === "first_ever") {
     const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
     preferredDomainLabel = DOMAIN_LABELS[randomDomain];
   } else {
-    const preferredDomain = pickLeastCoveredDomain(
-      steering?.domainCoverage ?? reflectionNote?.domainCoverage
-    );
-    preferredDomainLabel = preferredDomain ? DOMAIN_LABELS[preferredDomain] : null;
+    preferredDomainLabel = reflectionNote?.steerToTopics[0] ?? null;
   }
 
   const transcriptMessages = allMessages.map((message) => ({
@@ -180,7 +173,6 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   const context: SoulConversationContext = {
     visibleSoulFile,
     reflectionNote,
-    steering,
     messages: transcriptMessages,
     openingKind,
     xaiNews

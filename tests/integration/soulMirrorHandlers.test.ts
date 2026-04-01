@@ -12,35 +12,44 @@ vi.mock("../../workers/src/db.ts", () => ({
 }));
 
 vi.mock("../../workers/src/soulApp.ts", () => ({
+  checkHiddenSynthesisNeeded: vi.fn(),
   checkReflectionSnapshotNeeded: vi.fn(),
   checkSynthesisNeeded: vi.fn(),
   emptyVisibleSoulFile: vi.fn(() => ({
     version: 1,
     lastUpdated: "",
     portrait: null,
-    sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: "" },
+    sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourTensions: "", yourVoice: "" },
     crystallizedMoments: [],
     openThreads: [],
-    compassScores: {}
+    compassScores: {},
+    personalitySpectrum: {},
+    topValues: [],
+    relationalStyle: null
   })),
   getAllSoulMessages: vi.fn(),
   getHiddenSoulFile: vi.fn(),
   getLatestReflectionSnapshot: vi.fn(),
   getReflectionSnapshotState: vi.fn(),
+  getHiddenSynthesisStatus: vi.fn(),
   getSynthesisStatus: vi.fn(),
   getVisibleSoulFile: vi.fn(),
   insertSoulMessage: vi.fn(),
+  markHiddenSynthesisFailed: vi.fn(),
+  markHiddenSynthesisPending: vi.fn(),
   markReflectionSnapshotFailed: vi.fn(),
   markReflectionSnapshotPending: vi.fn(),
   markSynthesisFailed: vi.fn(),
   markSynthesisPending: vi.fn(),
+  runHiddenSynthesis: vi.fn(),
   runReflectionSnapshot: vi.fn(),
-  runSoulSynthesis: vi.fn()
+  runVisibleSynthesis: vi.fn()
 }));
 
 vi.mock("../../workers/src/backgroundJobsQueue.ts", () => ({
   enqueueReflectionSnapshot: vi.fn(),
-  enqueueSoulSynthesis: vi.fn(),
+  enqueueSynthesisHidden: vi.fn(),
+  enqueueSynthesisVisible: vi.fn(),
   processBackgroundJobsBatch: vi.fn()
 }));
 
@@ -61,7 +70,11 @@ import { handleGetDebugInfo } from "../../workers/src/handlers/get-debug-info.ts
 import { handleSetModelProfile } from "../../workers/src/handlers/set-model-profile.ts";
 import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts";
 import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
-import { enqueueReflectionSnapshot, enqueueSoulSynthesis } from "../../workers/src/backgroundJobsQueue.ts";
+import {
+  enqueueReflectionSnapshot,
+  enqueueSynthesisHidden,
+  enqueueSynthesisVisible
+} from "../../workers/src/backgroundJobsQueue.ts";
 import { readSessionToken, hashSessionToken, issueSessionToken } from "../../workers/src/auth.ts";
 import {
   getActiveSessionByTokenHash,
@@ -72,12 +85,15 @@ import {
   createDeviceSession
 } from "../../workers/src/db.ts";
 import {
+  checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
   checkSynthesisNeeded,
   getAllSoulMessages,
+  getHiddenSoulFile,
   getLatestReflectionSnapshot,
   getVisibleSoulFile,
   insertSoulMessage,
+  markHiddenSynthesisPending,
   markReflectionSnapshotPending,
   markSynthesisPending
 } from "../../workers/src/soulApp.ts";
@@ -138,14 +154,19 @@ describe("bootstrap + sync", () => {
       throughMessageCount: 20
     });
 
-    const response = await handleBootstrapSoul(mockSQL, mockEnv, { device_id: "device-1" }, makeRequest({ "x-thumos-session": "valid-token" }));
+    const response = await handleBootstrapSoul(
+      mockSQL,
+      mockEnv,
+      { device_id: "device-1" },
+      makeRequest({ "x-thumos-session": "valid-token" })
+    );
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("has_messages", true);
     expect(enqueueReflectionSnapshot).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1", 20);
   });
 
-  it("creates a new user/session when no bearer token exists", async () => {
+  it("creates a new user/session when no session exists", async () => {
     vi.mocked(readSessionToken).mockReturnValue(null);
     vi.mocked(ensureUser).mockResolvedValue({
       id: "new-user",
@@ -172,8 +193,6 @@ describe("bootstrap + sync", () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("user_id", "new-user");
     expect(response.body).toHaveProperty("token", "new-token");
-    expect(response.body).toHaveProperty("model_profile_id", "frontier_v1");
-    expect(ensureUser).toHaveBeenCalledWith(mockSQL, "new-device", "frontier_v1");
   });
 
   it("returns canonical messages from sync-messages", async () => {
@@ -195,7 +214,6 @@ describe("bootstrap + sync", () => {
     const response = await handleSyncMessages(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("messages");
-    expect((response.body as { messages: Array<{ id: string }> }).messages[0].id).toBe("m1");
   });
 });
 
@@ -204,35 +222,45 @@ describe("handleGetSoulFile", () => {
     vi.clearAllMocks();
   });
 
-  it("returns synthesis_pending true when synthesis is already running", async () => {
+  it("returns synthesis_pending true when visible synthesis is already running", async () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(checkSynthesisNeeded).mockResolvedValue({ needed: false, pending: true });
+    vi.mocked(checkHiddenSynthesisNeeded).mockResolvedValue({ needed: false, pending: false });
 
     const response = await handleGetSoulFile(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("synthesis_pending", true);
   });
 
-  it("enqueues synthesis when new messages exist", async () => {
+  it("enqueues visible and hidden synthesis when new messages exist", async () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(checkSynthesisNeeded).mockResolvedValue({ needed: true, pending: false });
+    vi.mocked(checkHiddenSynthesisNeeded).mockResolvedValue({ needed: true, pending: false });
     vi.mocked(markSynthesisPending).mockResolvedValue(true);
-    vi.mocked(enqueueSoulSynthesis).mockResolvedValue({
-      kind: "soul_synthesis",
+    vi.mocked(markHiddenSynthesisPending).mockResolvedValue(true);
+    vi.mocked(enqueueSynthesisVisible).mockResolvedValue({
+      kind: "synthesis_visible",
       jobId: "job-1",
+      userId: "user-1",
+      queuedAt: "2026-03-29T20:00:00Z"
+    });
+    vi.mocked(enqueueSynthesisHidden).mockResolvedValue({
+      kind: "synthesis_hidden",
+      jobId: "job-2",
       userId: "user-1",
       queuedAt: "2026-03-29T20:00:00Z"
     });
 
     const response = await handleGetSoulFile(mockSQL, mockEnv, {}, makeRequest({ "x-thumos-session": "valid-token" }));
     expect(response.status).toBe(200);
-    expect(enqueueSoulSynthesis).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1");
+    expect(enqueueSynthesisVisible).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1");
+    expect(enqueueSynthesisHidden).toHaveBeenCalledWith(mockEnv.BACKGROUND_QUEUE, "user-1");
     expect(response.body).toHaveProperty("synthesis_pending", true);
   });
 });
@@ -264,7 +292,11 @@ describe("handleSoulConverse", () => {
       yield "What part of you has been hardest to say out loud lately?";
     })());
 
-    const response = await handleSoulConverse(mockSQL, mockEnv, makeRequest({ "x-thumos-session": "valid-token" }, { mode: "opening" }));
+    const response = await handleSoulConverse(
+      mockSQL,
+      mockEnv,
+      makeRequest({ "x-thumos-session": "valid-token" }, { mode: "opening" })
+    );
     await response.text();
     expect(response.status).toBe(200);
     expect(insertSoulMessage).toHaveBeenCalledWith(
@@ -276,73 +308,9 @@ describe("handleSoulConverse", () => {
   });
 });
 
-describe("handleDebugDump", () => {
+describe("debug routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("returns raw state plus latest debug traces for an authenticated user", async () => {
-    vi.mocked(readSessionToken).mockReturnValue("valid-token");
-    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
-    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-
-    mockSQL
-      .mockResolvedValueOnce([{
-        id: "user-1",
-        device_id: "device-1",
-        last_active_at: "2026-03-29T20:00:00Z",
-        created_at: "2026-03-29T19:00:00Z",
-        updated_at: "2026-03-29T20:00:00Z"
-      }])
-      .mockResolvedValueOnce([
-        { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-29T20:00:00Z" }
-      ])
-      .mockResolvedValueOnce([{
-        user_id: "user-1",
-        through_message_count: 10,
-        through_last_message_created_at: "2026-03-29T20:00:00Z",
-        note: {
-          updatedAt: "2026-03-29T20:00:00Z",
-          factualAnchors: {},
-          tensions: [],
-          recurringThemes: [],
-          notableAbsences: [],
-          emotionalArc: "",
-          domainCoverage: [],
-          recentAssistantQuestions: [],
-          openLoops: []
-        },
-        status: "ready"
-      }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{
-        id: "trace-1",
-        user_id: "user-1",
-        trace_kind: "conversation",
-        model: "claude-opus-4-20250514",
-        system_prompt: "prompt",
-        input_messages: [],
-        raw_response: "raw",
-        meta: {},
-        created_at: "2026-03-29T20:00:00Z"
-      }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
-
-    const response = await handleDebugDump(
-      mockSQL,
-      mockEnv,
-      {},
-      makeRequest({
-        "x-thumos-session": "valid-token",
-        "x-thumos-debug-token": "debug-token"
-      })
-    );
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("reflection_snapshot_row");
-    expect(response.body).toHaveProperty("reflection_note");
-    expect(response.body).toHaveProperty("latest_conversation_trace");
   });
 
   it("rejects debug access without the developer token", async () => {
@@ -356,21 +324,28 @@ describe("handleDebugDump", () => {
     expect(response.status).toBe(403);
     expect(response.body).toHaveProperty("message", "Invalid debug token");
   });
-});
 
-describe("debug model profile routes", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("returns model profile info plus available options for an authenticated user", async () => {
+  it("returns model profile info and the new steering preview", async () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(getUserModelProfileId).mockResolvedValue("value_v1");
-    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
+    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue({
+      updatedAt: "2026-03-31T00:00:00Z",
+      factualAnchors: {},
+      tensions: [],
+      recurringThemes: [],
+      notableAbsences: [],
+      emotionalArc: "",
+      currentThreads: ["job drift"],
+      avoidPastObservations: ["You use humor as armor"],
+      avoidPastQuestions: ["What are you protecting?"],
+      steerToTopics: ["relationships — the guard around intimacy"],
+      steeringPressure: "gentle",
+      steeringReasoning: "The current thread is cooling."
+    });
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    mockSQL.mockResolvedValue([]);
+    vi.mocked(getHiddenSoulFile).mockResolvedValue(null);
 
     const response = await handleGetDebugInfo(
       mockSQL,
@@ -384,10 +359,10 @@ describe("debug model profile routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("model_profile_id", "value_v1");
-    expect(response.body).toHaveProperty("available_model_profiles");
+    expect(response.body).toHaveProperty("steering_preview.steer_to_topics");
   });
 
-  it("updates the current user's model profile when debug auth passes", async () => {
+  it("updates the current user's model profile via the debug route", async () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);

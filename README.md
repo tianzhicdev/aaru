@@ -1,12 +1,12 @@
 # Thumos
 
-Backend-first scaffold for the Thumos POC described in [VISION.md](VISION.md), now including the dashboard-v2 soul file model and queue-backed reflection/synthesis pipeline.
+Backend-first scaffold for the Thumos POC described in [VISION.md](VISION.md), now including the queue-backed reflection note pipeline, versioned soul artifacts, and model-profile based LLM routing.
 
 ## Included
 
-- TypeScript domain modules for soul mirror prompts, async reflection snapshots, and dashboard-v2 soul-file synthesis
+- TypeScript domain modules for soul mirror prompts, reflection note generation, and visible/hidden soul-file synthesis
 - Cloudflare Workers API under `workers/src`
-- Cloudflare Queue-backed background jobs for reflection snapshots and soul-file synthesis
+- Cloudflare Queue-backed background jobs for reflection snapshots plus separate visible/hidden synthesis
 - Neon schema and SQL migrations under `db/`
 - iOS dashboard-v2 soul file UI under `Thumos/App`
 - Unit and integration tests with Vitest
@@ -36,7 +36,7 @@ Current server flow:
 - `sync-messages` — fetch the full canonical transcript
 - `soul-converse` — unified SSE conversation endpoint for both `mode: "opening"` and `mode: "reply"`
 - `get-soul-file` — returns the current visible soul file and enqueues async synthesis when needed
-- background queue — runs reflection snapshots every 5 messages and dashboard-v2 soul-file synthesis after 3+ user messages
+- background queue — runs reflection snapshots every 5 total messages and separate visible/hidden synthesis after 3+ user messages
 
 Dashboard-v2 visible fields:
 
@@ -52,13 +52,15 @@ Dashboard-v2 iOS surfaces:
 - relational style card
 - collapsible narrative sections
 
-Dashboard-v2 hidden fields:
+Hidden soul file fields:
 
-- `bigFiveScores`
-- `schwartzProfile`
-- `attachmentScores`
-- `moralFoundations`
-- `meaningOrientation`
+- `expertReflections`
+- `coreDrivers`
+- `coreValues`
+- `voice`
+- `depthMap.domainCoverage`
+- `analystNotes`
+- `honestInsights`
 
 Required Worker runtime secrets:
 
@@ -84,7 +86,7 @@ Optional production smoke test:
 pnpm verify:live
 ```
 
-Simulation and dashboard-v2 verification:
+Simulation and soul-artifact verification:
 
 ```bash
 npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only fred-rogers

@@ -5,7 +5,21 @@ import { getUserModelProfileId } from "../db.ts";
 import { listModelProfiles } from "../modelProfiles.ts";
 import { getHiddenSoulFile, getVisibleSoulFile, getLatestReflectionSnapshot } from "../soulApp.ts";
 import { requireDebugApiToken, requireDeviceSession } from "../requestAuth.ts";
-import { deriveConversationSteering } from "../../../src/domain/soul.ts";
+
+function buildSteeringPreview(reflectionNote: Awaited<ReturnType<typeof getLatestReflectionSnapshot>>) {
+  if (!reflectionNote) {
+    return null;
+  }
+
+  return {
+    current_threads: reflectionNote.currentThreads,
+    avoid_past_observations: reflectionNote.avoidPastObservations,
+    avoid_past_questions: reflectionNote.avoidPastQuestions,
+    steer_to_topics: reflectionNote.steerToTopics,
+    steering_pressure: reflectionNote.steeringPressure,
+    steering_reasoning: reflectionNote.steeringReasoning
+  };
+}
 
 export async function handleGetDebugInfo(
   sql: NeonSQL,
@@ -31,7 +45,6 @@ export async function handleGetDebugInfo(
     getVisibleSoulFile(sql, userId),
     getLatestReflectionSnapshot(sql, userId)
   ]);
-  const { steering, source } = deriveConversationSteering(reflectionNote);
 
   return jsonResponse(200, {
     user_id: userId,
@@ -41,7 +54,7 @@ export async function handleGetDebugInfo(
     hidden_soul_file: hiddenSoulFile,
     visible_soul_file: visibleSoulFile,
     reflection_note: reflectionNote,
-    steering_preview: steering,
-    steering_source: source
+    steering_preview: buildSteeringPreview(reflectionNote),
+    steering_source: reflectionNote ? "reflection_snapshot" : "none"
   });
 }

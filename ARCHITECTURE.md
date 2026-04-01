@@ -30,8 +30,8 @@ Thumos is currently one product with one primary backend workflow: anonymous dev
                ▼                              ▼
       Neon Postgres                    Cloudflare Queue
       users                            reflection_snapshot
-      device_sessions                  soul_synthesis
-      soul_messages
+      device_sessions                  synthesis_visible
+      soul_messages                    synthesis_hidden
       reflection_snapshots
       visible_soul_files
       hidden_soul_files
@@ -40,7 +40,7 @@ Thumos is currently one product with one primary backend workflow: anonymous dev
                ▼
       LLM providers selected per model profile / task
         ├─ Anthropic
-        ├─ Fireworks (Anthropic-compatible API)
+        ├─ Fireworks (OpenAI-compatible API for DeepSeek)
         └─ xAI web search for optional opening context
 ```
 
@@ -64,7 +64,7 @@ aaru/
 ├── src/domain/
 │   ├── schemas.ts              # Shared Zod/domain types
 │   ├── soul.ts                 # Conversation prompt/system logic
-│   └── soulFile.ts             # Reflection + synthesis prompts/parsing
+│   └── soulFile.ts             # Reflection + synthesis prompts/parsing/schema
 ├── db/
 │   ├── schema.sql              # Current desired schema snapshot
 │   └── migrations/             # Historical migrations
@@ -77,7 +77,8 @@ aaru/
 │   ├── modelProfiles.ts        # Hardcoded model profiles
 │   ├── llm.ts                  # Provider routing
 │   ├── claude.ts               # Anthropic wrapper
-│   ├── fireworks.ts            # Fireworks Anthropic-compatible wrapper
+│   ├── fireworks.ts            # Fireworks OpenAI-compatible wrapper
+│   ├── openaiCompatible.ts     # Shared OpenAI-compatible transport
 │   ├── xai.ts                  # Optional opening-time current-events fetch
 │   ├── backgroundJobsQueue.ts  # Queue producer + consumer
 │   └── handlers/               # Route handlers
@@ -129,19 +130,18 @@ There are three execution modes, but only two deployed environments:
   - canonical full transcript
   - no user-visible session grouping
 - `reflection_snapshots`
-  - one row per user
-  - stores the latest derived reflection note plus status
+  - versioned reflection-note snapshots with `ready|pending|failed`
+  - each row records the transcript boundary it covers
 - `visible_soul_files`
-  - one current user-facing soul file row per user
+  - versioned user-facing soul files with `ready|pending|failed`
 - `hidden_soul_files`
-  - one current internal/clinical soul file row per user
+  - versioned internal/clinical soul files with `ready|pending|failed`
 - `claude_debug_traces`
   - stores latest prompt/input/response traces per kind
 
 ### Current truth about versioning and deletion
 
-- soul files have a `version` integer, but the system stores only the latest row, not historical versions.
-- reflection snapshots are overwritten in place; there is no snapshot history table.
+- reflection snapshots, visible soul files, and hidden soul files are all stored as versioned rows keyed by `(user_id, version)`.
 - account deletion is currently a hard delete via `DELETE FROM users`, relying on `ON DELETE CASCADE`.
 - there is no soft-delete or restore flow today.
 
@@ -197,9 +197,9 @@ Current implementation notes:
 - persists the user message first for `reply`
 - loads:
   - full persisted transcript
-  - latest ready reflection snapshot
+  - latest ready reflection note
   - latest visible soul file
-- derives conversation steering from the reflection snapshot
+- uses the reflection note directly for navigation (`currentThreads`, `avoidPastQuestions`, `steerToTopics`, pressure/reasoning)
 - builds a system prompt from the authoritative transcript plus optional advisory context
 - optional opening-time xAI lookup can fetch current-events context from `openThreads` and `recurringThemes`
 - resolves the user’s `model_profile_id` and selects the task config for `conversation`
@@ -222,28 +222,34 @@ Current reflection cadence: every 5 total persisted messages.
 
 ## Background Jobs
 
-Two queue job types exist:
+Three queue job types exist:
 
 - `reflection_snapshot`
-- `soul_synthesis`
+- `synthesis_visible`
+- `synthesis_hidden`
 
 ### Reflection snapshot job
 
 - reads all persisted messages
 - runs the reflection prompt using the current profile’s `reflection_snapshot` task config
-- stores a single latest reflection snapshot row
+- stores a new versioned reflection note row
 - fails closed and marks the snapshot row failed if the consumer errors
 
-### Soul synthesis job
+### Visible synthesis job
 
 - reads all persisted messages
-- loads the latest reflection snapshot
-- runs three steps:
-  - structured assessment
-  - visible narrative synthesis
-  - hidden synthesis
-- writes visible + hidden soul files
-- preserves the last ready state if synthesis fails
+- loads the latest reflection note
+- runs visible narrative synthesis directly, with no assessment pre-step
+- writes a new versioned visible soul file row
+- preserves the last ready visible file if synthesis fails
+
+### Hidden synthesis job
+
+- reads all persisted messages
+- loads the latest reflection note
+- runs hidden clinical synthesis directly, with no assessment pre-step
+- writes a new versioned hidden soul file row
+- preserves the last ready hidden file if synthesis fails
 
 ## LLM Routing
 
@@ -254,17 +260,19 @@ Two queue job types exist:
 Current profiles:
 
 - `frontier_v1`
-  - Anthropic for conversation, reflection, assessment, visible synthesis, hidden synthesis
+  - Anthropic for conversation, reflection, visible synthesis, hidden synthesis
 - `value_v1`
-  - Fireworks-hosted DeepSeek via Anthropic-compatible API for the same task set
+  - Fireworks-hosted DeepSeek via OpenAI-compatible API for the same task set
 
 Each user has a persisted `users.model_profile_id`.
 New users default from `DEFAULT_MODEL_PROFILE_ID`, falling back to `frontier_v1`.
 
 ### Provider behavior
 
-- `workers/src/llm.ts` dispatches by provider per task.
-- Fireworks calls use an Anthropic-compatible wrapper.
+- `workers/src/llm.ts` dispatches by provider per task behind a provider-neutral interface.
+- Anthropic stays on the Anthropic Messages API.
+- Fireworks uses an OpenAI-compatible transport for DeepSeek, with reasoning disabled for `value_v1`.
+- Reflection and synthesis use non-streaming structured-output calls; conversation stays streaming.
 - Fireworks requests add:
   - `x-session-affinity`
   - `x-prompt-cache-isolation-key`

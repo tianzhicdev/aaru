@@ -74,7 +74,7 @@ Production smoke test helper:
 pnpm verify:live
 ```
 
-Note: dashboard-v2 synthesis is a multi-call background pipeline and can take several minutes to complete. The verifier should allow a multi-minute polling window before treating `synthesis_pending` as a failure. If synthesis fails, the API should stop reporting `synthesis_pending: true` for that unchanged transcript and continue serving the last ready soul file until newer messages arrive.
+Note: synthesis now runs as two separate background jobs (`synthesis_visible` and `synthesis_hidden`) and can take several minutes to complete. The verifier should allow a multi-minute polling window before treating `synthesis_pending` as a failure. If synthesis fails, the API should stop reporting `synthesis_pending: true` for that unchanged transcript and continue serving the last ready soul file until newer messages arrive.
 
 Expected live verification for dashboard-v2:
 1. Existing-device `POST /sync-messages` returns the full transcript, not a last-10 slice.
@@ -84,7 +84,7 @@ Expected live verification for dashboard-v2:
    - at least 2 populated `personalitySpectrum` traits
    - at least 1 `topValues` entry
    - non-empty `relationalStyle`
-4. `POST /get-debug-info` returns a hidden soul file with at least one populated structured hidden-profile field.
+4. `POST /get-debug-info` returns a hidden soul file with populated `expertReflections`, `coreDrivers`, or `honestInsights`.
 5. `POST /debug-dump` returns:
    - `reflection_note`
    - `latest_conversation_trace`
@@ -100,6 +100,6 @@ npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only fred
 Expected:
 1. The conversation reaches the target exchange count without SSE failure.
 2. The generated visible soul file contains dashboard-v2 fields (`personalitySpectrum`, `topValues`, `relationalStyle`).
-3. The hidden soul file contains structured profile data.
-4. The debug dump contains a reflection snapshot with the new signal fields.
+3. The hidden soul file contains structured clinical data (`expertReflections`, `coreDrivers`, or `honestInsights`).
+4. The debug dump contains a reflection note with steering fields (`currentThreads`, `avoidPastQuestions`, `steerToTopics`, or steering reasoning).
 5. The readable report in `dry-run-output/<character>/soul-file-readable.md` marks the run as passing.

@@ -1,31 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/soulApp.ts", () => ({
+  checkHiddenSynthesisNeeded: vi.fn(),
   checkReflectionSnapshotNeeded: vi.fn(),
   checkSynthesisNeeded: vi.fn(),
+  getHiddenSynthesisStatus: vi.fn(),
   getReflectionSnapshotState: vi.fn(),
   getSynthesisStatus: vi.fn(),
+  markHiddenSynthesisFailed: vi.fn(),
   markReflectionSnapshotFailed: vi.fn(),
   markSynthesisFailed: vi.fn(),
+  runHiddenSynthesis: vi.fn(),
   runReflectionSnapshot: vi.fn(),
-  runSoulSynthesis: vi.fn()
+  runVisibleSynthesis: vi.fn()
 }));
 
 import {
   enqueueReflectionSnapshot,
-  enqueueSoulSynthesis,
+  enqueueSynthesisHidden,
+  enqueueSynthesisVisible,
   processBackgroundJobsBatch,
   type BackgroundQueueBinding
 } from "../../workers/src/backgroundJobsQueue.ts";
 import {
+  checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
   checkSynthesisNeeded,
+  getHiddenSynthesisStatus,
   getReflectionSnapshotState,
   getSynthesisStatus,
+  markHiddenSynthesisFailed,
   markReflectionSnapshotFailed,
   markSynthesisFailed,
+  runHiddenSynthesis,
   runReflectionSnapshot,
-  runSoulSynthesis
+  runVisibleSynthesis
 } from "../../workers/src/soulApp.ts";
 
 const mockSQL = vi.fn();
@@ -41,16 +50,26 @@ describe("queue publishers", () => {
     vi.clearAllMocks();
   });
 
-  it("publishes a synthesis job", async () => {
+  it("publishes separate visible and hidden synthesis jobs", async () => {
     const queue: BackgroundQueueBinding = { send: vi.fn().mockResolvedValue(undefined) };
-    const job = await enqueueSoulSynthesis(queue, "user-1");
-    expect(queue.send).toHaveBeenCalledWith({
-      kind: "soul_synthesis",
+
+    const visibleJob = await enqueueSynthesisVisible(queue, "user-1");
+    const hiddenJob = await enqueueSynthesisHidden(queue, "user-1");
+
+    expect(queue.send).toHaveBeenNthCalledWith(1, {
+      kind: "synthesis_visible",
       jobId: expect.any(String),
       userId: "user-1",
       queuedAt: expect.any(String)
     });
-    expect(job.kind).toBe("soul_synthesis");
+    expect(queue.send).toHaveBeenNthCalledWith(2, {
+      kind: "synthesis_hidden",
+      jobId: expect.any(String),
+      userId: "user-1",
+      queuedAt: expect.any(String)
+    });
+    expect(visibleJob.kind).toBe("synthesis_visible");
+    expect(hiddenJob.kind).toBe("synthesis_hidden");
   });
 
   it("publishes a reflection snapshot job", async () => {
@@ -72,20 +91,33 @@ describe("processBackgroundJobsBatch", () => {
     vi.clearAllMocks();
   });
 
-  it("runs synthesis jobs when the user is pending", async () => {
+  it("runs visible synthesis jobs when the user is pending", async () => {
     vi.mocked(getSynthesisStatus).mockResolvedValue("pending");
-    vi.mocked(runSoulSynthesis).mockResolvedValue({ visible: null, hidden: null });
+    vi.mocked(runVisibleSynthesis).mockResolvedValue(null);
 
     await processBackgroundJobsBatch(mockSQL, mockEnv, {
-      messages: [{ body: { kind: "soul_synthesis", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
+      messages: [{ body: { kind: "synthesis_visible", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
     });
 
-    expect(runSoulSynthesis).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
+    expect(runVisibleSynthesis).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
     expect(checkSynthesisNeeded).not.toHaveBeenCalled();
+  });
+
+  it("runs hidden synthesis jobs when the user is pending", async () => {
+    vi.mocked(getHiddenSynthesisStatus).mockResolvedValue("pending");
+    vi.mocked(runHiddenSynthesis).mockResolvedValue(null);
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{ body: { kind: "synthesis_hidden", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
+    });
+
+    expect(runHiddenSynthesis).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
+    expect(checkHiddenSynthesisNeeded).not.toHaveBeenCalled();
   });
 
   it("runs reflection snapshot jobs when a snapshot is pending", async () => {
     vi.mocked(getReflectionSnapshotState).mockResolvedValue({
+      version: 3,
       status: "pending",
       throughMessageCount: 20,
       startedAt: "2026-03-29T20:00:00.000Z"
@@ -100,20 +132,33 @@ describe("processBackgroundJobsBatch", () => {
     expect(checkReflectionSnapshotNeeded).not.toHaveBeenCalled();
   });
 
-  it("marks synthesis as failed when the consumer errors", async () => {
+  it("marks visible synthesis as failed when the consumer errors", async () => {
     vi.mocked(getSynthesisStatus).mockResolvedValue("pending");
-    vi.mocked(runSoulSynthesis).mockRejectedValue(new Error("boom"));
+    vi.mocked(runVisibleSynthesis).mockRejectedValue(new Error("boom"));
     vi.mocked(markSynthesisFailed).mockResolvedValue(undefined);
 
     await processBackgroundJobsBatch(mockSQL, mockEnv, {
-      messages: [{ body: { kind: "soul_synthesis", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
+      messages: [{ body: { kind: "synthesis_visible", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
     });
 
     expect(markSynthesisFailed).toHaveBeenCalledWith(mockSQL, "user-1");
   });
 
+  it("marks hidden synthesis as failed when the consumer errors", async () => {
+    vi.mocked(getHiddenSynthesisStatus).mockResolvedValue("pending");
+    vi.mocked(runHiddenSynthesis).mockRejectedValue(new Error("boom"));
+    vi.mocked(markHiddenSynthesisFailed).mockResolvedValue(undefined);
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{ body: { kind: "synthesis_hidden", jobId: "job-1", userId: "user-1", queuedAt: "2026-03-29T20:00:00.000Z" } }]
+    });
+
+    expect(markHiddenSynthesisFailed).toHaveBeenCalledWith(mockSQL, "user-1");
+  });
+
   it("marks reflection snapshots as failed when the consumer errors", async () => {
     vi.mocked(getReflectionSnapshotState).mockResolvedValue({
+      version: 4,
       status: "pending",
       throughMessageCount: 20,
       startedAt: "2026-03-29T20:00:00.000Z"

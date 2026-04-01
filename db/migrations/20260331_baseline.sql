@@ -104,7 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_soul_messages_user_created
 
 -- Reflection snapshots
 CREATE TABLE IF NOT EXISTS public.reflection_snapshots (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  version int NOT NULL DEFAULT 1,
   through_message_count int NOT NULL DEFAULT 0,
   through_last_message_created_at timestamptz,
   note jsonb,
@@ -117,6 +118,7 @@ CREATE TABLE IF NOT EXISTS public.reflection_snapshots (
 );
 
 ALTER TABLE public.reflection_snapshots
+  ADD COLUMN IF NOT EXISTS version int NOT NULL DEFAULT 1,
   ADD COLUMN IF NOT EXISTS through_message_count int NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS through_last_message_created_at timestamptz,
   ADD COLUMN IF NOT EXISTS note jsonb,
@@ -136,9 +138,18 @@ ALTER TABLE public.reflection_snapshots
   ALTER COLUMN updated_at SET DEFAULT now(),
   ALTER COLUMN updated_at SET NOT NULL;
 
+ALTER TABLE public.reflection_snapshots
+  DROP CONSTRAINT IF EXISTS reflection_snapshots_pkey;
+
+ALTER TABLE public.reflection_snapshots
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_reflection_snapshots_latest
+  ON public.reflection_snapshots(user_id, version DESC);
+
 -- Visible soul files
 CREATE TABLE IF NOT EXISTS public.visible_soul_files (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   version int NOT NULL DEFAULT 1,
   last_updated timestamptz NOT NULL DEFAULT now(),
   portrait text,
@@ -191,9 +202,18 @@ ALTER TABLE public.visible_soul_files
   ALTER COLUMN last_updated SET NOT NULL,
   ALTER COLUMN created_at SET DEFAULT now();
 
+ALTER TABLE public.visible_soul_files
+  DROP CONSTRAINT IF EXISTS visible_soul_files_pkey;
+
+ALTER TABLE public.visible_soul_files
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_visible_soul_files_latest
+  ON public.visible_soul_files(user_id, version DESC);
+
 -- Hidden soul files
 CREATE TABLE IF NOT EXISTS public.hidden_soul_files (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   version int NOT NULL DEFAULT 1,
   last_updated timestamptz NOT NULL DEFAULT now(),
   confidence text NOT NULL DEFAULT 'low'
@@ -204,6 +224,7 @@ CREATE TABLE IF NOT EXISTS public.hidden_soul_files (
   voice jsonb DEFAULT '{}'::jsonb,
   depth_map jsonb DEFAULT '{}'::jsonb,
   analyst_notes jsonb DEFAULT '[]'::jsonb,
+  honest_insights jsonb DEFAULT '[]'::jsonb,
   big_five_scores jsonb DEFAULT '{}'::jsonb,
   schwartz_profile jsonb DEFAULT '[]'::jsonb,
   attachment_scores jsonb DEFAULT '{}'::jsonb,
@@ -225,6 +246,7 @@ ALTER TABLE public.hidden_soul_files
   ADD COLUMN IF NOT EXISTS voice jsonb DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS depth_map jsonb DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS analyst_notes jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS honest_insights jsonb DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS big_five_scores jsonb DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS schwartz_profile jsonb DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS attachment_scores jsonb DEFAULT '{}'::jsonb,
@@ -242,6 +264,15 @@ ALTER TABLE public.hidden_soul_files
   ALTER COLUMN last_updated SET DEFAULT now(),
   ALTER COLUMN last_updated SET NOT NULL,
   ALTER COLUMN created_at SET DEFAULT now();
+
+ALTER TABLE public.hidden_soul_files
+  DROP CONSTRAINT IF EXISTS hidden_soul_files_pkey;
+
+ALTER TABLE public.hidden_soul_files
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_hidden_soul_files_latest
+  ON public.hidden_soul_files(user_id, version DESC);
 
 -- Debug traces
 CREATE TABLE IF NOT EXISTS public.claude_debug_traces (

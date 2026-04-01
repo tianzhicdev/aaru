@@ -233,7 +233,7 @@ struct SoulFileScreen: View {
             ("How You Connect", sections.howYouConnect),
             ("What You Carry", sections.whatYouCarry),
             ("What Lights You Up", sections.whatLightsYouUp),
-            ("Your Contradictions", sections.yourContradictions),
+            ("Your Tensions", sections.yourTensions),
             ("Your Voice", sections.yourVoice)
         ].filter { !$0.content.isEmpty }
     }

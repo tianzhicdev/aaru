@@ -24,6 +24,9 @@ import "dotenv/config";
 
 const API_BASE = process.env.THUMOS_API_BASE || "https://api.trythumos.com";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const DEBUG_API_TOKEN = process.env.THUMOS_DEBUG_API_TOKEN
+  || process.env.DEBUG_API_TOKEN
+  || process.env.DEBUG_API_TOKEN_DEV;
 
 if (!ANTHROPIC_API_KEY) {
   console.error("ANTHROPIC_API_KEY not set in environment or .env");
@@ -119,6 +122,9 @@ function serverHeaders(sessionToken?: string): Record<string, string> {
   };
   if (sessionToken) {
     headers["x-thumos-session"] = sessionToken;
+  }
+  if (DEBUG_API_TOKEN) {
+    headers["x-thumos-debug-token"] = DEBUG_API_TOKEN;
   }
   return headers;
 }
@@ -309,48 +315,46 @@ function hasRelationalStyle(visibleSoulFile: unknown): boolean {
 
 function hasHiddenProfiles(hiddenSoulFile: unknown): boolean {
   const hidden = hiddenSoulFile as {
-    bigFiveScores?: Record<string, unknown>;
-    schwartzProfile?: unknown[];
-    attachmentScores?: { style?: unknown; anxiety?: unknown; avoidance?: unknown };
-    moralFoundations?: Record<string, unknown>;
-    meaningOrientation?: unknown;
+    expertReflections?: Record<string, unknown[]>;
+    coreDrivers?: unknown[];
+    analystNotes?: unknown[];
+    honestInsights?: unknown[];
   } | null;
 
   if (!hidden) return false;
 
-  const bigFivePresent = hidden.bigFiveScores && Object.values(hidden.bigFiveScores).some(Boolean);
-  const schwartzPresent = Array.isArray(hidden.schwartzProfile) && hidden.schwartzProfile.length > 0;
-  const attachmentPresent = Boolean(hidden.attachmentScores?.style)
-    || typeof hidden.attachmentScores?.anxiety === "number"
-    || typeof hidden.attachmentScores?.avoidance === "number";
-  const moralPresent = hidden.moralFoundations && Object.values(hidden.moralFoundations).some((value) => typeof value === "number");
-  const meaningPresent = typeof hidden.meaningOrientation === "string" && hidden.meaningOrientation.length > 0;
+  const reflectionsPresent = hidden.expertReflections && Object.values(hidden.expertReflections).some(
+    (entries) => Array.isArray(entries) && entries.length > 0
+  );
+  const driversPresent = Array.isArray(hidden.coreDrivers) && hidden.coreDrivers.length > 0;
+  const notesPresent = Array.isArray(hidden.analystNotes) && hidden.analystNotes.length > 0;
+  const honestInsightsPresent = Array.isArray(hidden.honestInsights) && hidden.honestInsights.length > 0;
 
-  return Boolean(bigFivePresent || schwartzPresent || attachmentPresent || moralPresent || meaningPresent);
+  return Boolean(reflectionsPresent || driversPresent || notesPresent || honestInsightsPresent);
 }
 
 function hasReflectionSignals(debugDump: unknown): boolean {
   const reflection = (debugDump as {
     reflection_note?: {
-      inferredBigFive?: Record<string, unknown>;
-      attachmentSignals?: unknown[];
-      valueSignals?: unknown[];
-      moralFoundationSignals?: unknown[];
-      conflictStyle?: unknown;
-      meaningOrientation?: unknown;
+      currentThreads?: unknown[];
+      avoidPastObservations?: unknown[];
+      avoidPastQuestions?: unknown[];
+      steerToTopics?: unknown[];
+      steeringReasoning?: unknown;
     };
   } | null)?.reflection_note;
 
   if (!reflection) return false;
 
-  const bigFivePresent = reflection.inferredBigFive && Object.values(reflection.inferredBigFive).some(Boolean);
-  const attachmentPresent = Array.isArray(reflection.attachmentSignals) && reflection.attachmentSignals.length > 0;
-  const valuesPresent = Array.isArray(reflection.valueSignals) && reflection.valueSignals.length > 0;
-  const moralPresent = Array.isArray(reflection.moralFoundationSignals) && reflection.moralFoundationSignals.length > 0;
-  const conflictPresent = typeof reflection.conflictStyle === "string" && reflection.conflictStyle.length > 0;
-  const meaningPresent = typeof reflection.meaningOrientation === "string" && reflection.meaningOrientation.length > 0;
+  const currentThreadsPresent = Array.isArray(reflection.currentThreads) && reflection.currentThreads.length > 0;
+  const observationsPresent = Array.isArray(reflection.avoidPastObservations) && reflection.avoidPastObservations.length > 0;
+  const questionsPresent = Array.isArray(reflection.avoidPastQuestions) && reflection.avoidPastQuestions.length > 0;
+  const steerTopicsPresent = Array.isArray(reflection.steerToTopics) && reflection.steerToTopics.length > 0;
+  const reasoningPresent = typeof reflection.steeringReasoning === "string" && reflection.steeringReasoning.length > 0;
 
-  return Boolean(bigFivePresent || attachmentPresent || valuesPresent || moralPresent || conflictPresent || meaningPresent);
+  return Boolean(
+    currentThreadsPresent || observationsPresent || questionsPresent || steerTopicsPresent || reasoningPresent
+  );
 }
 
 async function waitForReflectionSnapshot(
@@ -367,15 +371,22 @@ async function waitForReflectionSnapshot(
     }
 
     const dump = await res.json() as {
-      reflection_note?: { domainCoverage?: unknown[] };
+      reflection_note?: {
+        currentThreads?: unknown[];
+        steerToTopics?: unknown[];
+        avoidPastQuestions?: unknown[];
+      };
       reflection_snapshot_row?: { status?: string };
     };
 
-    const hasCoverage = Array.isArray(dump.reflection_note?.domainCoverage)
-      && dump.reflection_note!.domainCoverage!.length > 0;
+    const hasSignals = Boolean(
+      (Array.isArray(dump.reflection_note?.currentThreads) && dump.reflection_note!.currentThreads!.length > 0)
+      || (Array.isArray(dump.reflection_note?.steerToTopics) && dump.reflection_note!.steerToTopics!.length > 0)
+      || (Array.isArray(dump.reflection_note?.avoidPastQuestions) && dump.reflection_note!.avoidPastQuestions!.length > 0)
+    );
     const notPending = dump.reflection_snapshot_row?.status !== "pending";
 
-    if (hasCoverage && notPending) {
+    if (hasSignals && notPending) {
       return true;
     }
 
@@ -654,7 +665,7 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
         howYouConnect: "How You Connect",
         whatYouCarry: "What You Carry",
         whatLightsYouUp: "What Lights You Up",
-        yourContradictions: "Your Contradictions",
+        yourTensions: "Your Tensions",
         yourVoice: "Your Voice"
       };
       for (const [key, label] of Object.entries(sectionNames)) {

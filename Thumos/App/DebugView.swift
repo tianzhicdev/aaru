@@ -221,41 +221,32 @@ struct DebugView: View {
             debugRow("Source", model.debugInfo?.steeringSource ?? "none")
 
             if let steering = model.debugInfo?.steeringPreview {
-                if !steering.currentlyLiveTopics.isEmpty {
-                    debugSubheader("Currently Live")
-                    ForEach(steering.currentlyLiveTopics, id: \.self) { bulletText($0) }
+                if !steering.steeringPressure.isEmpty {
+                    debugRow("Pressure", steering.steeringPressure)
                 }
 
-                if !steering.safeEntryPoints.isEmpty {
-                    debugSubheader("Safe Entry Points")
-                    ForEach(steering.safeEntryPoints, id: \.self) { bulletText($0) }
+                if !steering.steeringReasoning.isEmpty {
+                    debugRow("Reasoning", steering.steeringReasoning)
                 }
 
-                if !steering.unlockTopics.isEmpty {
-                    debugSubheader("Unlock Topics")
-                    ForEach(steering.unlockTopics, id: \.self) { bulletText($0) }
+                if !steering.currentThreads.isEmpty {
+                    debugSubheader("Current Threads")
+                    ForEach(steering.currentThreads, id: \.self) { bulletText($0) }
                 }
 
-                if !steering.avoidEarly.isEmpty {
-                    debugSubheader("Approach Carefully")
-                    ForEach(steering.avoidEarly, id: \.self) { bulletText($0) }
+                if !steering.steerToTopics.isEmpty {
+                    debugSubheader("Steer To")
+                    ForEach(steering.steerToTopics, id: \.self) { bulletText($0) }
                 }
 
-                if !steering.domainCoverage.isEmpty {
-                    debugSubheader("Domain Coverage")
-                    ForEach(Array(steering.domainCoverage.enumerated()), id: \.offset) { _, entry in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(entry.domain) — \(entry.depth)")
-                                .font(Theme.sans(12, weight: .medium))
-                                .foregroundStyle(Theme.textSecondary)
-                            if !entry.evidence.isEmpty {
-                                Text(entry.evidence)
-                                    .font(Theme.sans(12))
-                                    .foregroundStyle(Theme.textTertiary)
-                            }
-                        }
-                        .padding(.leading, 8)
-                    }
+                if !steering.avoidPastObservations.isEmpty {
+                    debugSubheader("Avoid Past Observations")
+                    ForEach(steering.avoidPastObservations, id: \.self) { bulletText($0) }
+                }
+
+                if !steering.avoidPastQuestions.isEmpty {
+                    debugSubheader("Avoid Past Questions")
+                    ForEach(steering.avoidPastQuestions, id: \.self) { bulletText($0) }
                 }
             }
         }
@@ -296,6 +287,34 @@ struct DebugView: View {
                             bulletText("\(key): \(value)")
                         }
                     }
+                }
+
+                if !note.currentThreads.isEmpty {
+                    debugSubheader("Current Threads")
+                    ForEach(note.currentThreads, id: \.self) { bulletText($0) }
+                }
+
+                if !note.steerToTopics.isEmpty {
+                    debugSubheader("Steer To Topics")
+                    ForEach(note.steerToTopics, id: \.self) { bulletText($0) }
+                }
+
+                if !note.avoidPastQuestions.isEmpty {
+                    debugSubheader("Avoid Past Questions")
+                    ForEach(note.avoidPastQuestions, id: \.self) { bulletText($0) }
+                }
+
+                if !note.avoidPastObservations.isEmpty {
+                    debugSubheader("Avoid Past Observations")
+                    ForEach(note.avoidPastObservations, id: \.self) { bulletText($0) }
+                }
+
+                if !note.steeringPressure.isEmpty {
+                    debugRow("Steering Pressure", note.steeringPressure)
+                }
+
+                if !note.steeringReasoning.isEmpty {
+                    debugRow("Steering Reasoning", note.steeringReasoning)
                 }
             } else {
                 Text("No reflection note yet")
@@ -409,6 +428,13 @@ struct DebugView: View {
                     }
                 }
 
+                if !hidden.honestInsights.isEmpty {
+                    debugSubheader("Honest Insights")
+                    ForEach(hidden.honestInsights, id: \.self) { insight in
+                        bulletText(insight)
+                    }
+                }
+
                 voiceSection(hidden.voice)
                 depthMapSection(hidden.depthMap)
             } else {
@@ -490,21 +516,21 @@ struct DebugView: View {
     @ViewBuilder
     private func depthMapSection(_ map: DepthMap) -> some View {
         debugSubheader("Depth Map")
-        if !map.safeEntryPoints.isEmpty {
-            Text("Safe Entry Points:").font(Theme.sans(11)).foregroundStyle(Theme.textTertiary).padding(.leading, 8)
-            ForEach(map.safeEntryPoints, id: \.self) { bulletText($0) }
-        }
-        if !map.unlockTopics.isEmpty {
-            Text("Unlock Topics:").font(Theme.sans(11)).foregroundStyle(Theme.textTertiary).padding(.leading, 8)
-            ForEach(map.unlockTopics, id: \.self) { bulletText($0) }
-        }
-        if !map.avoidEarly.isEmpty {
-            Text("Avoid Early:").font(Theme.sans(11)).foregroundStyle(Theme.textTertiary).padding(.leading, 8)
-            ForEach(map.avoidEarly, id: \.self) { bulletText($0) }
-        }
-        if !map.currentlyLiveTopics.isEmpty {
-            Text("Live Topics:").font(Theme.sans(11)).foregroundStyle(Theme.textTertiary).padding(.leading, 8)
-            ForEach(map.currentlyLiveTopics, id: \.self) { bulletText($0) }
+        if !map.domainCoverage.isEmpty {
+            debugSubheader("Domain Coverage")
+            ForEach(Array(map.domainCoverage.enumerated()), id: \.offset) { _, entry in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(entry.domain) — \(entry.depth)")
+                        .font(Theme.sans(12, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                    if !entry.evidence.isEmpty {
+                        Text(entry.evidence)
+                            .font(Theme.sans(12))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                }
+                .padding(.leading, 8)
+            }
         }
     }
 

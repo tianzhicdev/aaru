@@ -2,13 +2,19 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import {
+  checkHiddenSynthesisNeeded,
   getVisibleSoulFile,
   checkSynthesisNeeded,
+  markHiddenSynthesisFailed,
+  markHiddenSynthesisPending,
   markSynthesisPending,
   markSynthesisFailed
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
-import { enqueueSoulSynthesis } from "../backgroundJobsQueue.ts";
+import {
+  enqueueSynthesisHidden,
+  enqueueSynthesisVisible
+} from "../backgroundJobsQueue.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
 
 export async function handleGetSoulFile(
@@ -24,7 +30,10 @@ export async function handleGetSoulFile(
 
   const userId = auth.session.user_id;
   const visibleSoulFile = await getVisibleSoulFile(sql, userId);
-  const { needed, pending } = await checkSynthesisNeeded(sql, userId);
+  const [{ needed, pending }, hiddenState] = await Promise.all([
+    checkSynthesisNeeded(sql, userId),
+    checkHiddenSynthesisNeeded(sql, userId)
+  ]);
 
   let synthesisPending = pending;
   if (needed && !pending) {
@@ -33,16 +42,32 @@ export async function handleGetSoulFile(
       synthesisPending = true;
     } else {
       try {
-        await enqueueSoulSynthesis(env.BACKGROUND_QUEUE, userId);
+        await enqueueSynthesisVisible(env.BACKGROUND_QUEUE, userId);
         synthesisPending = true;
       } catch (error) {
-        console.error("Failed to enqueue soul synthesis:", error);
+        console.error("Failed to enqueue visible synthesis:", error);
         try {
           await markSynthesisFailed(sql, userId);
         } catch (markError) {
-          console.error("Failed to mark synthesis as failed:", markError);
+          console.error("Failed to mark visible synthesis as failed:", markError);
         }
         throw error;
+      }
+    }
+  }
+
+  if (hiddenState.needed && !hiddenState.pending) {
+    const hiddenClaimed = await markHiddenSynthesisPending(sql, userId);
+    if (hiddenClaimed) {
+      try {
+        await enqueueSynthesisHidden(env.BACKGROUND_QUEUE, userId);
+      } catch (error) {
+        console.error("Failed to enqueue hidden synthesis:", error);
+        try {
+          await markHiddenSynthesisFailed(sql, userId);
+        } catch (markError) {
+          console.error("Failed to mark hidden synthesis as failed:", markError);
+        }
       }
     }
   }

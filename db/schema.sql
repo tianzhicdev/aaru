@@ -47,7 +47,8 @@ CREATE INDEX idx_soul_messages_user_created ON public.soul_messages(user_id, cre
 -- ── Reflection Snapshots (async running memory) ──────────────
 
 CREATE TABLE public.reflection_snapshots (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  version int NOT NULL DEFAULT 1,
   through_message_count int NOT NULL DEFAULT 0,
   through_last_message_created_at timestamptz,
   note jsonb,
@@ -59,10 +60,16 @@ CREATE TABLE public.reflection_snapshots (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.reflection_snapshots
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX idx_reflection_snapshots_latest
+  ON public.reflection_snapshots(user_id, version DESC);
+
 -- ── Visible Soul Files (user-facing, poetic) ────────────────
 
 CREATE TABLE public.visible_soul_files (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   version int NOT NULL DEFAULT 1,
   last_updated timestamptz NOT NULL DEFAULT now(),
   portrait text,
@@ -85,10 +92,16 @@ CREATE TABLE public.visible_soul_files (
   created_at timestamptz DEFAULT now()
 );
 
+ALTER TABLE public.visible_soul_files
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX idx_visible_soul_files_latest
+  ON public.visible_soul_files(user_id, version DESC);
+
 -- ── Hidden Soul Files (agent-facing, clinical) ───────────────
 
 CREATE TABLE public.hidden_soul_files (
-  user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   version int NOT NULL DEFAULT 1,
   last_updated timestamptz NOT NULL DEFAULT now(),
   confidence text NOT NULL DEFAULT 'low'
@@ -99,6 +112,7 @@ CREATE TABLE public.hidden_soul_files (
   voice jsonb DEFAULT '{}'::jsonb,
   depth_map jsonb DEFAULT '{}'::jsonb,
   analyst_notes jsonb DEFAULT '[]'::jsonb,
+  honest_insights jsonb DEFAULT '[]'::jsonb,
   big_five_scores jsonb DEFAULT '{}'::jsonb,
   schwartz_profile jsonb DEFAULT '[]'::jsonb,
   attachment_scores jsonb DEFAULT '{}'::jsonb,
@@ -109,6 +123,12 @@ CREATE TABLE public.hidden_soul_files (
   synthesis_started_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
+
+ALTER TABLE public.hidden_soul_files
+  ADD PRIMARY KEY (user_id, version);
+
+CREATE INDEX idx_hidden_soul_files_latest
+  ON public.hidden_soul_files(user_id, version DESC);
 
 -- ── Claude Debug Traces ───────────────────────────────────────
 

@@ -1,11 +1,15 @@
 const base = process.env.THUMOS_API_BASE_URL || "https://api.trythumos.com";
+const debugToken = process.env.THUMOS_DEBUG_API_TOKEN
+  || process.env.DEBUG_API_TOKEN
+  || process.env.DEBUG_API_TOKEN_DEV;
 
 async function post(path, body = {}, token) {
   const response = await fetch(`${base}/${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...(token ? { "x-thumos-session": token } : {})
+      ...(token ? { "x-thumos-session": token } : {}),
+      ...(debugToken ? { "x-thumos-debug-token": debugToken } : {})
     },
     body: JSON.stringify(body)
   });
@@ -27,7 +31,8 @@ async function converse(body, token) {
     headers: {
       "content-type": "application/json",
       accept: "text/event-stream",
-      "x-thumos-session": token
+      "x-thumos-session": token,
+      ...(debugToken ? { "x-thumos-debug-token": debugToken } : {})
     },
     body: JSON.stringify(body)
   });
@@ -101,26 +106,23 @@ function countSpectrumTraits(visibleSoulFile) {
 
 function hasHiddenProfiles(hiddenSoulFile) {
   if (!hiddenSoulFile) return false;
-  const bigFive = hiddenSoulFile.bigFiveScores && Object.values(hiddenSoulFile.bigFiveScores).some(Boolean);
-  const schwartz = Array.isArray(hiddenSoulFile.schwartzProfile) && hiddenSoulFile.schwartzProfile.length > 0;
-  const attachment = hiddenSoulFile.attachmentScores
-    && (hiddenSoulFile.attachmentScores.style
-      || typeof hiddenSoulFile.attachmentScores.anxiety === "number"
-      || typeof hiddenSoulFile.attachmentScores.avoidance === "number");
-  const moral = hiddenSoulFile.moralFoundations && Object.values(hiddenSoulFile.moralFoundations).some((value) => typeof value === "number");
-  const meaning = typeof hiddenSoulFile.meaningOrientation === "string" && hiddenSoulFile.meaningOrientation.length > 0;
-  return Boolean(bigFive || schwartz || attachment || moral || meaning);
+  const reflections = hiddenSoulFile.expertReflections && Object.values(hiddenSoulFile.expertReflections).some(
+    (entries) => Array.isArray(entries) && entries.length > 0
+  );
+  const drivers = Array.isArray(hiddenSoulFile.coreDrivers) && hiddenSoulFile.coreDrivers.length > 0;
+  const notes = Array.isArray(hiddenSoulFile.analystNotes) && hiddenSoulFile.analystNotes.length > 0;
+  const honestInsights = Array.isArray(hiddenSoulFile.honestInsights) && hiddenSoulFile.honestInsights.length > 0;
+  return Boolean(reflections || drivers || notes || honestInsights);
 }
 
 function hasReflectionSignals(reflectionNote) {
   if (!reflectionNote) return false;
-  const bigFive = reflectionNote.inferredBigFive && Object.values(reflectionNote.inferredBigFive).some(Boolean);
-  const attachment = Array.isArray(reflectionNote.attachmentSignals) && reflectionNote.attachmentSignals.length > 0;
-  const values = Array.isArray(reflectionNote.valueSignals) && reflectionNote.valueSignals.length > 0;
-  const moral = Array.isArray(reflectionNote.moralFoundationSignals) && reflectionNote.moralFoundationSignals.length > 0;
-  const conflict = typeof reflectionNote.conflictStyle === "string" && reflectionNote.conflictStyle.length > 0;
-  const meaning = typeof reflectionNote.meaningOrientation === "string" && reflectionNote.meaningOrientation.length > 0;
-  return Boolean(bigFive || attachment || values || moral || conflict || meaning);
+  const currentThreads = Array.isArray(reflectionNote.currentThreads) && reflectionNote.currentThreads.length > 0;
+  const avoidObservations = Array.isArray(reflectionNote.avoidPastObservations) && reflectionNote.avoidPastObservations.length > 0;
+  const avoidQuestions = Array.isArray(reflectionNote.avoidPastQuestions) && reflectionNote.avoidPastQuestions.length > 0;
+  const steerToTopics = Array.isArray(reflectionNote.steerToTopics) && reflectionNote.steerToTopics.length > 0;
+  const reasoning = typeof reflectionNote.steeringReasoning === "string" && reflectionNote.steeringReasoning.length > 0;
+  return Boolean(currentThreads || avoidObservations || avoidQuestions || steerToTopics || reasoning);
 }
 
 async function main() {

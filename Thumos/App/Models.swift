@@ -53,7 +53,7 @@ struct VisibleSoulFileSections: Codable, Equatable {
     var howYouConnect: String
     var whatYouCarry: String
     var whatLightsYouUp: String
-    var yourContradictions: String
+    var yourTensions: String
     var yourVoice: String
 
     enum CodingKeys: String, CodingKey {
@@ -62,14 +62,57 @@ struct VisibleSoulFileSections: Codable, Equatable {
         case howYouConnect = "howYouConnect"
         case whatYouCarry = "whatYouCarry"
         case whatLightsYouUp = "whatLightsYouUp"
-        case yourContradictions = "yourContradictions"
+        case yourTensions = "yourTensions"
+        case legacyYourContradictions = "yourContradictions"
         case yourVoice = "yourVoice"
     }
 
     static let empty = VisibleSoulFileSections(
         howYouMove: "", howYouThink: "", howYouConnect: "",
-        whatYouCarry: "", whatLightsYouUp: "", yourContradictions: "", yourVoice: ""
+        whatYouCarry: "", whatLightsYouUp: "", yourTensions: "", yourVoice: ""
     )
+
+    init(
+        howYouMove: String,
+        howYouThink: String,
+        howYouConnect: String,
+        whatYouCarry: String,
+        whatLightsYouUp: String,
+        yourTensions: String,
+        yourVoice: String
+    ) {
+        self.howYouMove = howYouMove
+        self.howYouThink = howYouThink
+        self.howYouConnect = howYouConnect
+        self.whatYouCarry = whatYouCarry
+        self.whatLightsYouUp = whatLightsYouUp
+        self.yourTensions = yourTensions
+        self.yourVoice = yourVoice
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        howYouMove = try container.decodeIfPresent(String.self, forKey: .howYouMove) ?? ""
+        howYouThink = try container.decodeIfPresent(String.self, forKey: .howYouThink) ?? ""
+        howYouConnect = try container.decodeIfPresent(String.self, forKey: .howYouConnect) ?? ""
+        whatYouCarry = try container.decodeIfPresent(String.self, forKey: .whatYouCarry) ?? ""
+        whatLightsYouUp = try container.decodeIfPresent(String.self, forKey: .whatLightsYouUp) ?? ""
+        yourTensions = try container.decodeIfPresent(String.self, forKey: .yourTensions)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyYourContradictions)
+            ?? ""
+        yourVoice = try container.decodeIfPresent(String.self, forKey: .yourVoice) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(howYouMove, forKey: .howYouMove)
+        try container.encode(howYouThink, forKey: .howYouThink)
+        try container.encode(howYouConnect, forKey: .howYouConnect)
+        try container.encode(whatYouCarry, forKey: .whatYouCarry)
+        try container.encode(whatLightsYouUp, forKey: .whatLightsYouUp)
+        try container.encode(yourTensions, forKey: .yourTensions)
+        try container.encode(yourVoice, forKey: .yourVoice)
+    }
 }
 
 struct VisibleSoulFile: Codable, Equatable {
@@ -211,46 +254,27 @@ struct ReflectionNote: Codable {
     let recurringThemes: [String]
     let notableAbsences: [String]
     let emotionalArc: String
-    let domainCoverage: [DomainCoverageEntry]
-    let recentAssistantQuestions: [String]
-    let openLoops: [String]
-    let inferredBigFive: ReflectionInferredBigFive
-    let attachmentSignals: [AttachmentSignal]
-    let valueSignals: [ValueSignal]
-    let moralFoundationSignals: [MoralFoundationSignal]
-    let conflictStyle: String
-    let meaningOrientation: String
-}
+    let currentThreads: [String]
+    let avoidPastObservations: [String]
+    let avoidPastQuestions: [String]
+    let steerToTopics: [String]
+    let steeringPressure: String
+    let steeringReasoning: String
 
-struct ReflectionTraitEstimate: Codable {
-    let score: Double
-    let confidence: String
-    let evidence: String
-}
-
-struct ReflectionInferredBigFive: Codable {
-    let openness: ReflectionTraitEstimate?
-    let conscientiousness: ReflectionTraitEstimate?
-    let extraversion: ReflectionTraitEstimate?
-    let agreeableness: ReflectionTraitEstimate?
-    let neuroticism: ReflectionTraitEstimate?
-}
-
-struct AttachmentSignal: Codable {
-    let dimension: String
-    let signal: String
-    let strength: String
-}
-
-struct ValueSignal: Codable {
-    let value: String
-    let evidence: String
-    let direction: String
-}
-
-struct MoralFoundationSignal: Codable {
-    let foundation: String
-    let signal: String
+    enum CodingKeys: String, CodingKey {
+        case updatedAt
+        case factualAnchors
+        case tensions
+        case recurringThemes
+        case notableAbsences
+        case emotionalArc
+        case currentThreads
+        case avoidPastObservations
+        case avoidPastQuestions
+        case steerToTopics
+        case steeringPressure
+        case steeringReasoning
+    }
 }
 
 struct CoreDriver: Codable {
@@ -276,10 +300,6 @@ struct VoiceProfile: Codable {
 }
 
 struct DepthMap: Codable {
-    let safeEntryPoints: [String]
-    let unlockTopics: [String]
-    let avoidEarly: [String]
-    let currentlyLiveTopics: [String]
     let domainCoverage: [DomainCoverageEntry]
 }
 
@@ -300,54 +320,25 @@ struct HiddenSoulFile: Codable {
     let voice: VoiceProfile
     let depthMap: DepthMap
     let analystNotes: [String]
-    let bigFiveScores: HiddenBigFiveScores
-    let schwartzProfile: [SchwartzValueProfileEntry]
-    let attachmentScores: HiddenAttachmentScores
-    let moralFoundations: HiddenMoralFoundations
-    let meaningOrientation: String?
-}
-
-struct HiddenTraitScore: Codable {
-    let score: Double
-    let confidence: Double
-    let evidence: String
-}
-
-struct HiddenBigFiveScores: Codable {
-    let openness: HiddenTraitScore?
-    let conscientiousness: HiddenTraitScore?
-    let extraversion: HiddenTraitScore?
-    let agreeableness: HiddenTraitScore?
-    let neuroticism: HiddenTraitScore?
-}
-
-struct SchwartzValueProfileEntry: Codable {
-    let value: String
-    let priority: Int
-    let evidence: String
-}
-
-struct HiddenAttachmentScores: Codable {
-    let anxiety: Double?
-    let avoidance: Double?
-    let style: String?
-    let evidence: String
-}
-
-struct HiddenMoralFoundations: Codable {
-    let care: Double?
-    let fairness: Double?
-    let loyalty: Double?
-    let authority: Double?
-    let purity: Double?
+    let honestInsights: [String]
 }
 
 struct SteeringPreview: Codable {
-    let domainCoverage: [DomainCoverageEntry]
-    let safeEntryPoints: [String]
-    let unlockTopics: [String]
-    let avoidEarly: [String]
-    let currentlyLiveTopics: [String]
+    let currentThreads: [String]
+    let avoidPastObservations: [String]
+    let avoidPastQuestions: [String]
+    let steerToTopics: [String]
+    let steeringPressure: String
+    let steeringReasoning: String
+
+    enum CodingKeys: String, CodingKey {
+        case currentThreads = "current_threads"
+        case avoidPastObservations = "avoid_past_observations"
+        case avoidPastQuestions = "avoid_past_questions"
+        case steerToTopics = "steer_to_topics"
+        case steeringPressure = "steering_pressure"
+        case steeringReasoning = "steering_reasoning"
+    }
 }
 
 struct DebugModelProfileOption: Codable, Equatable, Identifiable {

@@ -2,7 +2,6 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import { debugTracesEnabled, getLatestClaudeDebugTrace } from "../debugTraces.ts";
-import { deriveConversationSteering } from "../../../src/domain/soul.ts";
 import {
   hiddenSoulFileSchema,
   reflectionNoteSchema,
@@ -47,6 +46,22 @@ function toHiddenSoulFile(row: HiddenSoulFileDumpRow | null): HiddenSoulFile | n
   });
 
   return parsed.success ? parsed.data : null;
+}
+
+function buildSteeringPreview(reflectionNote: unknown) {
+  const parsed = reflectionNoteSchema.safeParse(reflectionNote);
+  if (!parsed.success) {
+    return null;
+  }
+
+  return {
+    current_threads: parsed.data.currentThreads,
+    avoid_past_observations: parsed.data.avoidPastObservations,
+    avoid_past_questions: parsed.data.avoidPastQuestions,
+    steer_to_topics: parsed.data.steerToTopics,
+    steering_pressure: parsed.data.steeringPressure,
+    steering_reasoning: parsed.data.steeringReasoning
+  };
 }
 
 export async function handleDebugDump(
@@ -115,21 +130,18 @@ export async function handleDebugDump(
 
   const userRow = (userRows[0] as Record<string, unknown>) ?? null;
   const reflectionSnapshotRow = (reflectionSnapshotRows[0] as Record<string, unknown>) ?? null;
-  const reflectionNoteParsed = reflectionNoteSchema.safeParse(reflectionSnapshotRow?.note);
   const hiddenSoulFileParsed = toHiddenSoulFile((hiddenSoulFileRows[0] as HiddenSoulFileDumpRow) ?? null);
-  const { steering, source } = deriveConversationSteering(
-    reflectionNoteParsed.success ? reflectionNoteParsed.data : null
-  );
 
   return jsonResponse(200, {
     user: userRow,
     reflection_note: reflectionSnapshotRow?.note ?? null,
     reflection_snapshot_row: reflectionSnapshotRow,
-    steering_preview: steering,
-    steering_source: source,
+    steering_preview: buildSteeringPreview(reflectionSnapshotRow?.note),
+    steering_source: reflectionSnapshotRow?.note ? "reflection_snapshot" : "none",
     raw_messages: messageRows,
     visible_soul_file_row: visibleSoulFileRows[0] ?? null,
     hidden_soul_file_row: hiddenSoulFileRows[0] ?? null,
+    hidden_soul_file: hiddenSoulFileParsed,
     latest_conversation_trace: latestConversationTrace,
     latest_synthesis_trace: latestSynthesisTrace,
     latest_reflection_trace: latestReflectionTrace

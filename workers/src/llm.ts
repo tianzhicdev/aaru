@@ -88,7 +88,7 @@ const anthropicClient: LlmProviderClient = {
       temperature: config.temperature
     });
 
-    return JSON.parse(rawText) as T;
+    return parseJsonResponse<T>(rawText);
   }
 };
 
@@ -134,6 +134,11 @@ const fireworksOpenAIClient: LlmProviderClient = {
     });
   }
 };
+
+function parseJsonResponse<T>(rawText: string): T {
+  const cleaned = rawText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  return JSON.parse(cleaned) as T;
+}
 
 function getProviderClient(provider: ModelTaskConfig["provider"]): LlmProviderClient {
   switch (provider) {

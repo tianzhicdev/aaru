@@ -1,18 +1,29 @@
 import type { NeonSQL } from "./db.ts";
 import type { Env } from "./env.ts";
 import {
+  checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
   checkSynthesisNeeded,
+  getHiddenSynthesisStatus,
   getReflectionSnapshotState,
   getSynthesisStatus,
+  markHiddenSynthesisFailed,
   markReflectionSnapshotFailed,
   markSynthesisFailed,
+  runHiddenSynthesis,
   runReflectionSnapshot,
-  runSoulSynthesis
+  runVisibleSynthesis
 } from "./soulApp.ts";
 
-export interface SoulSynthesisJob {
-  kind: "soul_synthesis";
+export interface SynthesisVisibleJob {
+  kind: "synthesis_visible";
+  jobId: string;
+  userId: string;
+  queuedAt: string;
+}
+
+export interface SynthesisHiddenJob {
+  kind: "synthesis_hidden";
   jobId: string;
   userId: string;
   queuedAt: string;
@@ -26,7 +37,10 @@ export interface ReflectionSnapshotJob {
   throughMessageCount: number;
 }
 
-export type BackgroundJob = SoulSynthesisJob | ReflectionSnapshotJob;
+export type BackgroundJob =
+  | SynthesisVisibleJob
+  | SynthesisHiddenJob
+  | ReflectionSnapshotJob;
 
 export interface BackgroundQueueBinding {
   send(message: BackgroundJob): Promise<void>;
@@ -40,12 +54,26 @@ export interface QueueBatch<T> {
   messages: Array<QueueMessage<T>>;
 }
 
-export async function enqueueSoulSynthesis(
+export async function enqueueSynthesisVisible(
   queue: BackgroundQueueBinding,
   userId: string
-): Promise<SoulSynthesisJob> {
-  const job: SoulSynthesisJob = {
-    kind: "soul_synthesis",
+): Promise<SynthesisVisibleJob> {
+  const job: SynthesisVisibleJob = {
+    kind: "synthesis_visible",
+    jobId: crypto.randomUUID(),
+    userId,
+    queuedAt: new Date().toISOString()
+  };
+  await queue.send(job);
+  return job;
+}
+
+export async function enqueueSynthesisHidden(
+  queue: BackgroundQueueBinding,
+  userId: string
+): Promise<SynthesisHiddenJob> {
+  const job: SynthesisHiddenJob = {
+    kind: "synthesis_hidden",
     jobId: crypto.randomUUID(),
     userId,
     queuedAt: new Date().toISOString()
@@ -70,7 +98,7 @@ export async function enqueueReflectionSnapshot(
   return job;
 }
 
-async function processSoulSynthesisJob(sql: NeonSQL, env: Env, userId: string): Promise<void> {
+async function processVisibleSynthesisJob(sql: NeonSQL, env: Env, userId: string): Promise<void> {
   const status = await getSynthesisStatus(sql, userId);
   if (status !== "pending") {
     const { needed } = await checkSynthesisNeeded(sql, userId);
@@ -80,11 +108,30 @@ async function processSoulSynthesisJob(sql: NeonSQL, env: Env, userId: string): 
   }
 
   try {
-    await runSoulSynthesis(sql, env, userId);
+    await runVisibleSynthesis(sql, env, userId);
   } catch (error) {
-    console.error("Queued soul synthesis failed:", error);
+    console.error("Queued visible synthesis failed:", error);
     await markSynthesisFailed(sql, userId).catch((markError) =>
-      console.error("Failed to mark queued synthesis as failed:", markError)
+      console.error("Failed to mark queued visible synthesis as failed:", markError)
+    );
+  }
+}
+
+async function processHiddenSynthesisJob(sql: NeonSQL, env: Env, userId: string): Promise<void> {
+  const status = await getHiddenSynthesisStatus(sql, userId);
+  if (status !== "pending") {
+    const { needed } = await checkHiddenSynthesisNeeded(sql, userId);
+    if (!needed) {
+      return;
+    }
+  }
+
+  try {
+    await runHiddenSynthesis(sql, env, userId);
+  } catch (error) {
+    console.error("Queued hidden synthesis failed:", error);
+    await markHiddenSynthesisFailed(sql, userId).catch((markError) =>
+      console.error("Failed to mark queued hidden synthesis as failed:", markError)
     );
   }
 }
@@ -125,8 +172,13 @@ export async function processBackgroundJobsBatch(
       continue;
     }
 
-    if (body.kind === "soul_synthesis") {
-      await processSoulSynthesisJob(sql, env, userId);
+    if (body.kind === "synthesis_visible") {
+      await processVisibleSynthesisJob(sql, env, userId);
+      continue;
+    }
+
+    if (body.kind === "synthesis_hidden") {
+      await processHiddenSynthesisJob(sql, env, userId);
       continue;
     }
 

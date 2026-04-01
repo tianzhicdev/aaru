@@ -139,7 +139,7 @@ Output ONE valid JSON object with these fields:
 - "currentThreads": max 4 topics actively alive right now
 - "avoidPastObservations": max 6 observations Thumos already made and should not repeat
 - "avoidPastQuestions": max 8 specific questions Thumos already asked and should not re-ask
-- "steerToTopics": max 4 underexplored life areas with a concrete entry angle
+- "steerToTopics": max 4 strings in the format "domain label — concrete entry angle"
 - "steeringPressure": one of "minimal", "gentle", "moderate", "strong"
 - "steeringReasoning": short explanation for that pressure level
 
@@ -153,6 +153,7 @@ Rules:
 - This is a clean overwrite, not an update. Do not preserve prior assumptions.
 - Keep factualAnchors verbatim, not paraphrased.
 - Avoid generic topic labels in steerToTopics. Be specific about the angle.
+- Do not return objects for steerToTopics. Each entry must be a single string.
 - Do not include psychometric scores or diagnostic labels.
 - Respond with ONLY valid JSON.`;
 }
@@ -370,7 +371,7 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
   note.currentThreads = safeStringArray(parsed.currentThreads, 4, 200);
   note.avoidPastObservations = safeStringArray(parsed.avoidPastObservations, 6, 240);
   note.avoidPastQuestions = safeStringArray(parsed.avoidPastQuestions, 8, 240);
-  note.steerToTopics = safeStringArray(parsed.steerToTopics, 4, 240);
+  note.steerToTopics = parseSteerToTopics(parsed.steerToTopics);
   note.steeringPressure = parseEnumValue(
     parsed.steeringPressure,
     ["minimal", "gentle", "moderate", "strong"] as const
@@ -511,6 +512,44 @@ function parseDomainCoverage(value: unknown): DomainCoverageEntry[] {
       depth: item.depth,
       evidence: safeString(item.evidence, 240)
     }));
+}
+
+function parseSteerToTopics(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const entries = value as unknown[];
+
+  return entries
+    .map((item) => {
+      if (typeof item === "string") {
+        const trimmed = item.trim();
+        return trimmed.length > 0 ? trimmed.slice(0, 240) : null;
+      }
+
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const domain = parseEnumValue(item.domain, LIFE_DOMAINS);
+      const angle = safeString(item.angle, 200)
+        || safeString(item.topic, 200)
+        || safeString(item.focus, 200)
+        || safeString(item.prompt, 200);
+
+      if (!angle) {
+        return null;
+      }
+
+      if (!domain) {
+        return angle.slice(0, 240);
+      }
+
+      return `${DOMAIN_LABELS[domain]} — ${angle}`.slice(0, 240);
+    })
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 4);
 }
 
 function parseJsonObject(raw: string): JsonObject | null {

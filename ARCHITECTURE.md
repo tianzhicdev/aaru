@@ -208,7 +208,7 @@ Current implementation notes:
 - records a conversation debug trace with provider/model/profile metadata
 - queues reflection snapshot work when the transcript crosses the current cadence boundary
 
-Current reflection cadence: every 5 total persisted messages.
+Current reflection cadence: every 10 total persisted messages, which is roughly every 5 user/assistant exchanges.
 
 ### Soul File Fetch
 

@@ -95,6 +95,7 @@ export interface ReflectionSnapshotState {
 
 const SYNTHESIS_STALE_PENDING_MS = 15 * 60 * 1000;
 const REFLECTION_STALE_PENDING_MS = 10 * 60 * 1000;
+const REFLECTION_CADENCE_MESSAGES = 10;
 
 export type SynthesisStatus = "ready" | "pending" | "failed";
 export type ReflectionSnapshotStatus = "ready" | "pending" | "failed";
@@ -218,7 +219,7 @@ export async function checkReflectionSnapshotNeeded(
   const totalMessageCount = Number(countRows[0]?.cnt ?? 0);
   const lastMessageCreatedAt = normalizeTimestamp(countRows[0]?.last_created_at);
 
-  if (totalMessageCount < 5) {
+  if (totalMessageCount < REFLECTION_CADENCE_MESSAGES) {
     return {
       needed: false,
       pending: false,
@@ -243,7 +244,8 @@ export async function checkReflectionSnapshotNeeded(
   }
 
   const throughMessageCount = state?.throughMessageCount ?? 0;
-  const needed = Math.floor(totalMessageCount / 5) > Math.floor(throughMessageCount / 5);
+  const needed = Math.floor(totalMessageCount / REFLECTION_CADENCE_MESSAGES)
+    > Math.floor(throughMessageCount / REFLECTION_CADENCE_MESSAGES);
 
   return {
     needed,
@@ -706,7 +708,7 @@ export async function runReflectionSnapshot(
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingSnapshot = await getLatestReflectionSnapshot(sql, userId);
 
-  if (allMessages.length < 5) {
+  if (allMessages.length < REFLECTION_CADENCE_MESSAGES) {
     return existingSnapshot;
   }
 

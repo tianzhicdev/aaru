@@ -212,11 +212,18 @@ async function main() {
     };
   }, { attempts: 48, delayMs: 5000 });
 
-  const debugInfo = await post("get-debug-info", {}, token);
-  assert(debugInfo.status === 200, `Fresh get-debug-info failed: ${debugInfo.status}`);
+  const debugInfo = await waitFor(async () => {
+    const result = await post("get-debug-info", {}, token);
+    const ready = result.status === 200 && hasHiddenProfiles(result.json.hidden_soul_file);
+    return {
+      done: ready,
+      value: result.json,
+      error: "Hidden soul file did not populate structured profile fields within the polling window"
+    };
+  }, { attempts: 48, delayMs: 5000 });
 
   const visibleSoulFile = readySoulFile.visible_soul_file;
-  const hiddenSoulFile = debugInfo.json.hidden_soul_file;
+  const hiddenSoulFile = debugInfo.hidden_soul_file;
 
   assert(countSpectrumTraits(visibleSoulFile) >= 2, "Visible soul file did not populate enough personality spectrum traits");
   assert(Array.isArray(visibleSoulFile.topValues) && visibleSoulFile.topValues.length >= 1, "Visible soul file did not populate top values");

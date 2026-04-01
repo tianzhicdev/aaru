@@ -100,7 +100,12 @@ describe("reflection snapshots", () => {
         { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26T00:01:00Z" },
         { id: "m3", user_id: "user-1", role: "assistant", content: "What are the walls protecting?", created_at: "2026-03-26T00:02:00Z" },
         { id: "m4", user_id: "user-1", role: "user", content: "My time.", created_at: "2026-03-26T00:03:00Z" },
-        { id: "m5", user_id: "user-1", role: "assistant", content: "What does losing time mean for you?", created_at: "2026-03-26T00:04:00Z" }
+        { id: "m5", user_id: "user-1", role: "assistant", content: "What does losing time mean for you?", created_at: "2026-03-26T00:04:00Z" },
+        { id: "m6", user_id: "user-1", role: "user", content: "When I paint.", created_at: "2026-03-26T00:05:00Z" },
+        { id: "m7", user_id: "user-1", role: "assistant", content: "What opens when you paint?", created_at: "2026-03-26T00:06:00Z" },
+        { id: "m8", user_id: "user-1", role: "user", content: "My breath slows down.", created_at: "2026-03-26T00:07:00Z" },
+        { id: "m9", user_id: "user-1", role: "assistant", content: "What are you not outrunning then?", created_at: "2026-03-26T00:08:00Z" },
+        { id: "m10", user_id: "user-1", role: "user", content: "The need to prove I'm useful.", created_at: "2026-03-26T00:09:00Z" }
       ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])

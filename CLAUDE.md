@@ -135,7 +135,7 @@ A task is complete when ALL of the following are true:
 - **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
 - **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow. Opening mode can fetch current events via xAI web search (Grok 4) for topics from openThreads + recurringThemes, injected as optional "CURRENT CONTEXT" in the system prompt.
 - **xAI integration** — Optional (`XAI_TOKEN` env). Uses `grok-4-fast-non-reasoning` with `web_search` tool. Graceful degradation: returns empty on any failure. Only fires in opening mode when topics exist.
-- **Reflection snapshots** — Reflection notes are async clean-slate snapshots generated from all persisted messages every 5 total messages and stored as versioned rows in `reflection_snapshots`.
+- **Reflection snapshots** — Reflection notes are async clean-slate snapshots generated from all persisted messages every 10 total persisted messages (about 5 exchanges) and stored as versioned rows in `reflection_snapshots`.
 - **Conversation steering** — Live conversation uses the latest ready reflection note directly (`currentThreads`, `avoidPastQuestions`, `steerToTopics`, pressure/reasoning), but raw messages remain authoritative.
 - **Debug routes** — `get-debug-info` and `debug-dump` require both the normal session token and `x-thumos-debug-token`.
 - **Debug traces** — Raw prompt/response traces are only written when `ENABLE_DEBUG_TRACES=true`.

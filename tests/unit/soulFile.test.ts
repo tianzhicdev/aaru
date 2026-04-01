@@ -110,6 +110,33 @@ describe("parsers", () => {
     expect(note?.steeringPressure).toBe("gentle");
   });
 
+  it("coerces structured steer-to-topic objects into flat strings", () => {
+    const note = parseReflectionNote(JSON.stringify({
+      updatedAt: "2026-03-31T00:10:00Z",
+      factualAnchors: {},
+      tensions: [],
+      recurringThemes: [],
+      notableAbsences: [],
+      emotionalArc: "",
+      currentThreads: [],
+      avoidPastObservations: [],
+      avoidPastQuestions: [],
+      steerToTopics: [
+        {
+          domain: "values_and_beliefs",
+          angle: "what stability means when it is chosen instead of inherited"
+        }
+      ],
+      steeringPressure: "moderate",
+      steeringReasoning: "The conversation is circling."
+    }));
+
+    expect(note).not.toBeNull();
+    expect(note?.steerToTopics).toEqual([
+      "Values & Beliefs — what stability means when it is chosen instead of inherited"
+    ]);
+  });
+
   it("parses visible narrative output with your tensions", () => {
     const visible = parseVisibleNarrative(JSON.stringify({
       version: 2,

@@ -36,7 +36,7 @@ Current server flow:
 - `sync-messages` — fetch the full canonical transcript
 - `soul-converse` — unified SSE conversation endpoint for both `mode: "opening"` and `mode: "reply"`
 - `get-soul-file` — returns the current visible soul file and enqueues async synthesis when needed
-- background queue — runs reflection snapshots every 5 total messages and separate visible/hidden synthesis after 3+ user messages
+- background queue — runs reflection snapshots every 10 total persisted messages (about 5 exchanges) and separate visible/hidden synthesis after 3+ user messages
 
 Dashboard-v2 visible fields:
 

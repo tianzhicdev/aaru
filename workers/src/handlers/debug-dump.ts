@@ -21,6 +21,7 @@ interface HiddenSoulFileDumpRow {
   voice: Json;
   depth_map: Json;
   analyst_notes: Json;
+  honest_insights: Json;
 }
 
 function normalizeTimestamp(value: unknown): string {
@@ -42,7 +43,8 @@ function toHiddenSoulFile(row: HiddenSoulFileDumpRow | null): HiddenSoulFile | n
     coreValues: row.core_values,
     voice: row.voice,
     depthMap: row.depth_map,
-    analystNotes: row.analyst_notes
+    analystNotes: row.analyst_notes,
+    honestInsights: row.honest_insights
   });
 
   return parsed.success ? parsed.data : null;
@@ -87,6 +89,7 @@ export async function handleDebugDump(
     userRows,
     messageRows,
     reflectionSnapshotRows,
+    readyReflectionSnapshotRows,
     visibleSoulFileRows,
     hiddenSoulFileRows,
     latestConversationTrace,
@@ -109,18 +112,29 @@ export async function handleDebugDump(
       SELECT *
       FROM reflection_snapshots
       WHERE user_id = ${userId}
+      ORDER BY version DESC
+      LIMIT 1
+    `,
+    sql`
+      SELECT *
+      FROM reflection_snapshots
+      WHERE user_id = ${userId}
+        AND status = 'ready'
+      ORDER BY version DESC
       LIMIT 1
     `,
     sql`
       SELECT *
       FROM visible_soul_files
       WHERE user_id = ${userId}
+      ORDER BY version DESC
       LIMIT 1
     `,
     sql`
       SELECT *
       FROM hidden_soul_files
       WHERE user_id = ${userId}
+      ORDER BY version DESC
       LIMIT 1
     `,
     tracesAllowed ? getLatestClaudeDebugTrace(sql, userId, "conversation") : Promise.resolve(null),
@@ -130,14 +144,17 @@ export async function handleDebugDump(
 
   const userRow = (userRows[0] as Record<string, unknown>) ?? null;
   const reflectionSnapshotRow = (reflectionSnapshotRows[0] as Record<string, unknown>) ?? null;
+  const readyReflectionSnapshotRow = (readyReflectionSnapshotRows[0] as Record<string, unknown>) ?? null;
   const hiddenSoulFileParsed = toHiddenSoulFile((hiddenSoulFileRows[0] as HiddenSoulFileDumpRow) ?? null);
+  const reflectionNote = readyReflectionSnapshotRow?.note ?? null;
 
   return jsonResponse(200, {
     user: userRow,
-    reflection_note: reflectionSnapshotRow?.note ?? null,
+    reflection_note: reflectionNote,
     reflection_snapshot_row: reflectionSnapshotRow,
-    steering_preview: buildSteeringPreview(reflectionSnapshotRow?.note),
-    steering_source: reflectionSnapshotRow?.note ? "reflection_snapshot" : "none",
+    latest_ready_reflection_snapshot_row: readyReflectionSnapshotRow,
+    steering_preview: buildSteeringPreview(reflectionNote),
+    steering_source: reflectionNote ? "reflection_snapshot" : "none",
     raw_messages: messageRows,
     visible_soul_file_row: visibleSoulFileRows[0] ?? null,
     hidden_soul_file_row: hiddenSoulFileRows[0] ?? null,

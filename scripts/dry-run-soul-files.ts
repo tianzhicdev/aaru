@@ -211,11 +211,13 @@ ${exchangeNumber <= 7 ? "EARLY: Keep it relatively light, testing the waters. Sh
     role: (turn.role === "assistant" ? "user" : "assistant") as "user" | "assistant",
     content: turn.content
   }));
+  const simulationTimeoutMs = 45000;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
+        signal: AbortSignal.timeout(simulationTimeoutMs),
         headers: {
           "x-api-key": ANTHROPIC_API_KEY!,
           "anthropic-version": "2023-06-01",
@@ -238,11 +240,20 @@ ${exchangeNumber <= 7 ? "EARLY: Keep it relatively light, testing the waters. Sh
       const data = await response.json() as { content: Array<{ text: string }> };
       return data.content[0].text;
     } catch (err) {
+      const message = err instanceof Error && err.name === "TimeoutError"
+        ? `Character simulation timed out after ${Math.round(simulationTimeoutMs / 1000)}s`
+        : String(err);
+
       if (attempt < 2) {
-        console.error(`\n  [retry] character sim attempt ${attempt + 1} failed: ${err}`);
+        console.error(`\n  [retry] character sim attempt ${attempt + 1} failed: ${message}`);
         await new Promise((resolve) => setTimeout(resolve, 3000));
         continue;
       }
+
+      if (err instanceof Error && err.name === "TimeoutError") {
+        throw new Error(message);
+      }
+
       throw err;
     }
   }
@@ -397,6 +408,31 @@ async function waitForReflectionSnapshot(
   return false;
 }
 
+async function waitForHiddenSoulFile(
+  token: string,
+  maxWaitMs: number = 120000
+): Promise<unknown | null> {
+  const start = Date.now();
+
+  while (Date.now() - start < maxWaitMs) {
+    const res = await serverPost("get-debug-info", {}, token);
+    if (!res.ok) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      continue;
+    }
+
+    const debugInfo = await res.json() as { hidden_soul_file?: unknown };
+    if (hasHiddenProfiles(debugInfo.hidden_soul_file)) {
+      return debugInfo.hidden_soul_file ?? null;
+    }
+
+    process.stdout.write(".");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+
+  return null;
+}
+
 async function runCharacter(character: Character, exchanges: number): Promise<RunResult> {
   console.log(`\n${"═".repeat(60)}`);
   console.log(`  ${character.displayName}`);
@@ -514,15 +550,9 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   let hiddenSoulFile: unknown = null;
   let debugDump: unknown = null;
 
-  const debugInfoRes = await serverPost("get-debug-info", {}, token);
-  if (!debugInfoRes.ok) {
-    const err = await debugInfoRes.text();
-    console.error(`  [error] get-debug-info failed: ${debugInfoRes.status} ${err}`);
-  } else {
-    const debugInfo = await debugInfoRes.json() as { hidden_soul_file?: unknown };
-    hiddenSoulFile = debugInfo.hidden_soul_file ?? null;
-    console.log(`  [fetch] hidden soul file: ${hiddenSoulFile ? "found" : "not found"}`);
-  }
+  process.stdout.write("  [fetch] waiting for hidden soul file");
+  hiddenSoulFile = await waitForHiddenSoulFile(token);
+  console.log(hiddenSoulFile ? " ready" : " timed out");
 
   const debugDumpRes = await serverPost("debug-dump", {}, token);
   if (!debugDumpRes.ok) {

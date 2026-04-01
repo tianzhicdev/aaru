@@ -44,7 +44,7 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
       reflection_snapshot: {
         provider: "anthropic",
         model: "claude-haiku-4-5-20251001",
-        maxTokens: 4000,
+        maxTokens: 2000,
         temperature: 0.2
       },
       synthesis_assessment: {
@@ -81,7 +81,7 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
       reflection_snapshot: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/deepseek-v3p2",
-        maxTokens: 4000,
+        maxTokens: 2000,
         temperature: 0.2,
         reasoningMode: "disabled"
       },

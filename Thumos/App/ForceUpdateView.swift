@@ -28,7 +28,7 @@ struct ForceUpdateView: View {
                 Spacer()
 
                 Button {
-                    if let url = URL(string: "https://apps.apple.com/app/id6761285269") {
+                    if let url = URL(string: "https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301") {
                         UIApplication.shared.open(url)
                     }
                 } label: {

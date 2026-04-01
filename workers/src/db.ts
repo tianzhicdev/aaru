@@ -59,6 +59,21 @@ export async function getUserModelProfileId(
   return normalizeModelProfileId(rows[0]?.model_profile_id);
 }
 
+export async function updateUserModelProfileId(
+  sql: NeonSQL,
+  userId: string,
+  modelProfileId: ModelProfileId
+): Promise<ModelProfileId> {
+  const rows = await sql`
+    UPDATE users
+    SET model_profile_id = ${modelProfileId}
+    WHERE id = ${userId}
+    RETURNING model_profile_id
+  `;
+
+  return normalizeModelProfileId(rows[0]?.model_profile_id);
+}
+
 export async function createDeviceSession(
   sql: NeonSQL,
   userId: string,

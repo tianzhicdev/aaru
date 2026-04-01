@@ -350,9 +350,26 @@ struct SteeringPreview: Codable {
     let currentlyLiveTopics: [String]
 }
 
+struct DebugModelProfileOption: Codable, Equatable, Identifiable {
+    let id: String
+    let label: String
+}
+
+struct SetModelProfileResponse: Codable {
+    let userId: String
+    let modelProfileId: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case modelProfileId = "model_profile_id"
+    }
+}
+
 struct DebugInfoResponse: Codable {
     let userId: String
     let deviceId: String
+    let modelProfileId: String
+    let availableModelProfiles: [DebugModelProfileOption]?
     let hiddenSoulFile: HiddenSoulFile?
     let visibleSoulFile: VisibleSoulFile?
     let reflectionNote: ReflectionNote?
@@ -362,6 +379,8 @@ struct DebugInfoResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case deviceId = "device_id"
+        case modelProfileId = "model_profile_id"
+        case availableModelProfiles = "available_model_profiles"
         case hiddenSoulFile = "hidden_soul_file"
         case visibleSoulFile = "visible_soul_file"
         case reflectionNote = "reflection_note"

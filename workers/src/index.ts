@@ -14,6 +14,7 @@ import { handleGetSoulFile } from "./handlers/get-soul-file.ts";
 import { handleDeleteAccount } from "./handlers/delete-account.ts";
 import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
 import { handleDebugDump } from "./handlers/debug-dump.ts";
+import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -64,6 +65,11 @@ export default {
       case "debug-dump":
         return withErrorHandling(request, (payload, req) =>
           handleDebugDump(sql, env, payload, req)
+        );
+
+      case "set-model-profile":
+        return withErrorHandling(request, (payload, req) =>
+          handleSetModelProfile(sql, env, payload, req)
         );
 
       default:

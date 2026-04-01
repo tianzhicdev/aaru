@@ -6,6 +6,7 @@ struct DebugView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var deviceIDInput = ""
     @State private var selectedEnvironment = BackendEnvironmentKind.dev
+    @State private var selectedModelProfileID = "frontier_v1"
     @State private var customBaseURLInput = ""
     @State private var debugTokenInput = ""
     @State private var backendStatusMessage: String?
@@ -84,6 +85,17 @@ struct DebugView: View {
         !debugTokenInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var availableModelProfiles: [DebugModelProfileOption] {
+        let options = model.debugInfo?.availableModelProfiles ?? []
+        if !options.isEmpty {
+            return options
+        }
+        return [
+            DebugModelProfileOption(id: "frontier_v1", label: "Current Anthropic frontier stack"),
+            DebugModelProfileOption(id: "value_v1", label: "Fireworks DeepSeek value stack")
+        ]
+    }
+
     private var backendSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Backend")
@@ -120,6 +132,7 @@ struct DebugView: View {
 
             debugRow("Current URL", model.backendConfiguration.baseURLString.isEmpty ? "—" : model.backendConfiguration.baseURLString)
             debugRow("Namespace", model.backendConfiguration.storageNamespace)
+            debugRow("Model Profile", model.debugInfo?.modelProfileId ?? selectedModelProfileID)
 
             if let backendStatusMessage {
                 Text(backendStatusMessage)
@@ -153,6 +166,31 @@ struct DebugView: View {
                 }
             } label: {
                 Text("Apply Backend")
+                    .font(Theme.sans(13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Theme.accentBright)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            Picker("Model Profile", selection: $selectedModelProfileID) {
+                ForEach(availableModelProfiles) { option in
+                    Text(option.label).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(Theme.textPrimary)
+
+            Button {
+                Task {
+                    backendStatusMessage = "Updating model profile..."
+                    await model.updateDebugModelProfile(selectedModelProfileID)
+                    selectedModelProfileID = model.debugInfo?.modelProfileId ?? selectedModelProfileID
+                    backendStatusMessage = "Using model profile \(selectedModelProfileID)"
+                }
+            } label: {
+                Text("Apply Model Profile")
                     .font(Theme.sans(13, weight: .medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
@@ -474,6 +512,7 @@ struct DebugView: View {
         selectedEnvironment = model.backendConfiguration.environment
         customBaseURLInput = model.backendConfiguration.customBaseURLString ?? ""
         debugTokenInput = model.backendConfiguration.debugApiToken ?? ""
+        selectedModelProfileID = model.debugInfo?.modelProfileId ?? selectedModelProfileID
     }
 }
 #endif

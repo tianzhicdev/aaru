@@ -1,6 +1,6 @@
 import type { Env } from "./env.ts";
 import { callClaude, streamClaude } from "./claude.ts";
-import { callFireworks, streamFireworks } from "./fireworks.ts";
+import { callFireworks, callFireworksJson, streamFireworks } from "./fireworks.ts";
 import type { ModelProfileId, ModelTask, ModelTaskConfig } from "./modelProfiles.ts";
 
 export interface LlmMessage {
@@ -8,10 +8,34 @@ export interface LlmMessage {
   content: string;
 }
 
+export interface LlmJsonSchema {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+}
+
 export interface LlmInvocationContext {
   profileId: ModelProfileId;
   task: ModelTask;
   userId?: string;
+}
+
+interface LlmProviderRequest {
+  env: Env;
+  config: ModelTaskConfig;
+  systemPrompt: string;
+  messages: LlmMessage[];
+  context: LlmInvocationContext;
+}
+
+interface LlmProviderJsonRequest extends LlmProviderRequest {
+  outputSchema: LlmJsonSchema;
+}
+
+interface LlmProviderClient {
+  streamText(request: LlmProviderRequest): AsyncGenerator<string, void, undefined>;
+  callText(request: LlmProviderRequest): Promise<string>;
+  callJson<T>(request: LlmProviderJsonRequest): Promise<T>;
 }
 
 function getFireworksApiKey(env: Env): string {
@@ -33,6 +57,96 @@ function getFireworksHeaders(context: LlmInvocationContext): Record<string, stri
   };
 }
 
+function getFireworksReasoningEffort(config: ModelTaskConfig): "none" | false | undefined {
+  return config.reasoningMode === "disabled" ? "none" : undefined;
+}
+
+const anthropicClient: LlmProviderClient = {
+  streamText({ env, config, systemPrompt, messages }: LlmProviderRequest) {
+    return streamClaude(systemPrompt, messages, {
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature
+    });
+  },
+
+  callText({ env, config, systemPrompt, messages }: LlmProviderRequest) {
+    return callClaude(systemPrompt, messages, {
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature
+    });
+  },
+
+  async callJson<T>({ env, config, systemPrompt, messages }: LlmProviderJsonRequest): Promise<T> {
+    const rawText = await callClaude(systemPrompt, messages, {
+      apiKey: env.ANTHROPIC_API_KEY,
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature
+    });
+
+    return JSON.parse(rawText) as T;
+  }
+};
+
+const fireworksOpenAIClient: LlmProviderClient = {
+  streamText({ env, config, systemPrompt, messages, context }: LlmProviderRequest) {
+    return streamFireworks(systemPrompt, messages, {
+      apiKey: getFireworksApiKey(env),
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature,
+      extraHeaders: getFireworksHeaders(context),
+      reasoningEffort: getFireworksReasoningEffort(config)
+    });
+  },
+
+  callText({ env, config, systemPrompt, messages, context }: LlmProviderRequest) {
+    return callFireworks(systemPrompt, messages, {
+      apiKey: getFireworksApiKey(env),
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature,
+      extraHeaders: getFireworksHeaders(context),
+      reasoningEffort: getFireworksReasoningEffort(config)
+    });
+  },
+
+  callJson<T>({
+    env,
+    config,
+    systemPrompt,
+    messages,
+    context,
+    outputSchema
+  }: LlmProviderJsonRequest) {
+    return callFireworksJson<T>(systemPrompt, messages, {
+      apiKey: getFireworksApiKey(env),
+      model: config.model,
+      maxTokens: config.maxTokens,
+      temperature: config.temperature,
+      extraHeaders: getFireworksHeaders(context),
+      reasoningEffort: getFireworksReasoningEffort(config),
+      responseFormat: outputSchema
+    });
+  }
+};
+
+function getProviderClient(provider: ModelTaskConfig["provider"]): LlmProviderClient {
+  switch (provider) {
+    case "anthropic":
+      return anthropicClient;
+    case "fireworks_openai":
+      return fireworksOpenAIClient;
+  }
+
+  const unreachableProvider: never = provider;
+  throw new Error(`Unsupported LLM provider: ${unreachableProvider}`);
+}
+
 export async function* streamLlmText(
   env: Env,
   config: ModelTaskConfig,
@@ -40,29 +154,13 @@ export async function* streamLlmText(
   messages: LlmMessage[],
   context: LlmInvocationContext
 ): AsyncGenerator<string, void, undefined> {
-  switch (config.provider) {
-    case "anthropic":
-      yield* streamClaude(systemPrompt, messages, {
-        apiKey: env.ANTHROPIC_API_KEY,
-        model: config.model,
-        maxTokens: config.maxTokens,
-        temperature: config.temperature
-      });
-      return;
-
-    case "fireworks_anthropic":
-      yield* streamFireworks(systemPrompt, messages, {
-        apiKey: getFireworksApiKey(env),
-        model: config.model,
-        maxTokens: config.maxTokens,
-        temperature: config.temperature,
-        extraHeaders: getFireworksHeaders(context)
-      });
-      return;
-  }
-
-  const unreachableProvider: never = config.provider;
-  throw new Error(`Unsupported LLM provider: ${unreachableProvider}`);
+  yield* getProviderClient(config.provider).streamText({
+    env,
+    config,
+    systemPrompt,
+    messages,
+    context
+  });
 }
 
 export async function callLlmText(
@@ -72,25 +170,29 @@ export async function callLlmText(
   messages: LlmMessage[],
   context: LlmInvocationContext
 ): Promise<string> {
-  switch (config.provider) {
-    case "anthropic":
-      return callClaude(systemPrompt, messages, {
-        apiKey: env.ANTHROPIC_API_KEY,
-        model: config.model,
-        maxTokens: config.maxTokens,
-        temperature: config.temperature
-      });
+  return getProviderClient(config.provider).callText({
+    env,
+    config,
+    systemPrompt,
+    messages,
+    context
+  });
+}
 
-    case "fireworks_anthropic":
-      return callFireworks(systemPrompt, messages, {
-        apiKey: getFireworksApiKey(env),
-        model: config.model,
-        maxTokens: config.maxTokens,
-        temperature: config.temperature,
-        extraHeaders: getFireworksHeaders(context)
-      });
-  }
-
-  const unreachableProvider: never = config.provider;
-  throw new Error(`Unsupported LLM provider: ${unreachableProvider}`);
+export async function callLlmJson<T>(
+  env: Env,
+  config: ModelTaskConfig,
+  systemPrompt: string,
+  messages: LlmMessage[],
+  context: LlmInvocationContext,
+  outputSchema: LlmJsonSchema
+): Promise<T> {
+  return getProviderClient(config.provider).callJson<T>({
+    env,
+    config,
+    systemPrompt,
+    messages,
+    context,
+    outputSchema
+  });
 }

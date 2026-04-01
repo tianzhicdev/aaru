@@ -186,6 +186,14 @@ final class BackendClient {
             includeDebugToken: true
         )
     }
+
+    func setModelProfile(_ modelProfileID: String) async throws -> SetModelProfileResponse {
+        return try await post(
+            "set-model-profile",
+            body: ["model_profile_id": modelProfileID],
+            includeDebugToken: true
+        )
+    }
     #endif
 
     private func endpoint(named function: String) -> URL? {

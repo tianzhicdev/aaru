@@ -7,12 +7,13 @@ vi.mock("../../workers/src/claude.ts", () => ({
 
 vi.mock("../../workers/src/fireworks.ts", () => ({
   callFireworks: vi.fn(),
+  callFireworksJson: vi.fn(),
   streamFireworks: vi.fn()
 }));
 
 import { callClaude, streamClaude } from "../../workers/src/claude.ts";
-import { callFireworks, streamFireworks } from "../../workers/src/fireworks.ts";
-import { callLlmText, streamLlmText } from "../../workers/src/llm.ts";
+import { callFireworks, callFireworksJson, streamFireworks } from "../../workers/src/fireworks.ts";
+import { callLlmJson, callLlmText, streamLlmText } from "../../workers/src/llm.ts";
 
 describe("llm routing", () => {
   it("routes anthropic tasks to Claude", async () => {
@@ -52,10 +53,11 @@ describe("llm routing", () => {
         BACKGROUND_QUEUE: { send: vi.fn() }
       },
       {
-        provider: "fireworks_anthropic",
+        provider: "fireworks_openai",
         model: "accounts/fireworks/models/deepseek-v3p2",
         maxTokens: 1024,
-        temperature: 0.8
+        temperature: 0.8,
+        reasoningMode: "disabled"
       },
       "system",
       [{ role: "user", content: "Hi" }],
@@ -68,6 +70,7 @@ describe("llm routing", () => {
       [{ role: "user", content: "Hi" }],
       expect.objectContaining({
         apiKey: "fireworks-key",
+        reasoningEffort: "none",
         extraHeaders: expect.objectContaining({
           "x-session-affinity": "user-1",
           "x-prompt-cache-isolation-key": "user-1"
@@ -86,10 +89,11 @@ describe("llm routing", () => {
           BACKGROUND_QUEUE: { send: vi.fn() }
         },
         {
-          provider: "fireworks_anthropic",
+          provider: "fireworks_openai",
           model: "accounts/fireworks/models/deepseek-v3p2",
           maxTokens: 1024,
-          temperature: 0.8
+          temperature: 0.8,
+          reasoningMode: "disabled"
         },
         "system",
         [{ role: "user", content: "Hi" }],
@@ -113,10 +117,11 @@ describe("llm routing", () => {
         BACKGROUND_QUEUE: { send: vi.fn() }
       },
       {
-        provider: "fireworks_anthropic",
+        provider: "fireworks_openai",
         model: "accounts/fireworks/models/deepseek-v3p2",
         maxTokens: 1024,
-        temperature: 0.8
+        temperature: 0.8,
+        reasoningMode: "disabled"
       },
       "system",
       [{ role: "user", content: "Hi" }],
@@ -128,5 +133,49 @@ describe("llm routing", () => {
     expect(chunks).toEqual(["chunk"]);
     expect(streamFireworks).toHaveBeenCalledOnce();
     expect(streamClaude).not.toHaveBeenCalled();
+  });
+
+  it("calls provider-specific structured output path", async () => {
+    vi.mocked(callFireworksJson).mockResolvedValueOnce({ ok: true });
+
+    const result = await callLlmJson(
+      {
+        DATABASE_URL: "mock",
+        ANTHROPIC_API_KEY: "anthropic-key",
+        THUMOS_SESSION_SECRET: "secret",
+        FIREWORKS_API_KEY: "fireworks-key",
+        BACKGROUND_QUEUE: { send: vi.fn() }
+      },
+      {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/deepseek-v3p2",
+        maxTokens: 1024,
+        temperature: 0.2,
+        reasoningMode: "disabled"
+      },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "value_v1", task: "reflection_snapshot", userId: "user-1" },
+      {
+        name: "reflection_note",
+        schema: {
+          type: "object"
+        }
+      }
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(callFireworksJson).toHaveBeenCalledWith(
+      "system",
+      [{ role: "user", content: "Hi" }],
+      expect.objectContaining({
+        apiKey: "fireworks-key",
+        reasoningEffort: "none",
+        responseFormat: {
+          name: "reflection_note",
+          schema: { type: "object" }
+        }
+      })
+    );
   });
 });

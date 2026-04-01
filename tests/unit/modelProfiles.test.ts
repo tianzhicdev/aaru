@@ -18,7 +18,8 @@ describe("model profiles", () => {
 
   it("returns fireworks-backed task configs for value_v1", () => {
     const conversation = getTaskConfig("value_v1", "conversation");
-    expect(conversation.provider).toBe("fireworks_anthropic");
+    expect(conversation.provider).toBe("fireworks_openai");
     expect(conversation.model).toContain("deepseek-v3p2");
+    expect(conversation.reasoningMode).toBe("disabled");
   });
 });

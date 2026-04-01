@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../workers/src/db.ts", () => ({
   getActiveSessionByTokenHash: vi.fn(),
   getUserModelProfileId: vi.fn(),
+  updateUserModelProfileId: vi.fn(),
   touchDeviceSession: vi.fn(),
   ensureUser: vi.fn(),
   createDeviceSession: vi.fn(),
@@ -56,6 +57,8 @@ vi.mock("../../workers/src/llm.ts", () => ({
 import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
 import { handleDebugDump } from "../../workers/src/handlers/debug-dump.ts";
 import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
+import { handleGetDebugInfo } from "../../workers/src/handlers/get-debug-info.ts";
+import { handleSetModelProfile } from "../../workers/src/handlers/set-model-profile.ts";
 import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts";
 import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
 import { enqueueReflectionSnapshot, enqueueSoulSynthesis } from "../../workers/src/backgroundJobsQueue.ts";
@@ -63,6 +66,7 @@ import { readSessionToken, hashSessionToken, issueSessionToken } from "../../wor
 import {
   getActiveSessionByTokenHash,
   getUserModelProfileId,
+  updateUserModelProfileId,
   touchDeviceSession,
   ensureUser,
   createDeviceSession
@@ -351,5 +355,56 @@ describe("handleDebugDump", () => {
 
     expect(response.status).toBe(403);
     expect(response.body).toHaveProperty("message", "Invalid debug token");
+  });
+});
+
+describe("debug model profile routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns model profile info plus available options for an authenticated user", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("value_v1");
+    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    mockSQL.mockResolvedValue([]);
+
+    const response = await handleGetDebugInfo(
+      mockSQL,
+      mockEnv,
+      {},
+      makeRequest({
+        "x-thumos-session": "valid-token",
+        "x-thumos-debug-token": "debug-token"
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("model_profile_id", "value_v1");
+    expect(response.body).toHaveProperty("available_model_profiles");
+  });
+
+  it("updates the current user's model profile when debug auth passes", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(updateUserModelProfileId).mockResolvedValue("value_v1");
+
+    const response = await handleSetModelProfile(
+      mockSQL,
+      mockEnv,
+      { model_profile_id: "value_v1" },
+      makeRequest({
+        "x-thumos-session": "valid-token",
+        "x-thumos-debug-token": "debug-token"
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("model_profile_id", "value_v1");
+    expect(updateUserModelProfileId).toHaveBeenCalledWith(mockSQL, "user-1", "value_v1");
   });
 });

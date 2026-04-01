@@ -488,6 +488,16 @@ final class AppModel: ObservableObject {
         await bootstrap()
     }
 
+    func updateDebugModelProfile(_ modelProfileID: String) async {
+        do {
+            let response = try await backend.setModelProfile(modelProfileID)
+            logger.info("Updated debug model profile to \(response.modelProfileId, privacy: .public)")
+            await fetchDebugInfo()
+        } catch {
+            logger.error("Model profile update failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     func impersonateDevice(_ newDeviceID: String) async {
         debugDeviceIDOverride = newDeviceID.isEmpty ? nil : newDeviceID
         // Clear current state and re-bootstrap with new device ID

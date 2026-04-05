@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildSoulFallbackResponse,
   buildSoulSystemPrompt,
-  detectSoftSessionGap
+  detectSoftSessionGap,
+  extractRecentAssistantQuestions
 } from "../../src/domain/soul.ts";
 import type { SoulConversationContext } from "../../src/domain/soul.ts";
 import type { ReflectionNote, VisibleSoulFile } from "../../src/domain/schemas.ts";
@@ -33,24 +34,22 @@ function makeVisibleSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleS
     },
     topValues: [],
     relationalStyle: null,
-    ...overrides
+    ...overrides,
+    completeness: overrides.completeness ?? 0
   };
 }
 
 function makeReflectionNote(overrides: Partial<ReflectionNote> = {}): ReflectionNote {
   return {
     updatedAt: "2026-03-31T00:00:00Z",
-    factualAnchors: {},
-    tensions: [],
-    recurringThemes: [],
-    notableAbsences: [],
-    emotionalArc: "",
+    domainCoverage: [],
     currentThreads: [],
     avoidPastObservations: [],
     avoidPastQuestions: [],
     steerToTopics: [],
     steeringPressure: "minimal",
     steeringReasoning: "",
+    summary: "",
     ...overrides
   };
 }
@@ -93,28 +92,33 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("Relational style");
   });
 
-  it("includes the new reflection memory and navigation block", () => {
+  it("includes summary, territory map, and navigation from reflection note", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({
-        factualAnchors: { job: "software engineer" },
-        tensions: ["Says they love solitude but misses being chosen"],
-        recurringThemes: ["architecture", "boundaries"],
-        notableAbsences: ["family"],
-        emotionalArc: "Started guarded, gradually opening up",
+        domainCoverage: [
+          { domain: "work_and_purpose", depth: "deep", evidence: "Repeated job discussion" },
+          { domain: "relationships", depth: "untouched", evidence: "" },
+          { domain: "emotional_life", depth: "mentioned", evidence: "Brief mentions" }
+        ],
         currentThreads: ["job drift", "creative hunger"],
         avoidPastObservations: ["You turn humor into armor"],
         avoidPastQuestions: ["What are you protecting with those walls?"],
-        steerToTopics: ["relationships — mention of intimacy never fully opened"],
-        steeringPressure: "gentle",
-        steeringReasoning: "The current thread is cooling without being dead."
+        steerToTopics: ["Relationships — who do they turn to when things get hard?"],
+        steeringPressure: "moderate",
+        steeringReasoning: "Conversation narrowing to work, relationships untouched.",
+        summary: "This person is a software engineer wrestling with whether to leave their job. They build walls when overwhelmed."
       })
     }));
 
-    expect(prompt).toContain("LATEST REFLECTION NOTE");
+    expect(prompt).toContain("CONVERSATION SUMMARY");
     expect(prompt).toContain("software engineer");
-    expect(prompt).toContain("NAVIGATION (private)");
-    expect(prompt.toLowerCase()).toContain("avoid re-asking these questions");
-    expect(prompt).toContain("relationships — mention of intimacy never fully opened");
+    expect(prompt).toContain("TERRITORY MAP");
+    expect(prompt).toContain("Relationships: untouched");
+    expect(prompt).toContain("EXPLORE");
+    expect(prompt).toContain("NAVIGATION");
+    expect(prompt).toContain("Relationships — who do they turn to");
+    expect(prompt).toContain("Questions already asked");
+    expect(prompt).toContain("What are you protecting with those walls?");
   });
 
   it("includes opening guidance and current events when provided", () => {
@@ -187,5 +191,51 @@ describe("detectSoftSessionGap", () => {
     expect(result?.softSessionCount).toBe(1);
     expect(result?.gapMs).toBeGreaterThanOrEqual(threshold);
     expect(result?.lastUserMessage).toBe("I need to go");
+  });
+});
+
+describe("extractRecentAssistantQuestions", () => {
+  it("extracts questions from assistant messages", () => {
+    const messages = [
+      { role: "assistant", content: "What does your day look like? Tell me more." },
+      { role: "user", content: "I work from home mostly." },
+      { role: "assistant", content: "That sounds peaceful. Who do you spend your time with?" }
+    ];
+
+    const questions = extractRecentAssistantQuestions(messages);
+    expect(questions).toContain("What does your day look like?");
+    expect(questions).toContain("Who do you spend your time with?");
+    expect(questions).not.toContain("Tell me more.");
+  });
+
+  it("deduplicates case-insensitively", () => {
+    const messages = [
+      { role: "assistant", content: "What matters most to you?" },
+      { role: "assistant", content: "what matters most to you?" }
+    ];
+
+    const questions = extractRecentAssistantQuestions(messages);
+    expect(questions).toHaveLength(1);
+  });
+
+  it("returns last 10 unique questions", () => {
+    const messages = Array.from({ length: 15 }, (_, i) => ({
+      role: "assistant",
+      content: `Question number ${i + 1} for you?`
+    }));
+
+    const questions = extractRecentAssistantQuestions(messages);
+    expect(questions).toHaveLength(10);
+    expect(questions[9]).toContain("15");
+  });
+
+  it("ignores short questions", () => {
+    const messages = [
+      { role: "assistant", content: "Really? That's interesting. What happened next?" }
+    ];
+
+    const questions = extractRecentAssistantQuestions(messages);
+    expect(questions).not.toContain("Really?");
+    expect(questions).toContain("What happened next?");
   });
 });

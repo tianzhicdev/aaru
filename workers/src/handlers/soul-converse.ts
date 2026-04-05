@@ -158,8 +158,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     if (visibleSoulFile?.openThreads) {
       topics.push(...visibleSoulFile.openThreads);
     }
-    if (reflectionNote?.recurringThemes) {
-      topics.push(...reflectionNote.recurringThemes);
+    if (reflectionNote?.currentThreads) {
+      topics.push(...reflectionNote.currentThreads);
     }
     if (topics.length > 0) {
       try {

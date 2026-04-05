@@ -1,5 +1,5 @@
-import type { LifeDomain, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
-import { LIFE_DOMAINS } from "./schemas.ts";
+import type { DomainCoverageEntry, LifeDomain, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
+import { DOMAIN_LABELS, LIFE_DOMAINS } from "./schemas.ts";
 
 export type OpeningKind = "first_ever" | "returning";
 
@@ -91,40 +91,107 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
   return parts.length > 0 ? parts.join("\n") : "No soul file yet.";
 }
 
-function buildMemorySection(note: ReflectionNote): string {
-  const lines = [
-    "LATEST REFLECTION NOTE:",
-    `- Factual anchors: ${JSON.stringify(note.factualAnchors)}`,
-    `- Tensions: ${note.tensions.join("; ") || "None yet"}`,
-    `- Recurring themes: ${note.recurringThemes.join("; ") || "None yet"}`,
-    `- Notable absences: ${note.notableAbsences.join("; ") || "None yet"}`,
-    `- Emotional arc: ${note.emotionalArc || "Too early to tell"}`
-  ];
+function buildSummarySection(note: ReflectionNote): string {
+  if (!note.summary) return "";
+  return `\nCONVERSATION SUMMARY (from last reflection):\n${note.summary}`;
+}
 
+function buildNavigationSection(
+  note: ReflectionNote,
+  recentQuestions: string[]
+): string {
+  const lines: string[] = ["NAVIGATION:"];
+
+  // Territory map
+  if (note.domainCoverage.length > 0) {
+    const coverageMap = new Map(note.domainCoverage.map((entry) => [entry.domain, entry]));
+    lines.push("");
+    lines.push("TERRITORY MAP:");
+    for (const domain of LIFE_DOMAINS) {
+      const entry = coverageMap.get(domain);
+      const depth = entry?.depth ?? "untouched";
+      const label = DOMAIN_LABELS[domain];
+      const marker = depth === "untouched" || depth === "mentioned" ? " ← EXPLORE" : "";
+      const saturated = depth === "deep" ? " (saturated)" : "";
+      lines.push(`- ${label}: ${depth}${saturated}${marker}`);
+    }
+  }
+
+  // Steering pressure + reasoning
+  lines.push("");
+  lines.push(
+    `Pressure: ${note.steeringPressure.toUpperCase()}${note.steeringReasoning ? ` — ${note.steeringReasoning}` : ""}`
+  );
+
+  // Active threads
   if (note.currentThreads.length > 0) {
-    lines.push(`- Current threads: ${note.currentThreads.join("; ")}`);
+    lines.push(`Active threads: ${note.currentThreads.join(", ")}`);
   }
+
+  // Steer-to topics
+  if (note.steerToTopics.length > 0) {
+    lines.push("Steer toward:");
+    note.steerToTopics.forEach((topic, i) => {
+      lines.push(`  ${i + 1}. ${topic}`);
+    });
+  }
+
+  // Avoid-lists from reflection note
   if (note.avoidPastObservations.length > 0) {
-    lines.push(`- Avoid repeating these observations: ${note.avoidPastObservations.join(" | ")}`);
+    lines.push("");
+    lines.push("Observations already made (DO NOT repeat):");
+    note.avoidPastObservations.forEach((obs, i) => {
+      lines.push(`${i + 1}. ${obs}`);
+    });
   }
-  if (note.avoidPastQuestions.length > 0) {
-    lines.push(`- Avoid re-asking these questions: ${note.avoidPastQuestions.join(" | ")}`);
+
+  // Questions from both reflection note and deterministic extraction
+  const allQuestions = [...note.avoidPastQuestions];
+  for (const question of recentQuestions) {
+    if (!allQuestions.some((existing) => existing.toLowerCase() === question.toLowerCase())) {
+      allQuestions.push(question);
+    }
+  }
+  if (allQuestions.length > 0) {
+    lines.push("");
+    lines.push("Questions already asked (DO NOT repeat or rephrase):");
+    allQuestions.slice(0, 12).forEach((question, i) => {
+      lines.push(`${i + 1}. "${question}"`);
+    });
   }
 
   return `\n${lines.join("\n")}`;
 }
 
-function buildNavigationSection(note: ReflectionNote): string {
-  const lines = [
-    "NAVIGATION (private):",
-    `Pressure: ${note.steeringPressure.toUpperCase()}${note.steeringReasoning ? ` — ${note.steeringReasoning}` : ""}`,
-    `Active threads: ${note.currentThreads.join(", ") || "none"}`,
-    `Steer toward: ${note.steerToTopics.join(", ") || "follow their lead"}`,
-    `Don't re-observe: ${note.avoidPastObservations.join(", ") || "none"}`,
-    `Don't re-ask: ${note.avoidPastQuestions.join(", ") || "none"}`
-  ];
+export function extractRecentAssistantQuestions(
+  messages: Array<{ role: string; content: string }>
+): string[] {
+  const questions: string[] = [];
 
-  return `\n${lines.join("\n")}`;
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+
+    const sentences = message.content.split(/(?<=[.!?])\s+/);
+    for (const sentence of sentences) {
+      const trimmed = sentence.trim();
+      if (trimmed.endsWith("?") && trimmed.length > 10) {
+        questions.push(trimmed);
+      }
+    }
+  }
+
+  // Deduplicate (case-insensitive) and return last 10
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const question of questions) {
+    const key = question.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(question);
+    }
+  }
+
+  return deduped.slice(-10);
 }
 
 function buildOpeningSection(context: SoulConversationContext): string {
@@ -145,12 +212,14 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
     ? buildVisibleSoulFileContext(context.visibleSoulFile)
     : "No soul file yet.";
 
-  const memorySection = context.reflectionNote
-    ? buildMemorySection(context.reflectionNote)
+  const summarySection = context.reflectionNote
+    ? buildSummarySection(context.reflectionNote)
     : "";
 
+  const recentQuestions = extractRecentAssistantQuestions(context.messages);
+
   const navigationSection = context.reflectionNote
-    ? buildNavigationSection(context.reflectionNote)
+    ? buildNavigationSection(context.reflectionNote, recentQuestions)
     : "";
 
   const openingSection = buildOpeningSection(context);
@@ -164,9 +233,11 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
   return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are through reflection. You are a mirror, not a therapist.
 
 CONVERSATION PRINCIPLES:
-- Reflect, don't diagnose. Use the user's own words and metaphors.
-- Notice tensions without flattening them into labels.
-- Ask for stories, not self-assessments. Prioritize concrete facts, lived scenes, and specific language.
+- Reflect, don't diagnose. Notice tensions without flattening them into labels.
+- Ask for stories, not self-assessments. Prefer concrete questions (who, when, where, what happened) over abstract ones (how does that feel).
+- When a user mentions a person, follow up on that person within 2 exchanges.
+- If you've echoed the user's metaphor more than twice, stop. Ask for a specific memory, person, or scene.
+- If the TERRITORY MAP shows underexplored domains, bridge toward them within 2-3 exchanges.
 - Memory matters. Reference what they have already said when it helps them feel seen.
 - One question at a time. Never stack questions.
 - Short responses. Usually 2-4 sentences.
@@ -176,7 +247,7 @@ CONVERSATION PRINCIPLES:
 
 THEIR SOUL FILE:
 ${soulFileSection}
-${memorySection}
+${summarySection}
 ${navigationSection}
 ${currentEventsSection}
 ${openingSection}
@@ -195,7 +266,6 @@ HANDLING DIFFICULT MOMENTS:
 - If they ask for therapy advice: "I'm not a therapist — I'm a mirror. I can reflect what I see, but I can't prescribe what to do."
 
 WHAT MAKES A GOOD RESPONSE:
-- Uses their exact words when useful
 - Creates a "yes, that's exactly it" moment
 - Avoids repeated questions
 - Advances an existing thread or opens a new one only when it truly fits`;

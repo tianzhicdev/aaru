@@ -67,6 +67,7 @@ interface VerificationChecks {
 }
 
 interface RunResult {
+  modelProfileId: string | null;
   conversation: ConversationTurn[];
   visibleSoulFile: unknown;
   hiddenSoulFile: unknown;
@@ -76,11 +77,17 @@ interface RunResult {
   verificationChecks: VerificationChecks;
 }
 
-function parseArgs(): { file: string; only?: string; exchanges: number } {
+function parseArgs(): {
+  file: string;
+  only?: string;
+  exchanges: number;
+  modelProfileId?: string;
+} {
   const args = process.argv.slice(2);
   let file = "";
   let only: string | undefined;
   let exchanges = DEFAULT_EXCHANGES;
+  let modelProfileId: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--file" && args[index + 1]) {
@@ -96,15 +103,22 @@ function parseArgs(): { file: string; only?: string; exchanges: number } {
     if (args[index] === "--exchanges" && args[index + 1]) {
       exchanges = parseInt(args[index + 1], 10);
       index += 1;
+      continue;
+    }
+    if (args[index] === "--model-profile" && args[index + 1]) {
+      modelProfileId = args[index + 1];
+      index += 1;
     }
   }
 
   if (!file) {
-    console.error("Usage: npx tsx scripts/dry-run-soul-files.ts --file <characters.json> [--only <name>] [--exchanges <n>]");
+    console.error(
+      "Usage: npx tsx scripts/dry-run-soul-files.ts --file <characters.json> [--only <name>] [--exchanges <n>] [--model-profile <id>]"
+    );
     process.exit(1);
   }
 
-  return { file, only, exchanges };
+  return { file, only, exchanges, modelProfileId };
 }
 
 function scaleSessionPlan(totalExchanges: number): number[] {
@@ -433,13 +447,36 @@ async function waitForHiddenSoulFile(
   return null;
 }
 
-async function runCharacter(character: Character, exchanges: number): Promise<RunResult> {
+async function applyModelProfile(token: string, modelProfileId: string): Promise<void> {
+  if (!DEBUG_API_TOKEN) {
+    throw new Error("DEBUG_API_TOKEN or DEBUG_API_TOKEN_DEV is required to set model profile");
+  }
+
+  const response = await serverPost(
+    "set-model-profile",
+    { model_profile_id: modelProfileId },
+    token
+  );
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`set-model-profile failed: ${response.status} ${err}`);
+  }
+}
+
+async function runCharacter(
+  character: Character,
+  exchanges: number,
+  modelProfileId?: string
+): Promise<RunResult> {
   console.log(`\n${"═".repeat(60)}`);
   console.log(`  ${character.displayName}`);
   console.log(`${"═".repeat(60)}\n`);
 
   const sessionPlan = scaleSessionPlan(exchanges);
   console.log(`  Sessions: ${sessionPlan.length} (${sessionPlan.join(" + ")} = ${sessionPlan.reduce((a, b) => a + b, 0)} exchanges)`);
+  if (modelProfileId) {
+    console.log(`  Model profile: ${modelProfileId}`);
+  }
 
   // Bootstrap
   const deviceId = crypto.randomUUID();
@@ -451,9 +488,20 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
     throw new Error(`Bootstrap failed: ${bootstrapRes.status} ${err}`);
   }
 
-  const bootstrap = await bootstrapRes.json() as { user_id: string; token: string };
+  const bootstrap = await bootstrapRes.json() as {
+    user_id: string;
+    token: string;
+    model_profile_id?: string;
+  };
   const { token } = bootstrap;
   console.log("  [bootstrap] user created, token received");
+  const activeModelProfileId = modelProfileId ?? bootstrap.model_profile_id ?? null;
+
+  if (modelProfileId && bootstrap.model_profile_id !== modelProfileId) {
+    console.log(`  [profile] switching to ${modelProfileId}...`);
+    await applyModelProfile(token, modelProfileId);
+    console.log(`  [profile] active profile: ${modelProfileId}`);
+  }
 
   const conversation: ConversationTurn[] = [];
   let globalExchange = 0;
@@ -633,6 +681,7 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   console.log(`  Post-sim opening: ${checks.assistantOpeningWorks ? "✓" : "✗"}`);
 
   return {
+    modelProfileId: activeModelProfileId,
     conversation,
     visibleSoulFile,
     hiddenSoulFile,
@@ -643,8 +692,15 @@ async function runCharacter(character: Character, exchanges: number): Promise<Ru
   };
 }
 
+function buildCharacterOutputName(character: Character, result: RunResult): string {
+  if (!result.modelProfileId) {
+    return character.name;
+  }
+  return `${character.name}__${result.modelProfileId}`;
+}
+
 function saveResults(character: Character, result: RunResult, outputDir: string) {
-  const charDir = join(outputDir, character.name);
+  const charDir = join(outputDir, buildCharacterOutputName(character, result));
   mkdirSync(charDir, { recursive: true });
 
   const {
@@ -771,7 +827,7 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
 }
 
 async function main() {
-  const { file, only, exchanges } = parseArgs();
+  const { file, only, exchanges, modelProfileId } = parseArgs();
 
   const raw = readFileSync(file, "utf-8");
   let characters = JSON.parse(raw) as Character[];
@@ -793,6 +849,7 @@ async function main() {
   console.log(`Characters: ${characters.length}`);
   console.log(`Exchanges per character: ${exchanges} (~${exchanges * 2} messages)`);
   console.log(`Sessions: ${sessionPlan.length} (${sessionPlan.join(" + ")})`);
+  console.log(`Model profile: ${modelProfileId ?? "default"}`);
   console.log(`API base: ${API_BASE}`);
   console.log(`Output: ${outputDir}/\n`);
 
@@ -800,7 +857,7 @@ async function main() {
 
   for (const character of characters) {
     try {
-      const result = await runCharacter(character, exchanges);
+      const result = await runCharacter(character, exchanges, modelProfileId);
       saveResults(character, result, outputDir);
       results.push({ name: character.displayName, result });
     } catch (err) {
@@ -808,6 +865,7 @@ async function main() {
       results.push({
         name: character.displayName,
         result: {
+          modelProfileId: modelProfileId ?? null,
           conversation: [],
           visibleSoulFile: null,
           hiddenSoulFile: null,

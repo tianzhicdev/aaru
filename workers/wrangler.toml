@@ -17,6 +17,9 @@ queue = "thumos-soul-synthesis-dev"
 queue = "thumos-soul-synthesis-dev"
 max_batch_size = 1
 
+[env.dev.triggers]
+crons = ["0 6 * * *"]
+
 [env.production]
 name = "thumos-api"
 workers_dev = true
@@ -28,3 +31,6 @@ queue = "thumos-soul-synthesis"
 [[env.production.queues.consumers]]
 queue = "thumos-soul-synthesis"
 max_batch_size = 1
+
+[env.production.triggers]
+crons = ["0 6 * * *"]

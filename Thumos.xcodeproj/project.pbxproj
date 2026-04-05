@@ -14,6 +14,7 @@
 		10652552B9B6D8C68EB8A6AC /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 427464C56B70E731B3E93B29 /* SpaceGrotesk-Regular.ttf */; };
 		16FAF3C4E8A0B516B1309861 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2515DAFDA782E1E49D886250 /* Models.swift */; };
 		19C32519AC26D20D76EB9F29 /* CormorantGaramond-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8AC4956A0F9ECCF6F2B44DCB /* CormorantGaramond-Medium.ttf */; };
+		1BCDD5B1C16B35801CA32527 /* SoulmateProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */; };
 		2BA76081C14794E2B90B5B9B /* SpaceGrotesk-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B425334B8B0F944E7D1708FB /* SpaceGrotesk-Light.ttf */; };
 		332D281FE9CAE173D283F8F1 /* f08_mechanic_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = C771F9706370B2E807B44FE0 /* f08_mechanic_walk.png */; };
 		34C69319E0F6C30E45BDC976 /* f06_dancer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F0FE681AABB486C1B47D2D8 /* f06_dancer_walk.png */; };
@@ -51,6 +52,7 @@
 		ABB220E56E575861A5F6F13C /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10394D66BFD5E8E083AB1711 /* DebugView.swift */; };
 		AC9C5638BD0DDE6D166C78C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */; };
 		B00E02276B2AA6AF9CAEAF94 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9224320ED12C526A5BFFA9E /* RootView.swift */; };
+		BA931875105EEE8FD1C6780B /* SoulmateMatchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E858E10D3DD185BF9CC5C27 /* SoulmateMatchesView.swift */; };
 		BF397A5096B4B4C86EAC366F /* BackendClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0AD81894993C4A288A885C /* BackendClientTests.swift */; };
 		C1DE211B96DFDA25E2E44AD8 /* f10_adventurer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = E3C7D49379171BC95FB8C4CD /* f10_adventurer_walk.png */; };
 		C4CC59EB575AB2E5E9D3BDF7 /* m02_artisan_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = E9F27E3DC5F4793996F7CF06 /* m02_artisan_walk.png */; };
@@ -83,7 +85,7 @@
 
 /* Begin PBXFileReference section */
 		03353E9AD37FA9DA221FAD83 /* CormorantGaramond-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Light.ttf"; sourceTree = "<group>"; };
-		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0E0C051A3655BF0C1A3C2C5B /* m04_rebel_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m04_rebel_walk.png; sourceTree = "<group>"; };
 		10394D66BFD5E8E083AB1711 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		14D226C28CCC9536C6DCE559 /* f02_mystic_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f02_mystic_walk.png; sourceTree = "<group>"; };
@@ -91,7 +93,9 @@
 		24C0FBC98C1F26FA68BA6C4F /* AIConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConsentView.swift; sourceTree = "<group>"; };
 		2515DAFDA782E1E49D886250 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		27582326B464B2B57E3EB65E /* m10_hipster_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m10_hipster_walk.png; sourceTree = "<group>"; };
+		2E858E10D3DD185BF9CC5C27 /* SoulmateMatchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulmateMatchesView.swift; sourceTree = "<group>"; };
 		318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalitySpectrumView.swift; sourceTree = "<group>"; };
+		3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulmateProfileSetupView.swift; sourceTree = "<group>"; };
 		3721C7B04CDF94E2F75FBB2D /* m06_farmer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m06_farmer_walk.png; sourceTree = "<group>"; };
 		3794F1123A25A0EB6868BB07 /* f04_punk_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f04_punk_walk.png; sourceTree = "<group>"; };
 		38980E9538DFFF63E52B4871 /* m03_sage_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m03_sage_walk.png; sourceTree = "<group>"; };
@@ -140,7 +144,7 @@
 		DD1ED1D7A1E96A186F09A788 /* CormorantGaramond-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Regular.ttf"; sourceTree = "<group>"; };
 		E3C7D49379171BC95FB8C4CD /* f10_adventurer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f10_adventurer_walk.png; sourceTree = "<group>"; };
 		E9F27E3DC5F4793996F7CF06 /* m02_artisan_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m02_artisan_walk.png; sourceTree = "<group>"; };
-		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF9FD5D9AE86FAAE5989719F /* f09_artist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f09_artist_walk.png; sourceTree = "<group>"; };
 		F93A116D54888ADD10E7C0DF /* m05_gentleman_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m05_gentleman_walk.png; sourceTree = "<group>"; };
 		F9DFE166F49AD94C8312BAFC /* t01_student_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = t01_student_walk.png; sourceTree = "<group>"; };
@@ -269,6 +273,8 @@
 				51E613C373AB75F417D77807 /* SoulCompassView.swift */,
 				87822998F4CD1541C3F2EA1A /* SoulConversationScreen.swift */,
 				A422632A54F8509B551FF7EE /* SoulFileScreen.swift */,
+				2E858E10D3DD185BF9CC5C27 /* SoulmateMatchesView.swift */,
+				3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */,
 				722C30D2A06E75B300348A9A /* SoulMirrorTabView.swift */,
 				84C512C8DCA175C367F9EBC9 /* Theme.swift */,
 				FF86DC7FAF1336E26410AE14 /* ThumosApp.swift */,
@@ -325,8 +331,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 888EC908255CC0B5B03B6862 /* Build configuration list for PBXProject "Thumos" */;
 			developmentRegion = en;
@@ -426,6 +430,8 @@
 				3947B8F2AD411BC62687B475 /* SoulConversationScreen.swift in Sources */,
 				E920DB9DD49DB040FFDDA252 /* SoulFileScreen.swift in Sources */,
 				9B5D0B615B731FB472B9277B /* SoulMirrorTabView.swift in Sources */,
+				BA931875105EEE8FD1C6780B /* SoulmateMatchesView.swift in Sources */,
+				1BCDD5B1C16B35801CA32527 /* SoulmateProfileSetupView.swift in Sources */,
 				4392AEA5BE25BA2E5A63A4B4 /* Theme.swift in Sources */,
 				8515AD19B8A6A2BDAA456950 /* ThumosApp.swift in Sources */,
 				5DC75890C76BFC71969170F0 /* TopValuesView.swift in Sources */,
@@ -458,6 +464,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -614,6 +621,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

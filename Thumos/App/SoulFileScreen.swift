@@ -1,10 +1,13 @@
+import StoreKit
 import SwiftUI
 
 struct SoulFileScreen: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.requestReview) private var requestReview
 
     @State private var showPrivacy = false
     @State private var expandedSections: Set<String> = []
+    @State private var reviewTimer: Timer?
 
     var body: some View {
         ZStack {
@@ -19,6 +22,19 @@ struct SoulFileScreen: View {
         }
         .sheet(isPresented: $showPrivacy) {
             privacySheet
+        }
+        .onAppear {
+            reviewTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { _ in
+                Task { @MainActor in
+                    guard model.visibleSoulFile.version >= 2,
+                          !model.isSoulFileUpdating else { return }
+                    requestReview()
+                }
+            }
+        }
+        .onDisappear {
+            reviewTimer?.invalidate()
+            reviewTimer = nil
         }
     }
 

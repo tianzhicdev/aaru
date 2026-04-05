@@ -67,7 +67,8 @@
         "description": "Continuous learning and becoming, not arriving at a fixed destination."
       }
     ],
-    "relationalStyle": "You build trust through consistency and depth rather than charm."
+    "relationalStyle": "You build trust through consistency and depth rather than charm.",
+    "completeness": 0.67
   },
   "version": 3,
   "last_updated": "2026-03-15T10:30:00Z",

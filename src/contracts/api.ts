@@ -57,3 +57,43 @@ export interface VersionCheckWireResponse {
 export interface DeleteAccountWireResponse {
   deleted: boolean;
 }
+
+// ── GET /soulmate-profile ───────────────────────────────────
+
+export interface SoulmateProfileWirePayload {
+  user_id: string;
+  age: number;
+  gender: string;
+  latitude: number;
+  longitude: number;
+  preferred_age_min: number;
+  preferred_age_max: number;
+  preferred_genders: string[];
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetSoulmateProfileWireResponse {
+  soulmate_profile: SoulmateProfileWirePayload | null;
+}
+
+// ── POST /soulmate-profile ──────────────────────────────────
+
+export interface PostSoulmateProfileWireResponse {
+  soulmate_profile: SoulmateProfileWirePayload;
+}
+
+// ── GET /soulmate-matches ───────────────────────────────────
+
+export interface SoulmateMatchWirePayload {
+  match_id: string;
+  matched_user_id: string;
+  display_name: string;
+  portrait: string | null;
+  matched_at: string;
+}
+
+export interface GetSoulmateMatchesWireResponse {
+  matches: SoulmateMatchWirePayload[];
+}

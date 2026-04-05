@@ -4,6 +4,10 @@ import type { BackgroundJob, QueueBatch } from "./backgroundJobsQueue.ts";
 import { processBackgroundJobsBatch } from "./backgroundJobsQueue.ts";
 
 interface ExecutionContext {}
+interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
 import { withErrorHandling, optionsResponse, toEdgeResponse } from "./edge.ts";
 import { handlePing } from "./handlers/ping.ts";
 import { handleVersion } from "./handlers/version.ts";
@@ -15,6 +19,9 @@ import { handleDeleteAccount } from "./handlers/delete-account.ts";
 import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
 import { handleDebugDump } from "./handlers/debug-dump.ts";
 import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
+import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
+import { handleGetMatches } from "./handlers/get-matches.ts";
+import { runMatchingPipeline } from "./matchingPipeline.ts";
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -72,12 +79,32 @@ export default {
           handleSetModelProfile(sql, env, payload, req)
         );
 
+      case "soulmate-profile":
+        if (request.method === "GET") {
+          return withErrorHandling(request, (payload, req) =>
+            handleGetSoulmateProfile(sql, payload, req)
+          );
+        }
+        return withErrorHandling(request, (payload, req) =>
+          handlePostSoulmateProfile(sql, payload, req)
+        );
+
+      case "soulmate-matches":
+        return withErrorHandling(request, (payload, req) =>
+          handleGetMatches(sql, payload, req)
+        );
+
       default:
         return new Response(JSON.stringify({ code: 404, message: "Not found" }), {
           status: 404,
           headers: { "Content-Type": "application/json" }
         });
     }
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    const sql = createSQL(env.DATABASE_URL);
+    await runMatchingPipeline(sql, env);
   },
 
   async queue(batch: QueueBatch<BackgroundJob>, env: Env): Promise<void> {

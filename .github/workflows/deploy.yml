@@ -33,12 +33,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Install worker dependencies
+      - run: npm install
         working-directory: workers
-        run: pnpm install
       - name: Deploy Worker
         working-directory: workers
-        run: pnpm exec wrangler deploy --env production
+        run: npx wrangler deploy --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -21,3 +21,4 @@ TestResults/
 TestResults.xcresult/
 .gstack/
 .secrets/
+.claude/worktrees/

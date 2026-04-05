@@ -1,5 +1,7 @@
 import Foundation
 import OSLog
+import StoreKit
+import UIKit
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -133,6 +135,8 @@ final class AppModel: ObservableObject {
         defaults.removeObject(forKey: storageKey("cached_visible_soul_file"))
         defaults.removeObject(forKey: storageKey("cached_soul_messages"))
         defaults.removeObject(forKey: storageKey("has_completed_first_session"))
+        defaults.removeObject(forKey: storageKey("review_prompted_version"))
+        defaults.removeObject(forKey: storageKey("install_date"))
 
         // Reset in-memory state
         hasAgreedToAI = false
@@ -168,6 +172,41 @@ final class AppModel: ObservableObject {
         }
 
         await nm.scheduleWeeklyNotification()
+    }
+
+    // MARK: - App Store Review
+
+    /// Request an App Store review when conditions are right:
+    /// - Soul file version >= 2 (second synthesis)
+    /// - Installed 7+ days ago
+    /// - Haven't prompted this app version
+    private func maybeRequestAppReview(soulFileVersion: Int) {
+        guard soulFileVersion >= 2 else { return }
+
+        let defaults = UserDefaults.standard
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        let promptedKey = storageKey("review_prompted_version")
+
+        // Don't prompt the same app version twice
+        guard defaults.string(forKey: promptedKey) != appVersion else { return }
+
+        // Require 7+ days since install
+        let installKey = storageKey("install_date")
+        if let installDate = defaults.object(forKey: installKey) as? Date {
+            guard Date().timeIntervalSince(installDate) >= 7 * 86400 else { return }
+        } else {
+            // First time seeing this key — record install date and bail
+            defaults.set(Date(), forKey: installKey)
+            return
+        }
+
+        defaults.set(appVersion, forKey: promptedKey)
+        logger.info("Requesting App Store review (soul file v\(soulFileVersion))")
+
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
+        }
     }
 
     // MARK: - Soul Mirror
@@ -225,9 +264,15 @@ final class AppModel: ObservableObject {
             let response = try await backend.getSoulFile()
             let file = response.visibleSoulFile
             if !file.isEmpty {
+                let previousVersion = visibleSoulFile.version
                 visibleSoulFile = file
                 cacheVisibleSoulFile(visibleSoulFile)
                 markFirstSessionCompleted()
+
+                // Prompt for review when the soul file has just been updated
+                if response.version > previousVersion {
+                    maybeRequestAppReview(soulFileVersion: response.version)
+                }
             }
             isSoulFileUpdating = response.synthesisPending
         } catch {

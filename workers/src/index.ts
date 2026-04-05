@@ -21,6 +21,7 @@ import { handleDebugDump } from "./handlers/debug-dump.ts";
 import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
 import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
 import { handleGetMatches } from "./handlers/get-matches.ts";
+import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { runMatchingPipeline } from "./matchingPipeline.ts";
 
 export default {
@@ -92,6 +93,16 @@ export default {
       case "soulmate-matches":
         return withErrorHandling(request, (payload, req) =>
           handleGetMatches(sql, payload, req)
+        );
+
+      case "match-messages":
+        if (request.method === "GET") {
+          return withErrorHandling(request, (payload, req) =>
+            handleGetMatchMessages(sql, payload, req)
+          );
+        }
+        return withErrorHandling(request, (payload, req) =>
+          handlePostMatchMessage(sql, payload, req)
         );
 
       default:

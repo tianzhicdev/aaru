@@ -1,8 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/matchApp.ts", () => ({
-  insertMatchAttempt: vi.fn().mockResolvedValue(undefined)
+  insertMatchAttempt: vi.fn().mockResolvedValue(undefined),
+  getMatchedUserIds: vi.fn().mockResolvedValue([])
 }));
+
+vi.mock("../../workers/src/soulApp.ts", () => ({
+  getVisibleSoulFile: vi.fn().mockResolvedValue({
+    version: 1,
+    lastUpdated: "",
+    portrait: "A person",
+    sections: {
+      howYouMove: "Move", howYouThink: "Think", howYouConnect: "Connect",
+      whatYouCarry: "Carry", whatLightsYouUp: "Light", yourTensions: "Tensions", yourVoice: "Voice"
+    },
+    crystallizedMoments: [],
+    openThreads: [],
+    compassScores: {},
+    personalitySpectrum: {
+      openness: null, conscientiousness: null, extraversion: null,
+      agreeableness: null, emotionalSensitivity: null
+    },
+    topValues: [],
+    relationalStyle: null,
+    completeness: 0.8
+  })
+}));
+
+vi.mock("../../workers/src/llm.ts", () => ({
+  callLlmJson: vi.fn().mockResolvedValue({
+    decision: "match",
+    score: 0.85,
+    reasoning: "Great compatibility"
+  })
+}));
+
+vi.mock("../../workers/src/modelProfiles.ts", async () => {
+  const actual = await vi.importActual("../../workers/src/modelProfiles.ts");
+  return actual;
+});
 
 import { runMatchingPipeline } from "../../workers/src/matchingPipeline.ts";
 import { insertMatchAttempt } from "../../workers/src/matchApp.ts";

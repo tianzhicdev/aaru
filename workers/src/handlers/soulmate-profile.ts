@@ -77,7 +77,13 @@ function validateProfileInput(
     }
   }
 
+  const displayName = String(body.display_name ?? "").trim();
+  if (displayName.length === 0 || displayName.length > 50) {
+    return { error: "display_name must be 1-50 characters" };
+  }
+
   return {
+    display_name: displayName,
     age: Math.floor(age),
     gender,
     latitude,

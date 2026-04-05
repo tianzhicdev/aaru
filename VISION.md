@@ -45,10 +45,6 @@ we shall cover multiple domains about the user throughout the conversation
 (optional) we shall leverage xai to inject real time news into the conversation to keep things interesting.  
 
 
-
-
-
-
 phase 2: we focus on the social feature. 
 when the our understanding of the user reaches to the certain degree, we want to unable the user to socialize. 
 

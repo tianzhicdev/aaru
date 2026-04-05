@@ -1,7 +1,16 @@
 import type { NeonSQL } from "./db.ts";
 import type { Env } from "./env.ts";
 import { COMPLETENESS_THRESHOLD } from "../../src/domain/matching.ts";
+import {
+  summarizeSoulForMatching,
+  buildMatchEvaluationPrompt,
+  matchEvaluationResultSchema
+} from "../../src/domain/matchEvaluation.ts";
 import { insertMatchAttempt } from "./matchApp.ts";
+import { getVisibleSoulFile } from "./soulApp.ts";
+import { toJSONSchema } from "zod";
+import { callLlmJson } from "./llm.ts";
+import { defaultModelProfileIdFromEnv, getTaskConfig } from "./modelProfiles.ts";
 
 const MAX_MATCHES_PER_RUN = 2;
 const CANDIDATE_BATCH = 20;
@@ -62,7 +71,8 @@ export async function runMatchingPipeline(
         aSoulVersion,
         bSoulVersion,
         result.outcome,
-        result.score
+        result.score,
+        result.reasoning
       );
 
       if (result.outcome === "match") {
@@ -74,16 +84,64 @@ export async function runMatchingPipeline(
 }
 
 /**
- * Dummy match function — always returns 'match'.
- * Replace with real soul compatibility scoring later.
+ * Evaluates match compatibility between two users using their soul files.
+ * Loads both visible soul files, summarizes them, and calls LLM for evaluation.
+ * Falls back to error on any failure.
  */
 export async function evaluateMatch(
-  _sql: NeonSQL,
-  _env: Env,
-  _userAId: string,
-  _userBId: string
-): Promise<{ outcome: "match" | "no_match" | "error"; score: number | null }> {
-  return { outcome: "match", score: 1.0 };
+  sql: NeonSQL,
+  env: Env,
+  userAId: string,
+  userBId: string
+): Promise<{ outcome: "match" | "no_match" | "error"; score: number | null; reasoning: string | null }> {
+  try {
+    const [soulA, soulB] = await Promise.all([
+      getVisibleSoulFile(sql, userAId),
+      getVisibleSoulFile(sql, userBId)
+    ]);
+
+    if (!soulA || !soulB) {
+      return { outcome: "error", score: null, reasoning: "Missing soul file" };
+    }
+
+    const summaryA = summarizeSoulForMatching(soulA);
+    const summaryB = summarizeSoulForMatching(soulB);
+    const prompt = buildMatchEvaluationPrompt(summaryA, summaryB);
+
+    const profileId = defaultModelProfileIdFromEnv(env);
+    const config = getTaskConfig(profileId, "match_evaluation");
+    const context = { profileId, task: "match_evaluation" as const };
+
+    const jsonSchema = toJSONSchema(matchEvaluationResultSchema);
+    const schema = (typeof jsonSchema === "object" && jsonSchema !== null)
+      ? jsonSchema as Record<string, unknown>
+      : {};
+
+    const result = await callLlmJson<{ decision: string; score: number; reasoning: string }>(
+      env,
+      config,
+      prompt,
+      [{ role: "user", content: "Evaluate these two souls for compatibility." }],
+      context,
+      {
+        name: "match_evaluation",
+        schema
+      }
+    );
+
+    const parsed = matchEvaluationResultSchema.safeParse(result);
+    if (!parsed.success) {
+      return { outcome: "error", score: null, reasoning: "Failed to parse LLM response" };
+    }
+
+    return {
+      outcome: parsed.data.decision === "match" ? "match" : "no_match",
+      score: parsed.data.score,
+      reasoning: parsed.data.reasoning
+    };
+  } catch {
+    return { outcome: "error", score: null, reasoning: "Evaluation failed" };
+  }
 }
 
 async function getActiveSoulmateUsers(sql: NeonSQL): Promise<ActiveSoulmateUser[]> {

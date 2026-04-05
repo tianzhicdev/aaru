@@ -3,6 +3,7 @@ import CoreLocation
 
 struct SoulmateProfileSetupView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var displayName = ""
     @State private var age = ""
     @State private var gender = "male"
     @State private var preferredAgeMin = ""
@@ -32,6 +33,15 @@ struct SoulmateProfileSetupView: View {
                 Text("Before we can find your soulmate, tell us a bit about yourself.")
                     .font(.subheadline)
                     .foregroundColor(.gray)
+
+                // Display Name
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Your Name")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    TextField("How you'd like to be known", text: $displayName)
+                        .textFieldStyle(.roundedBorder)
+                }
 
                 // Age
                 VStack(alignment: .leading, spacing: 8) {
@@ -154,6 +164,11 @@ struct SoulmateProfileSetupView: View {
 
     private func submit() async {
         errorMessage = nil
+        let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, trimmedName.count <= 50 else {
+            errorMessage = "Please enter a name (1-50 characters)."
+            return
+        }
         guard let ageInt = Int(age), ageInt >= 18 else {
             errorMessage = "Please enter a valid age (18+)."
             return
@@ -193,6 +208,7 @@ struct SoulmateProfileSetupView: View {
 
         do {
             let response = try await model.backend.saveSoulmateProfile(
+                displayName: trimmedName,
                 age: ageInt,
                 gender: gender,
                 latitude: finalLat,

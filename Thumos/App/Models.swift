@@ -344,6 +344,7 @@ struct DeleteAccountResponse: Codable {
 
 struct SoulmateProfile: Codable, Equatable {
     let userId: String
+    let displayName: String?
     let age: Int
     let gender: String
     let latitude: Double
@@ -357,6 +358,7 @@ struct SoulmateProfile: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
+        case displayName = "display_name"
         case age
         case gender
         case latitude
@@ -378,12 +380,12 @@ struct SoulmateProfileResponse: Codable {
     }
 }
 
-struct SoulmateMatch: Codable, Identifiable, Equatable {
+struct SoulmateMatch: Codable, Identifiable, Equatable, Hashable {
     let matchId: String
     let matchedUserId: String
     let displayName: String
-    let portrait: String?
     let matchedAt: String
+    let reasoning: String?
 
     var id: String { matchId }
 
@@ -391,9 +393,33 @@ struct SoulmateMatch: Codable, Identifiable, Equatable {
         case matchId = "match_id"
         case matchedUserId = "matched_user_id"
         case displayName = "display_name"
-        case portrait
         case matchedAt = "matched_at"
+        case reasoning
     }
+}
+
+struct MatchMessage: Codable, Identifiable, Equatable {
+    let id: String
+    let senderId: String
+    let receiverId: String
+    let content: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case senderId = "sender_id"
+        case receiverId = "receiver_id"
+        case content
+        case createdAt = "created_at"
+    }
+}
+
+struct MatchMessagesResponse: Codable {
+    let messages: [MatchMessage]
+}
+
+struct MatchMessageResponse: Codable {
+    let message: MatchMessage
 }
 
 struct SoulmateMatchesResponse: Codable {

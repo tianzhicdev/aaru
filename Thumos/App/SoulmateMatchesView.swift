@@ -65,16 +65,8 @@ struct SoulmateMatchesView: View {
                 }
             } else {
                 List(model.soulmateMatches) { match in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(match.displayName)
-                            .font(Theme.serif(17, weight: .medium))
-                            .foregroundColor(Theme.textPrimary)
-                            .lineLimit(2)
-                        Text("Matched \(match.matchedAt.prefix(10))")
-                            .font(.caption)
-                            .foregroundColor(Theme.textSecondary)
-                    }
-                    .listRowBackground(Theme.surface)
+                    matchRow(match)
+                        .listRowBackground(Theme.surface)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -82,6 +74,40 @@ struct SoulmateMatchesView: View {
         }
         .task {
             await model.loadSoulmateMatches()
+        }
+    }
+
+    private func matchRow(_ match: SoulmateMatch) -> some View {
+        HStack(spacing: 12) {
+            Text(match.displayName)
+                .font(Theme.serif(17, weight: .medium))
+                .foregroundColor(Theme.textPrimary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button {
+                model.selectedMatchForReasoning = match
+            } label: {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18))
+                    .foregroundColor(Theme.accent)
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink(value: match) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 18))
+                    .foregroundColor(Theme.accent)
+            }
+        }
+        .padding(.vertical, 4)
+        .navigationDestination(for: SoulmateMatch.self) { match in
+            MatchChatView(match: match)
+                .environmentObject(model)
+        }
+        .sheet(item: $model.selectedMatchForReasoning) { match in
+            MatchReasoningSheet(match: match)
         }
     }
 }

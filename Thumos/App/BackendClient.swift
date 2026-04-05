@@ -189,6 +189,7 @@ final class BackendClient {
     }
 
     func saveSoulmateProfile(
+        displayName: String,
         age: Int,
         gender: String,
         latitude: Double,
@@ -198,6 +199,7 @@ final class BackendClient {
         preferredGenders: [String]
     ) async throws -> SoulmateProfileResponse {
         let body: [String: Any] = [
+            "display_name": displayName,
             "age": age,
             "gender": gender,
             "latitude": latitude,
@@ -217,6 +219,25 @@ final class BackendClient {
             "soulmate-matches",
             retryOnServerError: true
         )
+    }
+
+    func getMatchMessages(otherUserId: String, afterId: String? = nil) async throws -> MatchMessagesResponse {
+        var queryString = "match-messages?other_user_id=\(otherUserId)"
+        if let afterId {
+            queryString += "&after_id=\(afterId)"
+        }
+        guard endpoint(named: "match-messages") != nil else {
+            return MatchMessagesResponse(messages: [])
+        }
+        return try await getRaw(queryString)
+    }
+
+    func sendMatchMessage(receiverId: String, content: String) async throws -> MatchMessageResponse {
+        let body: [String: Any] = [
+            "receiver_id": receiverId,
+            "content": content
+        ]
+        return try await postRaw("match-messages", body: body)
     }
 
     #if DEBUG
@@ -279,6 +300,37 @@ final class BackendClient {
         if retryOnServerError, statusCode >= 500 && statusCode < 600 {
             try? await Task.sleep(for: .milliseconds(800))
             return try await get(name, retryOnServerError: false)
+        }
+
+        guard statusCode == 200 else {
+            let message = String(data: data, encoding: .utf8) ?? ""
+            throw BackendError.invalidResponse(statusCode: statusCode, message: message)
+        }
+
+        return try decoder.decode(ResponseType.self, from: data)
+    }
+
+    private func getRaw<ResponseType: Decodable>(
+        _ pathWithQuery: String
+    ) async throws -> ResponseType {
+        guard let baseURL = configuration.functionBaseURL else {
+            throw BackendError.missingBaseURL
+        }
+        guard let url = URL(string: pathWithQuery, relativeTo: baseURL) else {
+            throw BackendError.missingBaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        if statusCode == 401 || statusCode == 403 {
+            throw BackendError.authenticationFailed
         }
 
         guard statusCode == 200 else {

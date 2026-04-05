@@ -25,6 +25,7 @@ final class AppModel: ObservableObject {
     @Published var isDeletingAccount = false
     @Published var soulmateProfile: SoulmateProfile?
     @Published var soulmateMatches: [SoulmateMatch] = []
+    @Published var selectedMatchForReasoning: SoulmateMatch?
     private var lastSoulFileSynthesisRequest: Date?
     private var isBootstrapping = false
     private let iso8601Formatter = ISO8601DateFormatter()
@@ -149,6 +150,7 @@ final class AppModel: ObservableObject {
         errorMessage = nil
         soulmateProfile = nil
         soulmateMatches = []
+        selectedMatchForReasoning = nil
     }
 
     // MARK: - Notifications

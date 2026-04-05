@@ -62,6 +62,7 @@ export interface DeleteAccountWireResponse {
 
 export interface SoulmateProfileWirePayload {
   user_id: string;
+  display_name: string | null;
   age: number;
   gender: string;
   latitude: number;
@@ -90,10 +91,28 @@ export interface SoulmateMatchWirePayload {
   match_id: string;
   matched_user_id: string;
   display_name: string;
-  portrait: string | null;
   matched_at: string;
+  reasoning: string | null;
 }
 
 export interface GetSoulmateMatchesWireResponse {
   matches: SoulmateMatchWirePayload[];
+}
+
+// ── GET/POST /match-messages ────────────────────────────────
+
+export interface MatchMessageWirePayload {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface GetMatchMessagesWireResponse {
+  messages: MatchMessageWirePayload[];
+}
+
+export interface PostMatchMessageWireResponse {
+  message: MatchMessageWirePayload;
 }

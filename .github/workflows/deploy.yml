@@ -33,6 +33,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
+        working-directory: workers
       - name: Deploy Worker
         working-directory: workers
         run: pnpm exec wrangler deploy --env production

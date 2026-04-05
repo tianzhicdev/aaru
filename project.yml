@@ -54,6 +54,9 @@ targets:
     platform: iOS
     sources:
       - path: ThumosTests
+      - path: contracts
+        buildPhase: resources
+        type: folder
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

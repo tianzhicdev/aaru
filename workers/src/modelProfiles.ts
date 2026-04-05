@@ -95,14 +95,14 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
       synthesis_visible: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/deepseek-v3p2",
-        maxTokens: 6144,
+        maxTokens: 4096,
         temperature: 0.5,
         reasoningMode: "disabled"
       },
       synthesis_hidden: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/deepseek-v3p2",
-        maxTokens: 6144,
+        maxTokens: 4096,
         temperature: 0.2,
         reasoningMode: "disabled"
       }

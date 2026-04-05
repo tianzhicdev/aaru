@@ -153,6 +153,44 @@ struct VisibleSoulFile: Codable, Equatable {
         relationalStyle: nil
     )
 
+    init(
+        version: Int,
+        lastUpdated: String,
+        portrait: String?,
+        sections: VisibleSoulFileSections,
+        crystallizedMoments: [CrystallizedMoment],
+        openThreads: [String],
+        compassScores: [String: Double?]?,
+        personalitySpectrum: PersonalitySpectrum?,
+        topValues: [TopValue]?,
+        relationalStyle: String?
+    ) {
+        self.version = version
+        self.lastUpdated = lastUpdated
+        self.portrait = portrait
+        self.sections = sections
+        self.crystallizedMoments = crystallizedMoments
+        self.openThreads = openThreads
+        self.compassScores = compassScores
+        self.personalitySpectrum = personalitySpectrum
+        self.topValues = topValues
+        self.relationalStyle = relationalStyle
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 0
+        lastUpdated = try container.decodeIfPresent(String.self, forKey: .lastUpdated) ?? ""
+        portrait = try container.decodeIfPresent(String.self, forKey: .portrait)
+        sections = try container.decodeIfPresent(VisibleSoulFileSections.self, forKey: .sections) ?? .empty
+        crystallizedMoments = try container.decodeIfPresent([CrystallizedMoment].self, forKey: .crystallizedMoments) ?? []
+        openThreads = try container.decodeIfPresent([String].self, forKey: .openThreads) ?? []
+        compassScores = try container.decodeIfPresent([String: Double?].self, forKey: .compassScores)
+        personalitySpectrum = try container.decodeIfPresent(PersonalitySpectrum.self, forKey: .personalitySpectrum)
+        topValues = try container.decodeIfPresent([TopValue].self, forKey: .topValues)
+        relationalStyle = try container.decodeIfPresent(String.self, forKey: .relationalStyle)
+    }
+
     var isEmpty: Bool {
         portrait == nil && crystallizedMoments.isEmpty &&
         sections.howYouMove.isEmpty && sections.howYouThink.isEmpty
@@ -176,19 +214,49 @@ struct SoulMessagePayload: Codable, Equatable {
         case content
         case createdAt = "created_at"
     }
+
+    init(id: String, role: String, content: String, createdAt: String) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.createdAt = createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
+        role = try container.decodeIfPresent(String.self, forKey: .role) ?? "assistant"
+        content = try container.decodeIfPresent(String.self, forKey: .content) ?? ""
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
+    }
 }
 
 struct SoulBootstrapResponse: Codable {
     let userId: UUID
     let token: String?
     let visibleSoulFile: VisibleSoulFile?
-    let hasMessages: Bool?
+    let hasMessages: Bool
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case token
         case visibleSoulFile = "visible_soul_file"
         case hasMessages = "has_messages"
+    }
+
+    init(userId: UUID, token: String?, visibleSoulFile: VisibleSoulFile?, hasMessages: Bool) {
+        self.userId = userId
+        self.token = token
+        self.visibleSoulFile = visibleSoulFile
+        self.hasMessages = hasMessages
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        token = try container.decodeIfPresent(String.self, forKey: .token)
+        visibleSoulFile = try container.decodeIfPresent(VisibleSoulFile.self, forKey: .visibleSoulFile)
+        hasMessages = try container.decodeIfPresent(Bool.self, forKey: .hasMessages) ?? false
     }
 }
 
@@ -200,13 +268,28 @@ struct SoulFileResponse: Codable {
     let visibleSoulFile: VisibleSoulFile
     let version: Int
     let lastUpdated: String?
-    let synthesisPending: Bool?
+    let synthesisPending: Bool
 
     enum CodingKeys: String, CodingKey {
         case visibleSoulFile = "visible_soul_file"
         case version
         case lastUpdated = "last_updated"
         case synthesisPending = "synthesis_pending"
+    }
+
+    init(visibleSoulFile: VisibleSoulFile, version: Int, lastUpdated: String?, synthesisPending: Bool) {
+        self.visibleSoulFile = visibleSoulFile
+        self.version = version
+        self.lastUpdated = lastUpdated
+        self.synthesisPending = synthesisPending
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        visibleSoulFile = try container.decodeIfPresent(VisibleSoulFile.self, forKey: .visibleSoulFile) ?? .empty
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 0
+        lastUpdated = try container.decodeIfPresent(String.self, forKey: .lastUpdated)
+        synthesisPending = try container.decodeIfPresent(Bool.self, forKey: .synthesisPending) ?? false
     }
 }
 
@@ -229,6 +312,19 @@ struct VersionCheckResponse: Codable {
         case status
         case minVersion = "min_version"
         case message
+    }
+
+    init(status: String, minVersion: String, message: String?) {
+        self.status = status
+        self.minVersion = minVersion
+        self.message = message
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? "ok"
+        minVersion = try container.decodeIfPresent(String.self, forKey: .minVersion) ?? "0.0.0"
+        message = try container.decodeIfPresent(String.self, forKey: .message)
     }
 }
 

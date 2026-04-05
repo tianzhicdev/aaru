@@ -50,8 +50,8 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 
 ### TypeScript (src/)
 - `src/domain/` — Pure domain logic (soul mirror only)
-- `src/domain/soul.ts` — Soul Mirror system prompts, reflection-note navigation, opening flow, anti-repeat rules
-- `src/domain/soulFile.ts` — Reflection note prompt, visible narrative prompt, hidden clinical prompt, structured-output schemas/parsing
+- `src/domain/soul.ts` — Soul Mirror system prompts, navigation block (from reflection note steering fields), opening flow, anti-repeat rules
+- `src/domain/soulFile.ts` — Clean-slate reflection note prompt, independent visible narrative + hidden clinical prompts (no assessment step, no merge), JSON schema generation via `toJSONSchema()`, structured-output parsing
 - `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
 - `db/` — Neon schema and migrations
 
@@ -66,8 +66,8 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
 - `workers/src/fireworks.ts` — Fireworks OpenAI-compatible wrapper
 - `workers/src/openaiCompatible.ts` — OpenAI-compatible transport helpers
-- `workers/src/soulApp.ts` — Soul message CRUD + reflection/versioned synthesis logic
-- `workers/src/backgroundJobsQueue.ts` — Queue producer/consumer helpers
+- `workers/src/soulApp.ts` — Soul message CRUD + versioned reflection/synthesis logic (`runReflectionSnapshot`, `runVisibleSynthesis`, `runHiddenSynthesis` — all INSERT new versions, no merge)
+- `workers/src/backgroundJobsQueue.ts` — Queue producer/consumer: `reflection_snapshot`, `synthesis_visible`, `synthesis_hidden` job types
 - `workers/src/debugTraces.ts` — Last-3 Claude trace persistence per user/kind
 - `workers/src/edge.ts` — CORS + SSE headers + error handling
 - `workers/src/handlers/` — Route handlers:
@@ -127,7 +127,7 @@ A task is complete when ALL of the following are true:
 
 ## Known Constraints & Gotchas
 - **No API keys in CI/test** — LLM-dependent code must remain unit-testable without real API calls. The conversation path keeps a fallback; background jobs fail closed.
-- **Dual soul file architecture** — VisibleSoulFile (user-facing, "accurate and loving") + HiddenSoulFile (agent-facing, clinical). Generated independently from raw messages + latest reflection note. If synthesis fails, keep the last ready file and retry later.
+- **Dual soul file architecture** — VisibleSoulFile (user-facing, "accurate and loving") + HiddenSoulFile (agent-facing, clinical). Generated independently from raw messages + latest reflection note — no shared assessment step, no merge with previous versions. Each synthesis is a clean overwrite (INSERT new version). Visible and hidden are queued as separate background jobs. Psychometric scores (personality spectrum, compass) live only in the visible file. If synthesis fails, keep the last ready file and retry later.
 - **No soul sessions** — Messages belong directly to users (no session grouping)
 - **iOS client is a display layer** — all state is server-authoritative
 - **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
@@ -135,11 +135,36 @@ A task is complete when ALL of the following are true:
 - **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
 - **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow. Opening mode can fetch current events via xAI web search (Grok 4) for topics from openThreads + recurringThemes, injected as optional "CURRENT CONTEXT" in the system prompt.
 - **xAI integration** — Optional (`XAI_TOKEN` env). Uses `grok-4-fast-non-reasoning` with `web_search` tool. Graceful degradation: returns empty on any failure. Only fires in opening mode when topics exist.
-- **Reflection snapshots** — Reflection notes are async clean-slate snapshots generated from all persisted messages every 10 total persisted messages (about 5 exchanges) and stored as versioned rows in `reflection_snapshots`.
-- **Conversation steering** — Live conversation uses the latest ready reflection note directly (`currentThreads`, `avoidPastQuestions`, `steerToTopics`, pressure/reasoning), but raw messages remain authoritative.
+- **Reflection snapshots** — Reflection notes are async clean-slate snapshots generated from all persisted messages every 10 total persisted messages (about 5 exchanges) and stored as versioned rows in `reflection_snapshots`. Each snapshot is a full overwrite — no evolving from previous notes. Includes steering fields: `currentThreads`, `avoidPastObservations`, `avoidPastQuestions`, `steerToTopics`, `steeringPressure`, `steeringReasoning`.
+- **Conversation steering** — Steering comes directly from the reflection note's 4 steering fields + LLM-assessed pressure. Rendered as a NAVIGATION block in the system prompt. No separate `SteeringContext` or `deriveConversationSteering()` — the note IS the steering. Raw messages remain authoritative.
+- **Zod schema design** — `.max()` constraints are NOT on the Zod schemas (to tolerate older DB data). Array limits are enforced by prompt instructions and parser functions in `soulFile.ts`. JSON schema for Fireworks `response_format` is generated via `toJSONSchema()` from Zod.
 - **Debug routes** — `get-debug-info` and `debug-dump` require both the normal session token and `x-thumos-debug-token`.
 - **Debug traces** — Raw prompt/response traces are only written when `ENABLE_DEBUG_TRACES=true`.
 - **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
+
+## API Contract Rules
+
+The iOS ↔ server wire format is locked. Golden fixtures in `contracts/` are the source of truth.
+
+### Never-Break Rules
+1. Never remove a response key that iOS reads
+2. Never change a key's type (string → number, object → array)
+3. Never rename a key without sending BOTH old and new names
+4. New keys are always additive — old clients ignore unknown keys
+5. Wire format: snake_case envelope keys, camelCase domain object keys — forever
+
+### Verification
+- `contracts/*.json` — Golden fixture files shared by both test suites
+- `src/contracts/api.ts` — TypeScript wire format interfaces
+- `tests/unit/contracts.test.ts` — TypeScript verifies fixtures match wire types
+- `ThumosTests/ContractTests.swift` — Swift verifies iOS types decode fixtures
+- Both run automatically (`npx vitest run` and Xcode test suite)
+
+### When You Must Break Compatibility
+1. Ship the server change (backward compatible — send both old + new format)
+2. Ship iOS update + wait for App Store approval
+3. After adoption window: bump MIN_SUPPORTED_VERSION in version.ts
+4. Only then remove the old format from server
 
 ## Verify (standard process — run after every change)
 1. `npx vitest run` — all tests pass

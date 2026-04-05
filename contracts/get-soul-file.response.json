@@ -1,0 +1,75 @@
+{
+  "visible_soul_file": {
+    "version": 3,
+    "lastUpdated": "2026-03-15T10:30:00Z",
+    "portrait": "You carry a quiet intensity — someone who listens deeply before speaking, then says exactly what matters.",
+    "sections": {
+      "howYouMove": "You move deliberately through the world, preferring depth over speed.",
+      "howYouThink": "Your mind works in patterns — connecting disparate ideas into unified frameworks.",
+      "howYouConnect": "You build trust slowly but completely, offering presence rather than performance.",
+      "whatYouCarry": "A deep sense of responsibility for the people you love, sometimes to your own detriment.",
+      "whatLightsYouUp": "Novel ideas, meaningful conversations, and the moment a complex problem suddenly makes sense.",
+      "yourTensions": "The pull between wanting solitude to think and craving connection to feel alive.",
+      "yourVoice": "Direct but warm — you say hard truths gently and gentle truths directly."
+    },
+    "crystallizedMoments": [
+      {
+        "quote": "I realized I'd been optimizing for other people's definitions of success.",
+        "reflection": "A turning point where external metrics gave way to internal compass."
+      }
+    ],
+    "openThreads": [
+      "Exploring what creativity means outside of productivity"
+    ],
+    "compassScores": {
+      "origins": 72,
+      "relationships": 85,
+      "work_and_purpose": 90,
+      "values_and_beliefs": 65,
+      "emotional_life": 58,
+      "growth_and_change": 78,
+      "aspirations": 45
+    },
+    "personalitySpectrum": {
+      "openness": {
+        "position": 82,
+        "label": "Highly open",
+        "evidence": "Drawn to novel ideas and abstract thinking across multiple conversations."
+      },
+      "conscientiousness": {
+        "position": 71,
+        "label": "Structured but flexible",
+        "evidence": "Values systems and planning but adapts when circumstances change."
+      },
+      "extraversion": {
+        "position": 38,
+        "label": "Selectively social",
+        "evidence": "Energized by deep one-on-one conversations, drained by large groups."
+      },
+      "agreeableness": {
+        "position": 65,
+        "label": "Warm but boundaried",
+        "evidence": "Genuinely caring but willing to hold firm positions when it matters."
+      },
+      "emotionalSensitivity": {
+        "position": 74,
+        "label": "Deeply feeling",
+        "evidence": "Processes emotions thoroughly; strong empathic resonance with others."
+      }
+    },
+    "topValues": [
+      {
+        "value": "Authenticity",
+        "description": "Being genuine matters more than being liked."
+      },
+      {
+        "value": "Growth",
+        "description": "Continuous learning and becoming, not arriving at a fixed destination."
+      }
+    ],
+    "relationalStyle": "You build trust through consistency and depth rather than charm."
+  },
+  "version": 3,
+  "last_updated": "2026-03-15T10:30:00Z",
+  "synthesis_pending": false
+}

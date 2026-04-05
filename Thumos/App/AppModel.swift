@@ -37,6 +37,8 @@ final class AppModel: ObservableObject {
 
     #if DEBUG
     @Published var debugInfo: DebugInfoResponse?
+    @Published var debugRawSections: [String: String] = [:]
+    @Published var debugError: String?
     @Published var isLoadingDebugInfo = false
     var debugDeviceIDOverride: String? {
         didSet {
@@ -194,7 +196,7 @@ final class AppModel: ObservableObject {
                 SessionIdentity.save(token, namespace: backendConfiguration.storageNamespace)
             }
             visibleSoulFile = response.visibleSoulFile ?? .empty
-            hasMessages = response.hasMessages ?? false
+            hasMessages = response.hasMessages
             cacheVisibleSoulFile(visibleSoulFile)
             await syncSoulMessages()
             await maybeRequestOpeningIfNeeded()
@@ -227,7 +229,7 @@ final class AppModel: ObservableObject {
                 cacheVisibleSoulFile(visibleSoulFile)
                 markFirstSessionCompleted()
             }
-            isSoulFileUpdating = response.synthesisPending ?? false
+            isSoulFileUpdating = response.synthesisPending
         } catch {
             logger.error("Soul file refresh failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -462,9 +464,49 @@ final class AppModel: ObservableObject {
     func fetchDebugInfo() async {
         isLoadingDebugInfo = true
         defer { isLoadingDebugInfo = false }
+
         do {
-            debugInfo = try await backend.getDebugInfo()
+            let (statusCode, rawData) = try await backend.getDebugInfoRaw()
+
+            if statusCode != 200 {
+                let body = String(data: rawData, encoding: .utf8) ?? ""
+                debugError = "HTTP \(statusCode): \(body)"
+                debugInfo = nil
+                debugRawSections = [:]
+                return
+            }
+
+            debugError = nil
+
+            // Try to parse the full response for structured UI (metadata)
+            do {
+                debugInfo = try JSONDecoder().decode(DebugInfoResponse.self, from: rawData)
+            } catch {
+                debugInfo = nil
+                debugError = "Parse error: \(error.localizedDescription)"
+            }
+
+            // Extract raw JSON strings for each artifact section
+            if let dict = try? JSONSerialization.jsonObject(with: rawData) as? [String: Any] {
+                var sections: [String: String] = [:]
+                for key in ["reflection_note", "visible_soul_file", "hidden_soul_file", "steering_preview"] {
+                    if let value = dict[key] {
+                        if let sectionData = try? JSONSerialization.data(
+                            withJSONObject: value,
+                            options: [.prettyPrinted, .sortedKeys]
+                        ) {
+                            sections[key] = String(data: sectionData, encoding: .utf8)
+                        }
+                    }
+                }
+                debugRawSections = sections
+            } else {
+                debugRawSections = [:]
+            }
         } catch {
+            debugError = error.localizedDescription
+            debugInfo = nil
+            debugRawSections = [:]
             logger.error("Debug info fetch failed: \(error.localizedDescription, privacy: .public)")
         }
     }

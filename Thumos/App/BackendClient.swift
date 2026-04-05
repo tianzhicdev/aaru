@@ -179,12 +179,25 @@ final class BackendClient {
     }
 
     #if DEBUG
-    func getDebugInfo() async throws -> DebugInfoResponse {
-        return try await post(
-            "get-debug-info",
-            body: EmptyBody(),
-            includeDebugToken: true
-        )
+    func getDebugInfoRaw() async throws -> (statusCode: Int, rawBody: Data) {
+        guard let url = endpoint(named: "get-debug-info") else {
+            throw BackendError.missingBaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = try encoder.encode(EmptyBody())
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+        if let debugApiToken = configuration.debugApiToken, !debugApiToken.isEmpty {
+            request.setValue(debugApiToken, forHTTPHeaderField: "x-thumos-debug-token")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        return (statusCode, data)
     }
 
     func setModelProfile(_ modelProfileID: String) async throws -> SetModelProfileResponse {

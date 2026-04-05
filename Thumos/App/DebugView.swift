@@ -23,11 +23,14 @@ struct DebugView: View {
                     VStack(spacing: 24) {
                         backendSection
                         identitySection
-                        steeringSection
-                        reflectionNoteSection
-                        visibleSoulFileSection
+                        if let errorText = model.debugError {
+                            errorSection(errorText)
+                        }
+                        rawJsonSection("Steering Preview", key: "steering_preview")
+                        rawJsonSection("Reflection Note", key: "reflection_note")
+                        rawJsonSection("Visible Soul File", key: "visible_soul_file")
                         impersonateSection
-                        hiddenSoulFileSection
+                        rawJsonSection("Hidden Soul File", key: "hidden_soul_file")
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
@@ -213,130 +216,31 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Steering
+    // MARK: - Error
 
-    private var steeringSection: some View {
+    private func errorSection(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Steering")
-            debugRow("Source", model.debugInfo?.steeringSource ?? "none")
-
-            if let steering = model.debugInfo?.steeringPreview {
-                if !steering.steeringPressure.isEmpty {
-                    debugRow("Pressure", steering.steeringPressure)
-                }
-
-                if !steering.steeringReasoning.isEmpty {
-                    debugRow("Reasoning", steering.steeringReasoning)
-                }
-
-                if !steering.currentThreads.isEmpty {
-                    debugSubheader("Current Threads")
-                    ForEach(steering.currentThreads, id: \.self) { bulletText($0) }
-                }
-
-                if !steering.steerToTopics.isEmpty {
-                    debugSubheader("Steer To")
-                    ForEach(steering.steerToTopics, id: \.self) { bulletText($0) }
-                }
-
-                if !steering.avoidPastObservations.isEmpty {
-                    debugSubheader("Avoid Past Observations")
-                    ForEach(steering.avoidPastObservations, id: \.self) { bulletText($0) }
-                }
-
-                if !steering.avoidPastQuestions.isEmpty {
-                    debugSubheader("Avoid Past Questions")
-                    ForEach(steering.avoidPastQuestions, id: \.self) { bulletText($0) }
-                }
-            }
+            sectionHeader("Error")
+            Text(text)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(Theme.errorText)
+                .textSelection(.enabled)
         }
     }
 
-    // MARK: - Reflection Note
+    // MARK: - Raw JSON Section
 
-    private var reflectionNoteSection: some View {
+    private func rawJsonSection(_ title: String, key: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Reflection Note")
-
-            if let note = model.debugInfo?.reflectionNote {
-                debugRow("Updated", note.updatedAt)
-
-                if !note.recurringThemes.isEmpty {
-                    debugSubheader("Recurring Themes")
-                    ForEach(note.recurringThemes, id: \.self) { bulletText($0) }
-                }
-
-                if !note.tensions.isEmpty {
-                    debugSubheader("Tensions")
-                    ForEach(note.tensions, id: \.self) { bulletText($0) }
-                }
-
-                if !note.notableAbsences.isEmpty {
-                    debugSubheader("Notable Absences")
-                    ForEach(note.notableAbsences, id: \.self) { bulletText($0) }
-                }
-
-                if !note.emotionalArc.isEmpty {
-                    debugRow("Emotional Arc", note.emotionalArc)
-                }
-
-                if !note.factualAnchors.isEmpty {
-                    debugSubheader("Factual Anchors")
-                    ForEach(note.factualAnchors.keys.sorted(), id: \.self) { key in
-                        if let value = note.factualAnchors[key] {
-                            bulletText("\(key): \(value)")
-                        }
-                    }
-                }
-
-                if !note.currentThreads.isEmpty {
-                    debugSubheader("Current Threads")
-                    ForEach(note.currentThreads, id: \.self) { bulletText($0) }
-                }
-
-                if !note.steerToTopics.isEmpty {
-                    debugSubheader("Steer To Topics")
-                    ForEach(note.steerToTopics, id: \.self) { bulletText($0) }
-                }
-
-                if !note.avoidPastQuestions.isEmpty {
-                    debugSubheader("Avoid Past Questions")
-                    ForEach(note.avoidPastQuestions, id: \.self) { bulletText($0) }
-                }
-
-                if !note.avoidPastObservations.isEmpty {
-                    debugSubheader("Avoid Past Observations")
-                    ForEach(note.avoidPastObservations, id: \.self) { bulletText($0) }
-                }
-
-                if !note.steeringPressure.isEmpty {
-                    debugRow("Steering Pressure", note.steeringPressure)
-                }
-
-                if !note.steeringReasoning.isEmpty {
-                    debugRow("Steering Reasoning", note.steeringReasoning)
-                }
+            sectionHeader(title)
+            if let json = model.debugRawSections[key] {
+                Text(json)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Theme.textSecondary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text("No reflection note yet")
-                    .font(Theme.sans(13))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-        }
-    }
-
-    // MARK: - Visible Soul File
-
-    private var visibleSoulFileSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Visible Soul File")
-            if let visible = model.debugInfo?.visibleSoulFile {
-                debugRow("Version", "\(visible.version)")
-                debugRow("Last Updated", visible.lastUpdated)
-                debugRow("Portrait", visible.portrait ?? "—")
-                debugRow("Open Threads", "\(visible.openThreads.count)")
-                debugRow("Moments", "\(visible.crystallizedMoments.count)")
-            } else {
-                Text("No visible soul file yet")
+                Text("—")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.textTertiary)
             }
@@ -383,68 +287,6 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Hidden Soul File
-
-    private var hiddenSoulFileSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader("Hidden Soul File")
-
-            if let hidden = model.debugInfo?.hiddenSoulFile {
-                debugRow("Version", "\(hidden.version)")
-                debugRow("Confidence", hidden.confidence)
-                debugRow("Last Updated", hidden.lastUpdated)
-
-                if !hidden.coreValues.isEmpty {
-                    debugSubheader("Core Values")
-                    ForEach(hidden.coreValues, id: \.self) { value in
-                        bulletText(value)
-                    }
-                }
-
-                if !hidden.coreDrivers.isEmpty {
-                    debugSubheader("Core Drivers")
-                    ForEach(Array(hidden.coreDrivers.enumerated()), id: \.offset) { _, driver in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(driver.driver) — \(String(format: "%.0f%%", driver.strength * 100))")
-                                .font(Theme.sans(13, weight: .medium))
-                                .foregroundStyle(Theme.textSecondary)
-                            Text(driver.evidence)
-                                .font(Theme.sans(12))
-                                .foregroundStyle(Theme.textTertiary)
-                        }
-                        .padding(.leading, 8)
-                    }
-                }
-
-                expertSection("Psychologist", hidden.expertReflections.psychologist)
-                expertSection("Sociologist", hidden.expertReflections.sociologist)
-                expertSection("Linguist", hidden.expertReflections.linguist)
-                expertSection("Narrative Analyst", hidden.expertReflections.narrativeAnalyst)
-
-                if !hidden.analystNotes.isEmpty {
-                    debugSubheader("Analyst Notes")
-                    ForEach(hidden.analystNotes, id: \.self) { note in
-                        bulletText(note)
-                    }
-                }
-
-                if !hidden.honestInsights.isEmpty {
-                    debugSubheader("Honest Insights")
-                    ForEach(hidden.honestInsights, id: \.self) { insight in
-                        bulletText(insight)
-                    }
-                }
-
-                voiceSection(hidden.voice)
-                depthMapSection(hidden.depthMap)
-            } else {
-                Text("No hidden soul file yet")
-                    .font(Theme.sans(13))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     private func sectionHeader(_ title: String) -> some View {
@@ -453,13 +295,6 @@ struct DebugView: View {
             .foregroundStyle(Theme.accent)
             .textCase(.uppercase)
             .tracking(1.5)
-    }
-
-    private func debugSubheader(_ title: String) -> some View {
-        Text(title)
-            .font(Theme.sans(11, weight: .medium))
-            .foregroundStyle(Theme.accentBright)
-            .padding(.top, 4)
     }
 
     private func debugRow(_ label: String, _ value: String) -> some View {
@@ -473,64 +308,6 @@ struct DebugView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .textSelection(.enabled)
             Spacer()
-        }
-    }
-
-    private func bulletText(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            Text("•")
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.textTertiary)
-            Text(text)
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.textSecondary)
-        }
-        .padding(.leading, 8)
-    }
-
-    @ViewBuilder
-    private func expertSection(_ title: String, _ reflections: [String]) -> some View {
-        if !reflections.isEmpty {
-            debugSubheader(title)
-            ForEach(reflections, id: \.self) { reflection in
-                bulletText(reflection)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func voiceSection(_ voice: VoiceProfile) -> some View {
-        debugSubheader("Voice Profile")
-        debugRow("Register", voice.register)
-        debugRow("Density", voice.density)
-        if !voice.humorStyle.isEmpty { debugRow("Humor", voice.humorStyle) }
-        if !voice.conflictStyle.isEmpty { debugRow("Conflict", voice.conflictStyle) }
-        debugRow("Disclosure", voice.disclosureRate)
-        if !voice.signaturePatterns.isEmpty {
-            ForEach(voice.signaturePatterns, id: \.self) { pattern in
-                bulletText(pattern)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func depthMapSection(_ map: DepthMap) -> some View {
-        debugSubheader("Depth Map")
-        if !map.domainCoverage.isEmpty {
-            debugSubheader("Domain Coverage")
-            ForEach(Array(map.domainCoverage.enumerated()), id: \.offset) { _, entry in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(entry.domain) — \(entry.depth)")
-                        .font(Theme.sans(12, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                    if !entry.evidence.isEmpty {
-                        Text(entry.evidence)
-                            .font(Theme.sans(12))
-                            .foregroundStyle(Theme.textTertiary)
-                    }
-                }
-                .padding(.leading, 8)
-            }
         }
     }
 

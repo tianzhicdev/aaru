@@ -100,14 +100,14 @@ export type SteeringPressure = z.infer<typeof steeringPressureSchema>;
 export const reflectionNoteSchema = z.object({
   updatedAt: z.string().default(""),
   factualAnchors: z.record(z.string(), z.string()).default({}),
-  tensions: z.array(z.string()).max(5).default([]),
-  recurringThemes: z.array(z.string()).max(5).default([]),
-  notableAbsences: z.array(z.string()).max(3).default([]),
+  tensions: z.array(z.string()).default([]),
+  recurringThemes: z.array(z.string()).default([]),
+  notableAbsences: z.array(z.string()).default([]),
   emotionalArc: z.string().default(""),
-  currentThreads: z.array(z.string()).max(4).default([]),
-  avoidPastObservations: z.array(z.string()).max(6).default([]),
-  avoidPastQuestions: z.array(z.string()).max(8).default([]),
-  steerToTopics: z.array(z.string()).max(4).default([]),
+  currentThreads: z.array(z.string()).default([]),
+  avoidPastObservations: z.array(z.string()).default([]),
+  avoidPastQuestions: z.array(z.string()).default([]),
+  steerToTopics: z.array(z.string()).default([]),
   steeringPressure: steeringPressureSchema.default("minimal"),
   steeringReasoning: z.string().default("")
 });
@@ -138,10 +138,10 @@ export const visibleSoulFileSchema = z.object({
     yourVoice: ""
   }),
   crystallizedMoments: z.array(crystallizedMomentSchema).default([]),
-  openThreads: z.array(z.string()).max(5).default([]),
+  openThreads: z.array(z.string()).default([]),
   compassScores: z.record(z.string(), z.number().min(0).max(100).nullable()).default({}),
   personalitySpectrum: personalitySpectrumSchema,
-  topValues: z.array(topValueSchema).max(3).default([]),
+  topValues: z.array(topValueSchema).default([]),
   relationalStyle: z.string().nullable().default(null)
 });
 
@@ -160,18 +160,18 @@ export const hiddenSoulFileSchema = z.object({
   lastUpdated: z.string().default(""),
   confidence: z.enum(["low", "medium", "high"]).default("low"),
   expertReflections: z.object({
-    psychologist: z.array(z.string()).max(6).default([]),
-    sociologist: z.array(z.string()).max(6).default([]),
-    linguist: z.array(z.string()).max(6).default([]),
-    narrativeAnalyst: z.array(z.string()).max(6).default([])
+    psychologist: z.array(z.string()).default([]),
+    sociologist: z.array(z.string()).default([]),
+    linguist: z.array(z.string()).default([]),
+    narrativeAnalyst: z.array(z.string()).default([])
   }).default({
     psychologist: [],
     sociologist: [],
     linguist: [],
     narrativeAnalyst: []
   }),
-  coreDrivers: z.array(coreDriverSchema).max(6).default([]),
-  coreValues: z.array(z.string()).max(6).default([]),
+  coreDrivers: z.array(coreDriverSchema).default([]),
+  coreValues: z.array(z.string()).default([]),
   voice: voiceProfileSchema.default({
     register: "casual",
     density: "moderate",
@@ -182,8 +182,8 @@ export const hiddenSoulFileSchema = z.object({
     voiceExamples: []
   }),
   depthMap: depthMapSchema,
-  analystNotes: z.array(z.string()).max(6).default([]),
-  honestInsights: z.array(z.string()).max(3).default([])
+  analystNotes: z.array(z.string()).default([]),
+  honestInsights: z.array(z.string()).default([])
 });
 
 export type HiddenSoulFile = z.infer<typeof hiddenSoulFileSchema>;

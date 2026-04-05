@@ -2,16 +2,14 @@ import { toJSONSchema } from "zod";
 import type {
   DomainCoverageEntry,
   HiddenSoulFile,
-  ReflectionNote,
   VisibleSoulFile
 } from "./schemas.ts";
 import {
-  DOMAIN_LABELS,
   LIFE_DOMAINS,
   hiddenSoulFileSchema,
-  reflectionNoteSchema,
   visibleSoulFileSchema
 } from "./schemas.ts";
+import { computeSoulFileCompleteness } from "./matching.ts";
 
 const SPECTRUM_KEYS = [
   "openness",
@@ -59,7 +57,8 @@ export function emptyVisibleSoulFile(): VisibleSoulFile {
       emotionalSensitivity: null
     },
     topValues: [],
-    relationalStyle: null
+    relationalStyle: null,
+    completeness: 0
   };
 }
 
@@ -93,83 +92,12 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
   };
 }
 
-function emptyReflectionNote(): ReflectionNote {
-  return {
-    updatedAt: new Date().toISOString(),
-    factualAnchors: {},
-    tensions: [],
-    recurringThemes: [],
-    notableAbsences: [],
-    emotionalArc: "",
-    currentThreads: [],
-    avoidPastObservations: [],
-    avoidPastQuestions: [],
-    steerToTopics: [],
-    steeringPressure: "minimal",
-    steeringReasoning: ""
-  };
-}
-
-export function buildReflectionPrompt(
-  messages: Array<{ role: string; content: string }>,
-  messageCount: number
-): string {
-  const transcript = buildTranscript(messages);
-  const domainChecklist = LIFE_DOMAINS
-    .map((domain) => `- ${domain}: ${DOMAIN_LABELS[domain]}`)
-    .join("\n");
-
-  return `You are maintaining Thumos's private conversation-state tracker. Read the full transcript and produce a clean-slate reflection note grounded only in the transcript.
-
-Current total message count: ${messageCount}
-
-Transcript:
-${transcript}
-
-When deciding steerToTopics, use this 7-domain checklist as a reference:
-${domainChecklist}
-
-Output ONE valid JSON object with these fields:
-- "updatedAt": ISO timestamp
-- "factualAnchors": object of key -> exact user quote pairs for durable facts
-- "tensions": max 5 observed pulls or contradictions
-- "recurringThemes": max 5 repeated topics or patterns
-- "notableAbsences": max 3 meaningful silences
-- "emotionalArc": 1-2 sentences on how their emotional state shifted
-- "currentThreads": max 4 topics actively alive right now
-- "avoidPastObservations": max 6 observations Thumos already made and should not repeat
-- "avoidPastQuestions": max 8 specific questions Thumos already asked and should not re-ask
-- "steerToTopics": max 4 strings in the format "domain label — concrete entry angle"
-- "steeringPressure": one of "minimal", "gentle", "moderate", "strong"
-- "steeringReasoning": short explanation for that pressure level
-
-Steering pressure rules:
-- "minimal": the user is still in productive flow and offering new material
-- "gentle": the current thread is cooling and a natural bridge would help
-- "moderate": the conversation is saturating and multiple life areas remain underexplored
-- "strong": the conversation is circling or the user is giving closure signals on current topics
-
-Rules:
-- This is a clean overwrite, not an update. Do not preserve prior assumptions.
-- Keep factualAnchors verbatim, not paraphrased.
-- Avoid generic topic labels in steerToTopics. Be specific about the angle.
-- Do not return objects for steerToTopics. Each entry must be a single string.
-- Do not include psychometric scores or diagnostic labels.
-- Respond with ONLY valid JSON.`;
-}
-
 export function buildVisibleNarrativePrompt(
-  messages: Array<{ role: string; content: string }>,
-  reflectionNote: ReflectionNote | null
+  messages: Array<{ role: string; content: string }>
 ): string {
   const transcript = buildTranscript(messages);
-  const reflectionContext = reflectionNote
-    ? `Latest reflection note:\n${JSON.stringify(reflectionNote, null, 2)}`
-    : "No reflection note yet.";
 
   return `You are writing the visible soul file for a person. It should feel accurate, warm, honest, and grounded in their own words.
-
-${reflectionContext}
 
 Transcript:
 ${transcript}
@@ -222,13 +150,9 @@ Rules:
 }
 
 export function buildHiddenClinicalPrompt(
-  messages: Array<{ role: string; content: string }>,
-  reflectionNote: ReflectionNote | null
+  messages: Array<{ role: string; content: string }>
 ): string {
   const transcript = buildTranscript(messages);
-  const reflectionContext = reflectionNote
-    ? `Latest reflection note:\n${JSON.stringify(reflectionNote, null, 2)}`
-    : "No reflection note yet.";
   const userMessageCount = messages.filter((message) => message.role === "user").length;
   const confidenceHint = userMessageCount < 10 ? "low" : userMessageCount < 30 ? "medium" : "high";
   const domainCoverageSpec = LIFE_DOMAINS.map((domain) =>
@@ -236,8 +160,6 @@ export function buildHiddenClinicalPrompt(
   ).join(",\n");
 
   return `You are writing the hidden clinical soul file for Thumos. This is private process guidance, not user-facing prose.
-
-${reflectionContext}
 
 Transcript:
 ${transcript}
@@ -305,8 +227,11 @@ export function parseVisibleNarrative(raw: string): VisibleSoulFile | null {
     compassScores: parseCompassScores(parsed.compassScores),
     personalitySpectrum: parsePersonalitySpectrum(parsed.personalitySpectrum),
     topValues: parseTopValues(parsed.topValues),
-    relationalStyle: parseNullableString(parsed.relationalStyle, 600)
+    relationalStyle: parseNullableString(parsed.relationalStyle, 600),
+    completeness: 0
   };
+
+  candidate.completeness = computeSoulFileCompleteness(candidate);
 
   const result = visibleSoulFileSchema.safeParse(candidate);
   return result.success ? result.data : null;
@@ -347,43 +272,6 @@ export function parseHiddenClinical(raw: string): HiddenSoulFile | null {
 
   const result = hiddenSoulFileSchema.safeParse(candidate);
   return result.success ? result.data : null;
-}
-
-export function parseReflectionNote(raw: string): ReflectionNote | null {
-  const parsed = parseJsonObject(raw);
-  if (!parsed) return null;
-
-  const note = emptyReflectionNote();
-  note.updatedAt = safeString(parsed.updatedAt, 64) || new Date().toISOString();
-
-  if (isRecord(parsed.factualAnchors)) {
-    for (const [key, value] of Object.entries(parsed.factualAnchors)) {
-      if (typeof value === "string" && key.trim().length > 0) {
-        note.factualAnchors[key.slice(0, 64)] = value.slice(0, 300);
-      }
-    }
-  }
-
-  note.tensions = safeStringArray(parsed.tensions, 5, 300);
-  note.recurringThemes = safeStringArray(parsed.recurringThemes, 5, 200);
-  note.notableAbsences = safeStringArray(parsed.notableAbsences, 3, 200);
-  note.emotionalArc = safeString(parsed.emotionalArc, 500);
-  note.currentThreads = safeStringArray(parsed.currentThreads, 4, 200);
-  note.avoidPastObservations = safeStringArray(parsed.avoidPastObservations, 6, 240);
-  note.avoidPastQuestions = safeStringArray(parsed.avoidPastQuestions, 8, 240);
-  note.steerToTopics = parseSteerToTopics(parsed.steerToTopics);
-  note.steeringPressure = parseEnumValue(
-    parsed.steeringPressure,
-    ["minimal", "gentle", "moderate", "strong"] as const
-  ) ?? "minimal";
-  note.steeringReasoning = safeString(parsed.steeringReasoning, 500);
-
-  const result = reflectionNoteSchema.safeParse(note);
-  return result.success ? result.data : null;
-}
-
-export function getReflectionNoteJsonSchema(): Record<string, unknown> {
-  return schemaObject(toJSONSchema(reflectionNoteSchema));
 }
 
 export function getVisibleSoulFileJsonSchema(): Record<string, unknown> {
@@ -512,44 +400,6 @@ function parseDomainCoverage(value: unknown): DomainCoverageEntry[] {
       depth: item.depth,
       evidence: safeString(item.evidence, 240)
     }));
-}
-
-function parseSteerToTopics(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const entries = value as unknown[];
-
-  return entries
-    .map((item) => {
-      if (typeof item === "string") {
-        const trimmed = item.trim();
-        return trimmed.length > 0 ? trimmed.slice(0, 240) : null;
-      }
-
-      if (!isRecord(item)) {
-        return null;
-      }
-
-      const domain = parseEnumValue(item.domain, LIFE_DOMAINS);
-      const angle = safeString(item.angle, 200)
-        || safeString(item.topic, 200)
-        || safeString(item.focus, 200)
-        || safeString(item.prompt, 200);
-
-      if (!angle) {
-        return null;
-      }
-
-      if (!domain) {
-        return angle.slice(0, 240);
-      }
-
-      return `${DOMAIN_LABELS[domain]} — ${angle}`.slice(0, 240);
-    })
-    .filter((item): item is string => Boolean(item))
-    .slice(0, 4);
 }
 
 function parseJsonObject(raw: string): JsonObject | null {

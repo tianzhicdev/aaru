@@ -43,28 +43,28 @@ describe("reflection snapshots", () => {
     expect(note).toBeNull();
   });
 
-  it("parses the latest ready snapshot with new steering fields", async () => {
+  it("parses the latest ready snapshot with steering fields", async () => {
     mockSQL.mockResolvedValueOnce([{
       note: {
         updatedAt: "2026-03-31",
-        factualAnchors: { job: "engineer" },
-        tensions: [],
-        recurringThemes: [],
-        notableAbsences: [],
-        emotionalArc: "",
+        domainCoverage: [
+          { domain: "work_and_purpose", depth: "deep", evidence: "Repeated job discussion" }
+        ],
         currentThreads: ["job drift"],
         avoidPastObservations: ["You use humor as armor"],
         avoidPastQuestions: ["What are you avoiding?"],
         steerToTopics: ["relationships — what intimacy costs you"],
         steeringPressure: "gentle",
-        steeringReasoning: "The current thread is cooling."
+        steeringReasoning: "The current thread is cooling.",
+        summary: "An engineer wrestling with job satisfaction."
       }
     }]);
 
     const note = await getLatestReflectionSnapshot(mockSQL, "user-1");
-    expect(note?.factualAnchors.job).toBe("engineer");
+    expect(note?.domainCoverage[0]?.domain).toBe("work_and_purpose");
     expect(note?.avoidPastQuestions).toContain("What are you avoiding?");
     expect(note?.steeringPressure).toBe("gentle");
+    expect(note?.summary).toContain("engineer");
   });
 
   it("flags snapshot work when transcript crossed a new reflection cadence block", async () => {
@@ -113,17 +113,17 @@ describe("reflection snapshots", () => {
 
     vi.mocked(callLlmJson).mockResolvedValueOnce({
       updatedAt: "2026-03-26T00:10:00Z",
-      factualAnchors: { art: "When I paint." },
-      tensions: ["Wants freedom but protects time with walls"],
-      recurringThemes: ["walls", "painting"],
-      notableAbsences: ["family"],
-      emotionalArc: "Guarded, then more direct",
+      domainCoverage: [
+        { domain: "emotional_life", depth: "explored", evidence: "Painting as emotional regulation" },
+        { domain: "work_and_purpose", depth: "mentioned", evidence: "Proving usefulness" }
+      ],
       currentThreads: ["painting", "fear of being swallowed"],
       avoidPastObservations: ["You use walls as emotional architecture"],
       avoidPastQuestions: ["What does losing time mean for you?"],
       steerToTopics: ["origins — when time first started feeling scarce"],
       steeringPressure: "gentle",
-      steeringReasoning: "The current thread is still alive but narrowing."
+      steeringReasoning: "The current thread is still alive but narrowing.",
+      summary: "This person builds walls when overwhelmed. Painting slows their breath. They fear needing to prove they're useful."
     });
 
     const note = await runReflectionSnapshot(mockSQL, {
@@ -231,28 +231,12 @@ describe("synthesis", () => {
     expect(claimed).toBe(true);
   });
 
-  it("runs visible synthesis from messages plus the latest reflection note", async () => {
+  it("runs visible synthesis from messages only (no reflection note)", async () => {
     mockSQL
       .mockResolvedValueOnce([
         { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
         { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
       ])
-      .mockResolvedValueOnce([{
-        note: {
-          updatedAt: "2026-03-26T00:00:00Z",
-          factualAnchors: {},
-          tensions: [],
-          recurringThemes: ["walls"],
-          notableAbsences: [],
-          emotionalArc: "",
-          currentThreads: [],
-          avoidPastObservations: [],
-          avoidPastQuestions: [],
-          steerToTopics: ["relationships — who gets past the guard"],
-          steeringPressure: "gentle",
-          steeringReasoning: "The current thread is cooling."
-        }
-      }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
@@ -293,28 +277,12 @@ describe("synthesis", () => {
     expect(result?.personalitySpectrum.openness?.position).toBe(76);
   });
 
-  it("runs hidden synthesis independently from the same transcript", async () => {
+  it("runs hidden synthesis from messages only (no reflection note)", async () => {
     mockSQL
       .mockResolvedValueOnce([
         { id: "m1", user_id: "user-1", role: "assistant", content: "Hello", created_at: "2026-03-26" },
         { id: "m2", user_id: "user-1", role: "user", content: "I build walls.", created_at: "2026-03-26" }
       ])
-      .mockResolvedValueOnce([{
-        note: {
-          updatedAt: "2026-03-26T00:00:00Z",
-          factualAnchors: {},
-          tensions: [],
-          recurringThemes: ["walls"],
-          notableAbsences: [],
-          emotionalArc: "",
-          currentThreads: [],
-          avoidPastObservations: [],
-          avoidPastQuestions: [],
-          steerToTopics: ["origins — when the guard first formed"],
-          steeringPressure: "gentle",
-          steeringReasoning: "The thread is cooling."
-        }
-      }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])

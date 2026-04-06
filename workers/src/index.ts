@@ -23,6 +23,16 @@ import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { runMatchingPipeline } from "./matchingPipeline.ts";
+import { requireDebugApiToken } from "./requestAuth.ts";
+import { jsonResponse } from "../../src/lib/http.ts";
+import type { NeonSQL } from "./db.ts";
+
+async function handleRunMatching(sql: NeonSQL, env: Env, request: Request) {
+  const authErr = requireDebugApiToken(request, env);
+  if (authErr) return authErr.error;
+  await runMatchingPipeline(sql, env);
+  return jsonResponse(200, { ok: true, message: "Matching pipeline completed" });
+}
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -93,6 +103,11 @@ export default {
       case "soulmate-matches":
         return withErrorHandling(request, (payload, req) =>
           handleGetMatches(sql, payload, req)
+        );
+
+      case "run-matching":
+        return withErrorHandling(request, (_payload, req) =>
+          handleRunMatching(sql, env, req)
         );
 
       case "match-messages":

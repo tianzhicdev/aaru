@@ -23,7 +23,7 @@ struct SoulMirrorTabView: View {
             SoulmateMatchesView()
                 .tabItem {
                     Image(systemName: "heart.circle")
-                    Text("Soulmate")
+                    Text("Thumos")
                 }
                 .tag(2)
         }

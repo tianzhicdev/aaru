@@ -15,8 +15,16 @@ struct SoulmateMatchesView: View {
                     matchesListView
                 }
             }
-            .navigationTitle("Soulmate")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Thumos")
+                        .font(Theme.sans(14, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .textCase(.uppercase)
+                        .tracking(2)
+                }
+            }
             .background(Theme.backgroundGradient)
         }
     }
@@ -26,11 +34,11 @@ struct SoulmateMatchesView: View {
             Spacer()
             Image(systemName: "lock.fill")
                 .font(.system(size: 48))
-                .foregroundColor(Theme.textSecondary)
+                .foregroundStyle(Theme.textSecondary)
 
             Text("Keep Reflecting to Unlock")
                 .font(Theme.serif(24, weight: .medium))
-                .foregroundColor(Theme.textPrimary)
+                .foregroundStyle(Theme.textPrimary)
 
             Text("Keep having conversations to unlock this.")
                 .font(Theme.sans(15, weight: .light))
@@ -53,12 +61,13 @@ struct SoulmateMatchesView: View {
                     Spacer()
                     Image(systemName: "heart.circle")
                         .font(.system(size: 48))
-                        .foregroundColor(Theme.textSecondary)
-                    Text("No Matches Yet")
+                        .foregroundStyle(Theme.textSecondary)
+                    Text("Looking for your soulmate")
                         .font(Theme.serif(24, weight: .medium))
-                        .foregroundColor(Theme.textPrimary)
+                        .foregroundStyle(Theme.textPrimary)
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(model.soulmateMatches) { match in
                     matchRow(match)
@@ -84,7 +93,7 @@ struct SoulmateMatchesView: View {
                     showEditProfile = true
                 } label: {
                     Image(systemName: "pencil.circle")
-                        .foregroundColor(Theme.accent)
+                        .foregroundStyle(Theme.accent)
                 }
             }
         }
@@ -108,7 +117,7 @@ struct SoulmateMatchesView: View {
             HStack(spacing: 12) {
                 Text(match.displayName)
                     .font(Theme.serif(17, weight: .medium))
-                    .foregroundColor(Theme.textPrimary)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
 
                 Spacer()
@@ -118,7 +127,7 @@ struct SoulmateMatchesView: View {
                 } label: {
                     Image(systemName: "sparkles")
                         .font(.system(size: 18))
-                        .foregroundColor(Theme.accent)
+                        .foregroundStyle(Theme.accent)
                 }
                 .buttonStyle(.plain)
             }

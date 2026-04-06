@@ -10,11 +10,14 @@ struct MatchChatView: View {
     private let pollInterval: TimeInterval = 5
 
     var body: some View {
-        VStack(spacing: 0) {
-            messageList
-            inputBar
+        ZStack {
+            Theme.backgroundGradient.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                messageList
+                inputBar
+            }
         }
-        .background(Color.black)
         .navigationTitle(match.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -26,13 +29,17 @@ struct MatchChatView: View {
     private var messageList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 12) {
+                LazyVStack(spacing: 20) {
                     ForEach(messages) { message in
                         messageBubble(message)
                             .id(message.id)
                     }
                 }
-                .padding()
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+            }
+            .onTapGesture {
+                isInputFocused = false
             }
             .onChange(of: messages.count) { _, _ in
                 if let last = messages.last {
@@ -51,16 +58,16 @@ struct MatchChatView: View {
             if isOwn { Spacer(minLength: 60) }
 
             Text(message.content)
-                .font(.body)
-                .foregroundColor(Theme.textPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .font(Theme.serif(19))
+                .foregroundStyle(isOwn ? .white : Theme.textPrimary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(
                     isOwn
-                        ? Theme.accent.opacity(0.2)
-                        : Theme.surface
+                        ? AnyShapeStyle(Theme.userBubble)
+                        : AnyShapeStyle(Theme.assistantBubble)
                 )
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
             if !isOwn { Spacer(minLength: 60) }
         }
@@ -69,29 +76,30 @@ struct MatchChatView: View {
     private var inputBar: some View {
         HStack(spacing: 12) {
             TextField("Message...", text: $inputText, axis: .vertical)
-                .focused($isInputFocused)
+                .font(Theme.serif(18))
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1...4)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
                 .background(Theme.surface)
-                .cornerRadius(20)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .focused($isInputFocused)
 
             Button {
                 Task { await sendMessage() }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundColor(
+                    .font(.system(size: 32))
+                    .foregroundStyle(
                         inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending
-                            ? Theme.textSecondary
-                            : Theme.accent
+                            ? Theme.accent
+                            : Theme.accentBright
                     )
             }
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.black)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private func loadMessages() async {

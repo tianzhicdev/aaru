@@ -520,13 +520,15 @@ final class AppModel: ObservableObject {
             if let dict = try? JSONSerialization.jsonObject(with: rawData) as? [String: Any] {
                 var sections: [String: String] = [:]
                 for key in ["reflection_note", "visible_soul_file", "hidden_soul_file", "steering_preview"] {
-                    if let value = dict[key] {
+                    if let value = dict[key], JSONSerialization.isValidJSONObject(value) {
                         if let sectionData = try? JSONSerialization.data(
                             withJSONObject: value,
                             options: [.prettyPrinted, .sortedKeys]
                         ) {
                             sections[key] = String(data: sectionData, encoding: .utf8)
                         }
+                    } else if let value = dict[key], !(value is NSNull) {
+                        sections[key] = "\(value)"
                     }
                 }
                 debugRawSections = sections

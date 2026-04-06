@@ -10,4 +10,5 @@ export interface Env {
   DEFAULT_MODEL_PROFILE_ID?: string;
   DEBUG_API_TOKEN?: string;
   ENABLE_DEBUG_TRACES?: string;
+  ENABLE_SOULMATE?: string;
 }

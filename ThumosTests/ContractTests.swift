@@ -46,6 +46,8 @@ final class ContractTests: XCTestCase {
         XCTAssertNotNil(sf.topValues)
         XCTAssertGreaterThan(sf.topValues?.count ?? 0, 0)
         XCTAssertNotNil(sf.relationalStyle)
+        XCTAssertGreaterThanOrEqual(sf.completeness, 0)
+        XCTAssertLessThanOrEqual(sf.completeness, 1)
     }
 
     // MARK: - get-soul-file
@@ -57,6 +59,7 @@ final class ContractTests: XCTestCase {
         XCTAssertNotNil(response.lastUpdated)
         XCTAssertFalse(response.synthesisPending)
         XCTAssertFalse(response.visibleSoulFile.sections.howYouMove.isEmpty)
+        XCTAssertGreaterThanOrEqual(response.visibleSoulFile.completeness, 0)
     }
 
     // MARK: - sync-messages
@@ -113,6 +116,7 @@ final class ContractTests: XCTestCase {
         XCTAssertEqual(sf.sections.howYouMove, "")
         XCTAssertEqual(sf.crystallizedMoments.count, 0)
         XCTAssertEqual(sf.openThreads.count, 0)
+        XCTAssertEqual(sf.completeness, 0)
     }
 
     func testVersionCheckDecodesWithMissingKeys() throws {

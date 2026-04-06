@@ -57,3 +57,62 @@ export interface VersionCheckWireResponse {
 export interface DeleteAccountWireResponse {
   deleted: boolean;
 }
+
+// ── GET /soulmate-profile ───────────────────────────────────
+
+export interface SoulmateProfileWirePayload {
+  user_id: string;
+  display_name: string | null;
+  age: number;
+  gender: string;
+  latitude: number;
+  longitude: number;
+  preferred_age_min: number;
+  preferred_age_max: number;
+  preferred_genders: string[];
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetSoulmateProfileWireResponse {
+  soulmate_profile: SoulmateProfileWirePayload | null;
+}
+
+// ── POST /soulmate-profile ──────────────────────────────────
+
+export interface PostSoulmateProfileWireResponse {
+  soulmate_profile: SoulmateProfileWirePayload;
+}
+
+// ── GET /soulmate-matches ───────────────────────────────────
+
+export interface SoulmateMatchWirePayload {
+  match_id: string;
+  matched_user_id: string;
+  display_name: string;
+  matched_at: string;
+  reasoning: string | null;
+}
+
+export interface GetSoulmateMatchesWireResponse {
+  matches: SoulmateMatchWirePayload[];
+}
+
+// ── GET/POST /match-messages ────────────────────────────────
+
+export interface MatchMessageWirePayload {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface GetMatchMessagesWireResponse {
+  messages: MatchMessageWirePayload[];
+}
+
+export interface PostMatchMessageWireResponse {
+  message: MatchMessageWirePayload;
+}

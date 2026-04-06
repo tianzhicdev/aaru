@@ -19,11 +19,12 @@ enum Theme {
     static let textSecondary = Color(red: 1.0, green: 0.973, blue: 0.902).opacity(0.50)
     static let textTertiary = Color(red: 1.0, green: 0.973, blue: 0.902).opacity(0.25)
 
-    static let accent = Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.55)
-    static let accentBright = Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.70)
-    static let divider = Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.20)
+    static let goldBase = Color(red: 0.831, green: 0.690, blue: 0.302)
+    static let accent = goldBase.opacity(0.55)
+    static let accentBright = goldBase.opacity(0.70)
+    static let divider = goldBase.opacity(0.20)
 
-    static let userBubble = Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.25)
+    static let userBubble = goldBase.opacity(0.25)
     static let assistantBubble = Color(red: 1.0, green: 0.973, blue: 0.902).opacity(0.06)
 
     static let errorBg = Color(red: 0.706, green: 0.235, blue: 0.157).opacity(0.15)

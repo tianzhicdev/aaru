@@ -56,7 +56,7 @@ struct SoulCompassView: View {
                 path.addLine(to: end)
                 context.stroke(
                     path,
-                    with: .color(Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.15)),
+                    with: .color(Theme.goldBase.opacity(0.15)),
                     style: StrokeStyle(
                         lineWidth: 0.5,
                         dash: hasScore ? [] : [4, 4]
@@ -84,7 +84,7 @@ struct SoulCompassView: View {
                 path.closeSubpath()
                 context.stroke(
                     path,
-                    with: .color(Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.08)),
+                    with: .color(Theme.goldBase.opacity(0.08)),
                     lineWidth: 0.5
                 )
             }
@@ -113,11 +113,11 @@ struct SoulCompassView: View {
 
             context.fill(
                 path,
-                with: .color(Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.15))
+                with: .color(Theme.goldBase.opacity(0.15))
             )
             context.stroke(
                 path,
-                with: .color(Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.60)),
+                with: .color(Theme.goldBase.opacity(0.60)),
                 lineWidth: 1.5
             )
 
@@ -125,7 +125,7 @@ struct SoulCompassView: View {
                 let rect = CGRect(x: point.x - 2.5, y: point.y - 2.5, width: 5, height: 5)
                 context.fill(
                     Path(ellipseIn: rect),
-                    with: .color(Color(red: 0.831, green: 0.690, blue: 0.302).opacity(0.70))
+                    with: .color(Theme.goldBase.opacity(0.70))
                 )
             }
         }

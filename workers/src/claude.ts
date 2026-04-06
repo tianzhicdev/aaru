@@ -1,4 +1,4 @@
-import { callAnthropicCompatible, streamAnthropicCompatible } from "./anthropicCompatible.ts";
+import { callAnthropicCompatible, callAnthropicCompatibleJson, streamAnthropicCompatible } from "./anthropicCompatible.ts";
 
 interface ClaudeMessage {
   role: "user" | "assistant";
@@ -64,5 +64,42 @@ export async function callClaude(
     model,
     maxTokens,
     temperature
+  });
+}
+
+/**
+ * Call Claude with forced JSON output via tool_use.
+ * Forces the model to produce structured output matching the schema.
+ */
+export async function callClaudeJson<T>(
+  systemPrompt: string,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  options: {
+    apiKey: string;
+    model?: string;
+    maxTokens?: number;
+    temperature?: number;
+    toolSchema: { name: string; schema: Record<string, unknown> };
+  }
+): Promise<T> {
+  const model = options.model ?? "claude-haiku-4-5-20251001";
+  const maxTokens = options.maxTokens ?? 4096;
+  const temperature = options.temperature ?? 0.3;
+
+  return callAnthropicCompatibleJson<T>(systemPrompt, messages, {
+    endpoint: "https://api.anthropic.com/v1/messages",
+    headers: {
+      "x-api-key": options.apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json"
+    },
+    model,
+    maxTokens,
+    temperature,
+    toolSchema: {
+      name: options.toolSchema.name,
+      description: `Output structured JSON matching the ${options.toolSchema.name} schema.`,
+      schema: options.toolSchema.schema
+    }
   });
 }

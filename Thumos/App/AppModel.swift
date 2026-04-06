@@ -23,6 +23,9 @@ final class AppModel: ObservableObject {
     @Published var isSoulStreaming = false
     @Published var isSoulFileUpdating = false
     @Published var isDeletingAccount = false
+    @Published var soulmateProfile: SoulmateProfile?
+    @Published var soulmateMatches: [SoulmateMatch] = []
+    @Published var selectedMatchForReasoning: SoulmateMatch?
     private var lastSoulFileSynthesisRequest: Date?
     private var isBootstrapping = false
     private let iso8601Formatter = ISO8601DateFormatter()
@@ -133,7 +136,6 @@ final class AppModel: ObservableObject {
         defaults.removeObject(forKey: storageKey("cached_visible_soul_file"))
         defaults.removeObject(forKey: storageKey("cached_soul_messages"))
         defaults.removeObject(forKey: storageKey("has_completed_first_session"))
-
         // Reset in-memory state
         hasAgreedToAI = false
         visibleSoulFile = .empty
@@ -146,6 +148,9 @@ final class AppModel: ObservableObject {
         appUpdateMessage = nil
         userID = nil
         errorMessage = nil
+        soulmateProfile = nil
+        soulmateMatches = []
+        selectedMatchForReasoning = nil
     }
 
     // MARK: - Notifications
@@ -202,6 +207,11 @@ final class AppModel: ObservableObject {
             await maybeRequestOpeningIfNeeded()
 
             logger.info("Soul bootstrap complete: hasMessages=\(self.hasMessages)")
+
+            // Post-bootstrap: load soulmate profile if unlocked
+            if visibleSoulFile.completeness >= 0.7 {
+                Task { await loadSoulmateProfile() }
+            }
 
             // Post-bootstrap: schedule local notification
             Task {
@@ -440,6 +450,26 @@ final class AppModel: ObservableObject {
         await beginSoulConversation()
     }
 
+    // MARK: - Soulmate
+
+    func loadSoulmateProfile() async {
+        do {
+            let response = try await backend.getSoulmateProfile()
+            soulmateProfile = response.soulmateProfile
+        } catch {
+            logger.error("Soulmate profile fetch failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func loadSoulmateMatches() async {
+        do {
+            let response = try await backend.getSoulmateMatches()
+            soulmateMatches = response.matches
+        } catch {
+            logger.error("Soulmate matches fetch failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     private func resetLocalConversationState() {
         backend.sessionToken = SessionIdentity.current(namespace: backendConfiguration.storageNamespace)
         #if DEBUG
@@ -490,13 +520,15 @@ final class AppModel: ObservableObject {
             if let dict = try? JSONSerialization.jsonObject(with: rawData) as? [String: Any] {
                 var sections: [String: String] = [:]
                 for key in ["reflection_note", "visible_soul_file", "hidden_soul_file", "steering_preview"] {
-                    if let value = dict[key] {
+                    if let value = dict[key], JSONSerialization.isValidJSONObject(value) {
                         if let sectionData = try? JSONSerialization.data(
                             withJSONObject: value,
                             options: [.prettyPrinted, .sortedKeys]
                         ) {
                             sections[key] = String(data: sectionData, encoding: .utf8)
                         }
+                    } else if let value = dict[key], !(value is NSNull) {
+                        sections[key] = "\(value)"
                     }
                 }
                 debugRawSections = sections

@@ -1,5 +1,5 @@
 import type { Env } from "./env.ts";
-import { callClaude, streamClaude } from "./claude.ts";
+import { callClaude, callClaudeJson, streamClaude } from "./claude.ts";
 import { callFireworks, callFireworksJson, streamFireworks } from "./fireworks.ts";
 import type { ModelProfileId, ModelTask, ModelTaskConfig } from "./modelProfiles.ts";
 
@@ -80,15 +80,17 @@ const anthropicClient: LlmProviderClient = {
     });
   },
 
-  async callJson<T>({ env, config, systemPrompt, messages }: LlmProviderJsonRequest): Promise<T> {
-    const rawText = await callClaude(systemPrompt, messages, {
+  callJson<T>({ env, config, systemPrompt, messages, outputSchema }: LlmProviderJsonRequest): Promise<T> {
+    return callClaudeJson<T>(systemPrompt, messages, {
       apiKey: env.ANTHROPIC_API_KEY,
       model: config.model,
       maxTokens: config.maxTokens,
-      temperature: config.temperature
+      temperature: config.temperature,
+      toolSchema: {
+        name: outputSchema.name,
+        schema: outputSchema.schema
+      }
     });
-
-    return parseJsonResponse<T>(rawText);
   }
 };
 

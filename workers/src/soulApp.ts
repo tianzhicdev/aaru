@@ -9,16 +9,19 @@ import {
 } from "../../src/domain/schemas.ts";
 import {
   buildHiddenClinicalPrompt,
-  buildReflectionPrompt,
   buildVisibleNarrativePrompt,
   emptyVisibleSoulFile,
   getHiddenSoulFileJsonSchema,
-  getReflectionNoteJsonSchema,
   getVisibleSoulFileJsonSchema,
   parseHiddenClinical,
-  parseReflectionNote,
   parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
+import { computeSoulFileCompleteness } from "../../src/domain/matching.ts";
+import {
+  buildReflectionPrompt,
+  getReflectionNoteJsonSchema,
+  parseReflectionNote
+} from "../../src/domain/reflectionNote.ts";
 import { callLlmJson } from "./llm.ts";
 import { getTaskConfig } from "./modelProfiles.ts";
 import { recordClaudeDebugTrace } from "./debugTraces.ts";
@@ -42,6 +45,7 @@ interface VisibleSoulFileRow {
   personality_spectrum: Json;
   top_values: Json;
   relational_style: string | null;
+  completeness?: number | null;
   status?: SynthesisStatus;
   synthesis_started_at?: string | Date | null;
 }
@@ -119,7 +123,8 @@ function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
     compassScores: row.compass_scores ?? {},
     personalitySpectrum: row.personality_spectrum ?? {},
     topValues: row.top_values ?? [],
-    relationalStyle: row.relational_style
+    relationalStyle: row.relational_style,
+    completeness: row.completeness ?? 0
   });
 }
 
@@ -607,6 +612,7 @@ async function saveVisibleSoulFile(
   const latest = await getLatestVisibleSynthesisState(sql, userId);
   const version = latest?.status === "pending" ? latest.version : (latest?.version ?? 0) + 1;
   const timestamp = new Date().toISOString();
+  const completeness = computeSoulFileCompleteness(file);
 
   await sql`
     INSERT INTO visible_soul_files (
@@ -615,7 +621,7 @@ async function saveVisibleSoulFile(
       what_lights_you_up, your_contradictions, your_voice,
       crystallized_moments, open_threads, compass_scores,
       personality_spectrum, top_values, relational_style,
-      status, synthesis_started_at
+      completeness, status, synthesis_started_at
     ) VALUES (
       ${userId}, ${version}, ${timestamp}, ${file.portrait},
       ${file.sections.howYouMove}, ${file.sections.howYouThink},
@@ -628,6 +634,7 @@ async function saveVisibleSoulFile(
       ${JSON.stringify(file.personalitySpectrum ?? {})},
       ${JSON.stringify(file.topValues ?? [])},
       ${file.relationalStyle},
+      ${completeness},
       'ready',
       NULL
     )
@@ -647,6 +654,7 @@ async function saveVisibleSoulFile(
       personality_spectrum = EXCLUDED.personality_spectrum,
       top_values = EXCLUDED.top_values,
       relational_style = EXCLUDED.relational_style,
+      completeness = EXCLUDED.completeness,
       status = 'ready',
       synthesis_started_at = NULL
   `;
@@ -803,9 +811,8 @@ export async function runVisibleSynthesis(
 ): Promise<VisibleSoulFile | null> {
   const profileId = await getUserModelProfileId(sql, userId);
   const visibleConfig = getTaskConfig(profileId, "synthesis_visible");
-  const [allMessages, reflectionNote, existingVisible] = await Promise.all([
+  const [allMessages, existingVisible] = await Promise.all([
     getAllSoulMessages(sql, userId),
-    getLatestReflectionSnapshot(sql, userId),
     getVisibleSoulFile(sql, userId)
   ]);
 
@@ -814,8 +821,7 @@ export async function runVisibleSynthesis(
   }
 
   const prompt = buildVisibleNarrativePrompt(
-    allMessages.map((message) => ({ role: message.role, content: message.content })),
-    reflectionNote
+    allMessages.map((message) => ({ role: message.role, content: message.content }))
   );
 
   try {
@@ -848,7 +854,6 @@ export async function runVisibleSynthesis(
         artifact: "visible",
         message_count: allMessages.length,
         parse_success: Boolean(parsed),
-        has_reflection_snapshot: Boolean(reflectionNote),
         provider: visibleConfig.provider,
         model_profile_id: profileId
       }
@@ -881,9 +886,8 @@ export async function runHiddenSynthesis(
 ): Promise<HiddenSoulFile | null> {
   const profileId = await getUserModelProfileId(sql, userId);
   const hiddenConfig = getTaskConfig(profileId, "synthesis_hidden");
-  const [allMessages, reflectionNote, existingHidden] = await Promise.all([
+  const [allMessages, existingHidden] = await Promise.all([
     getAllSoulMessages(sql, userId),
-    getLatestReflectionSnapshot(sql, userId),
     getHiddenSoulFile(sql, userId)
   ]);
 
@@ -892,8 +896,7 @@ export async function runHiddenSynthesis(
   }
 
   const prompt = buildHiddenClinicalPrompt(
-    allMessages.map((message) => ({ role: message.role, content: message.content })),
-    reflectionNote
+    allMessages.map((message) => ({ role: message.role, content: message.content }))
   );
 
   try {
@@ -926,7 +929,6 @@ export async function runHiddenSynthesis(
         artifact: "hidden",
         message_count: allMessages.length,
         parse_success: Boolean(parsed),
-        has_reflection_snapshot: Boolean(reflectionNote),
         provider: hiddenConfig.provider,
         model_profile_id: profileId
       }

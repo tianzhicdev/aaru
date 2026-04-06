@@ -332,17 +332,16 @@ describe("debug routes", () => {
     vi.mocked(getUserModelProfileId).mockResolvedValue("value_v1");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue({
       updatedAt: "2026-03-31T00:00:00Z",
-      factualAnchors: {},
-      tensions: [],
-      recurringThemes: [],
-      notableAbsences: [],
-      emotionalArc: "",
+      domainCoverage: [
+        { domain: "work_and_purpose", depth: "deep", evidence: "Repeated discussion" }
+      ],
       currentThreads: ["job drift"],
       avoidPastObservations: ["You use humor as armor"],
       avoidPastQuestions: ["What are you protecting?"],
       steerToTopics: ["relationships — the guard around intimacy"],
       steeringPressure: "gentle",
-      steeringReasoning: "The current thread is cooling."
+      steeringReasoning: "The current thread is cooling.",
+      summary: "They're drifting at work and using humor as armor."
     });
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(getHiddenSoulFile).mockResolvedValue(null);

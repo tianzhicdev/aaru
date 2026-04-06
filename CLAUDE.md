@@ -1,7 +1,7 @@
 # Thumos — Claude Operating Rules
 
 ## Project Overview
-Thumos is a soul-based social app. Phase 1 (current): Soul Mirror — reflective AI conversations that build a living soul file.
+Thumos is a soul-based social app. Phase 1: Soul Mirror — reflective AI conversations that build a living soul file. Phase 2 (current): Soulmate — LLM-based match evaluation, match reasoning, display names, and direct messaging between matched users.
 
 **Two codebases in one repo:**
 - **TypeScript backend** — domain logic + Cloudflare Workers API
@@ -49,10 +49,12 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 ## Architecture
 
 ### TypeScript (src/)
-- `src/domain/` — Pure domain logic (soul mirror only)
+- `src/domain/` — Pure domain logic (soul mirror + matching)
 - `src/domain/soul.ts` — Soul Mirror system prompts, navigation block (from reflection note steering fields), opening flow, anti-repeat rules
 - `src/domain/soulFile.ts` — Clean-slate reflection note prompt, independent visible narrative + hidden clinical prompts (no assessment step, no merge), JSON schema generation via `toJSONSchema()`, structured-output parsing
 - `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
+- `src/domain/matching.ts` — Completeness threshold for soulmate matching
+- `src/domain/matchEvaluation.ts` — Match prompt builder, Zod schema for evaluation results, soul summarizer for matching
 - `db/` — Neon schema and migrations
 
 ### Cloudflare Workers (workers/src/)
@@ -61,7 +63,7 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `workers/src/xai.ts` — xAI Grok web search client for current events in opening mode
 - `workers/src/db.ts` — Neon serverless driver + user/session CRUD
 - `workers/src/auth.ts` — HMAC SHA-256 session tokens
-- `workers/src/modelProfiles.ts` — Hardcoded model profiles and per-task routing
+- `workers/src/modelProfiles.ts` — Hardcoded model profiles and per-task routing (includes `match_evaluation` task)
 - `workers/src/llm.ts` — Provider router
 - `workers/src/claude.ts` — Anthropic API wrapper (streaming + completion)
 - `workers/src/fireworks.ts` — Fireworks OpenAI-compatible wrapper
@@ -70,11 +72,16 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `workers/src/backgroundJobsQueue.ts` — Queue producer/consumer: `reflection_snapshot`, `synthesis_visible`, `synthesis_hidden` job types
 - `workers/src/debugTraces.ts` — Last-3 Claude trace persistence per user/kind
 - `workers/src/edge.ts` — CORS + SSE headers + error handling
+- `workers/src/matchApp.ts` — Soulmate profile CRUD, match CRUD, match message CRUD (getMatchMessages, insertMatchMessage)
+- `workers/src/matchingPipeline.ts` — Daily matching pipeline: finds active users, fetches candidates, runs LLM-based evaluateMatch(), caps at 2 matches per user per run
 - `workers/src/handlers/` — Route handlers:
   - `bootstrap-soul.ts` — User bootstrap + session creation
   - `sync-messages.ts` — Full canonical transcript sync
   - `soul-converse.ts` — SSE streaming soul conversations for both `opening` and `reply`
   - `get-soul-file.ts` — Fetch visible soul file + trigger async queue-backed synthesis
+  - `soulmate-profile.ts` — GET/POST soulmate profile (with display_name)
+  - `get-matches.ts` — GET matches list (returns display_name + reasoning, no portrait)
+  - `match-messages.ts` — GET/POST direct messages between matched users
   - `delete-account.ts` — Cascade delete user
   - `get-debug-info.ts`, `debug-dump.ts` — Debug endpoints
   - `ping.ts`, `version.ts` — Health check + version gate
@@ -93,10 +100,14 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `Thumos/App/PersonalitySpectrumView.swift` — Personality spectrum bars
 - `Thumos/App/TopValuesView.swift` — Top value pills
 - `Thumos/App/SecureStore.swift` — Keychain wrapper (device/session identity)
+- `Thumos/App/SoulmateMatchesView.swift` — Match list with detail (reasoning) + chat icons per row
+- `Thumos/App/SoulmateProfileSetupView.swift` — Soulmate profile setup (display name, age, gender, preferences)
+- `Thumos/App/MatchReasoningSheet.swift` — Sheet showing match name + LLM-generated reasoning (no soul file content)
+- `Thumos/App/MatchChatView.swift` — Direct messaging UI between matched users (polling every 5s)
 - `ThumosTests/` — XCTest unit tests
 
 ### Tests (tests/)
-- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, debugTraces, version, xai)
+- `tests/unit/` — Unit tests for domain functions (soul, soulFile, soulApp, matchEvaluation, matchingPipeline, debugTraces, version, xai)
 - `tests/integration/` — Handler integration tests (soulMirrorHandlers, deleteAccount)
 
 ## Code Style Conventions
@@ -141,6 +152,10 @@ A task is complete when ALL of the following are true:
 - **Debug routes** — `get-debug-info` and `debug-dump` require both the normal session token and `x-thumos-debug-token`.
 - **Debug traces** — Raw prompt/response traces are only written when `ENABLE_DEBUG_TRACES=true`.
 - **Notification permission** — Requested after first completed session, not on first launch. Local notifications only (no APNs).
+- **Soulmate matching pipeline** — Daily cron triggers `runMatchingPipeline()`. Loads active users with ready visible soul files (completeness >= threshold), fetches geo-sorted candidates with mutual preference filters, evaluates each pair via LLM (`evaluateMatch()`), caps at 2 new matches per user per run. Results stored in `matches` table with reasoning.
+- **Match evaluation** — LLM-based: loads both users' visible soul files, summarizes for token efficiency (strips raw moments/quotes), calls `callLlmJson()` with structured output schema. Returns decision (match/no_match), score (0-1), and reasoning paragraph. Falls back to error on any failure.
+- **Match messages** — Simple sender_id/receiver_id model (no match_id foreign key). Auth check verifies users are matched via `getMatchedUserIds()`. iOS polls every 5 seconds using `after_id` for incremental fetches.
+- **Display name privacy** — Match list shows `display_name` from `soulmate_profiles` + `reasoning` from `matches`. Soul file portrait/content is NEVER exposed to other users.
 
 ## API Contract Rules
 
@@ -185,7 +200,7 @@ sudo ./deploy.sh --prod --secrets /Users/biubiu/.secrets/prod.env
 - dev uses `workers.dev`
 - production secrets stay out of repo-local `.env`
 
-Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, delete-account, get-debug-info, debug-dump
+Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, soulmate-profile, get-matches, match-messages, delete-account, get-debug-info, debug-dump
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: Thumos

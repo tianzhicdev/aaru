@@ -126,6 +126,7 @@ struct VisibleSoulFile: Codable, Equatable {
     var personalitySpectrum: PersonalitySpectrum?
     var topValues: [TopValue]?
     var relationalStyle: String?
+    var completeness: Double
 
     enum CodingKeys: String, CodingKey {
         case version
@@ -138,6 +139,7 @@ struct VisibleSoulFile: Codable, Equatable {
         case personalitySpectrum
         case topValues
         case relationalStyle
+        case completeness
     }
 
     static let empty = VisibleSoulFile(
@@ -150,7 +152,8 @@ struct VisibleSoulFile: Codable, Equatable {
         compassScores: nil,
         personalitySpectrum: .empty,
         topValues: [],
-        relationalStyle: nil
+        relationalStyle: nil,
+        completeness: 0
     )
 
     init(
@@ -163,7 +166,8 @@ struct VisibleSoulFile: Codable, Equatable {
         compassScores: [String: Double?]?,
         personalitySpectrum: PersonalitySpectrum?,
         topValues: [TopValue]?,
-        relationalStyle: String?
+        relationalStyle: String?,
+        completeness: Double = 0
     ) {
         self.version = version
         self.lastUpdated = lastUpdated
@@ -175,6 +179,7 @@ struct VisibleSoulFile: Codable, Equatable {
         self.personalitySpectrum = personalitySpectrum
         self.topValues = topValues
         self.relationalStyle = relationalStyle
+        self.completeness = completeness
     }
 
     init(from decoder: Decoder) throws {
@@ -189,6 +194,7 @@ struct VisibleSoulFile: Codable, Equatable {
         personalitySpectrum = try container.decodeIfPresent(PersonalitySpectrum.self, forKey: .personalitySpectrum)
         topValues = try container.decodeIfPresent([TopValue].self, forKey: .topValues)
         relationalStyle = try container.decodeIfPresent(String.self, forKey: .relationalStyle)
+        completeness = try container.decodeIfPresent(Double.self, forKey: .completeness) ?? 0
     }
 
     var isEmpty: Bool {
@@ -334,6 +340,92 @@ struct DeleteAccountResponse: Codable {
     let deleted: Bool
 }
 
+// MARK: - Soulmate
+
+struct SoulmateProfile: Codable, Equatable {
+    let userId: String
+    let displayName: String?
+    let age: Int
+    let gender: String
+    let latitude: Double
+    let longitude: Double
+    let preferredAgeMin: Int
+    let preferredAgeMax: Int
+    let preferredGenders: [String]
+    let active: Bool
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case displayName = "display_name"
+        case age
+        case gender
+        case latitude
+        case longitude
+        case preferredAgeMin = "preferred_age_min"
+        case preferredAgeMax = "preferred_age_max"
+        case preferredGenders = "preferred_genders"
+        case active
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct SoulmateProfileResponse: Codable {
+    let soulmateProfile: SoulmateProfile?
+
+    enum CodingKeys: String, CodingKey {
+        case soulmateProfile = "soulmate_profile"
+    }
+}
+
+struct SoulmateMatch: Codable, Identifiable, Equatable, Hashable {
+    let matchId: String
+    let matchedUserId: String
+    let displayName: String
+    let matchedAt: String
+    let reasoning: String?
+
+    var id: String { matchId }
+
+    enum CodingKeys: String, CodingKey {
+        case matchId = "match_id"
+        case matchedUserId = "matched_user_id"
+        case displayName = "display_name"
+        case matchedAt = "matched_at"
+        case reasoning
+    }
+}
+
+struct MatchMessage: Codable, Identifiable, Equatable {
+    let id: String
+    let senderId: String
+    let receiverId: String
+    let content: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case senderId = "sender_id"
+        case receiverId = "receiver_id"
+        case content
+        case createdAt = "created_at"
+    }
+}
+
+struct MatchMessagesResponse: Codable {
+    let messages: [MatchMessage]
+}
+
+struct MatchMessageResponse: Codable {
+    let message: MatchMessage
+}
+
+struct SoulmateMatchesResponse: Codable {
+    let matches: [SoulmateMatch]
+}
+
 // MARK: - Debug (stripped from Release builds)
 
 #if DEBUG
@@ -345,31 +437,37 @@ struct DomainCoverageEntry: Codable {
 
 struct ReflectionNote: Codable {
     let updatedAt: String
-    let factualAnchors: [String: String]
-    let tensions: [String]
-    let recurringThemes: [String]
-    let notableAbsences: [String]
-    let emotionalArc: String
+    let domainCoverage: [DomainCoverageEntry]?
     let currentThreads: [String]
     let avoidPastObservations: [String]
     let avoidPastQuestions: [String]
     let steerToTopics: [String]
     let steeringPressure: String
     let steeringReasoning: String
+    let summary: String?
+
+    // Legacy fields preserved as optional so debug builds can still decode older backends.
+    let factualAnchors: [String: String]?
+    let tensions: [String]?
+    let recurringThemes: [String]?
+    let notableAbsences: [String]?
+    let emotionalArc: String?
 
     enum CodingKeys: String, CodingKey {
         case updatedAt
-        case factualAnchors
-        case tensions
-        case recurringThemes
-        case notableAbsences
-        case emotionalArc
+        case domainCoverage
         case currentThreads
         case avoidPastObservations
         case avoidPastQuestions
         case steerToTopics
         case steeringPressure
         case steeringReasoning
+        case summary
+        case factualAnchors
+        case tensions
+        case recurringThemes
+        case notableAbsences
+        case emotionalArc
     }
 }
 

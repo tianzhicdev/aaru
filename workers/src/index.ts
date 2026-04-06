@@ -4,6 +4,10 @@ import type { BackgroundJob, QueueBatch } from "./backgroundJobsQueue.ts";
 import { processBackgroundJobsBatch } from "./backgroundJobsQueue.ts";
 
 interface ExecutionContext {}
+interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
 import { withErrorHandling, optionsResponse, toEdgeResponse } from "./edge.ts";
 import { handlePing } from "./handlers/ping.ts";
 import { handleVersion } from "./handlers/version.ts";
@@ -15,6 +19,19 @@ import { handleDeleteAccount } from "./handlers/delete-account.ts";
 import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
 import { handleDebugDump } from "./handlers/debug-dump.ts";
 import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
+import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
+import { handleGetMatches } from "./handlers/get-matches.ts";
+import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
+import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
+import { requireDebugApiToken } from "./requestAuth.ts";
+import { jsonResponse } from "../../src/lib/http.ts";
+
+async function handleRunMatching(env: Env, request: Request) {
+  const authErr = requireDebugApiToken(request, env);
+  if (authErr) return authErr.error;
+  const job = await enqueueMatchingRun(env.BACKGROUND_QUEUE);
+  return jsonResponse(200, { ok: true, message: "Matching pipeline enqueued", jobId: job.jobId });
+}
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -72,12 +89,46 @@ export default {
           handleSetModelProfile(sql, env, payload, req)
         );
 
+      case "soulmate-profile":
+        if (request.method === "GET") {
+          return withErrorHandling(request, (payload, req) =>
+            handleGetSoulmateProfile(sql, payload, req)
+          );
+        }
+        return withErrorHandling(request, (payload, req) =>
+          handlePostSoulmateProfile(sql, payload, req)
+        );
+
+      case "soulmate-matches":
+        return withErrorHandling(request, (payload, req) =>
+          handleGetMatches(sql, payload, req)
+        );
+
+      case "run-matching":
+        return withErrorHandling(request, (_payload, req) =>
+          handleRunMatching(env, req)
+        );
+
+      case "match-messages":
+        if (request.method === "GET") {
+          return withErrorHandling(request, (payload, req) =>
+            handleGetMatchMessages(sql, payload, req)
+          );
+        }
+        return withErrorHandling(request, (payload, req) =>
+          handlePostMatchMessage(sql, payload, req)
+        );
+
       default:
         return new Response(JSON.stringify({ code: 404, message: "Not found" }), {
           status: 404,
           headers: { "Content-Type": "application/json" }
         });
     }
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await enqueueMatchingRun(env.BACKGROUND_QUEUE);
   },
 
   async queue(batch: QueueBatch<BackgroundJob>, env: Env): Promise<void> {

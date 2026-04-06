@@ -120,3 +120,49 @@ export async function callAnthropicCompatible(
 
   return textBlock.text;
 }
+
+export async function callAnthropicCompatibleJson<T>(
+  systemPrompt: string,
+  messages: AnthropicCompatibleMessage[],
+  options: AnthropicCompatibleOptions & {
+    toolSchema: { name: string; description: string; schema: Record<string, unknown> };
+  }
+): Promise<T> {
+  const response = await fetch(options.endpoint, {
+    method: "POST",
+    headers: options.headers,
+    body: JSON.stringify({
+      model: options.model,
+      max_tokens: options.maxTokens,
+      temperature: options.temperature,
+      system: systemPrompt,
+      messages,
+      tools: [{
+        name: options.toolSchema.name,
+        description: options.toolSchema.description,
+        input_schema: options.toolSchema.schema
+      }],
+      tool_choice: { type: "tool", name: options.toolSchema.name }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`LLM API error ${response.status}: ${errorText}`);
+  }
+
+  const result = await response.json() as {
+    content: Array<{ type: string; input?: unknown }>;
+  };
+
+  if (!result.content || result.content.length === 0) {
+    throw new Error("Empty response from LLM API");
+  }
+
+  const toolBlock = result.content.find((block) => block.type === "tool_use");
+  if (!toolBlock?.input) {
+    throw new Error("No tool_use block in LLM response");
+  }
+
+  return toolBlock.input as T;
+}

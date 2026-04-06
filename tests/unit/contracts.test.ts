@@ -53,6 +53,9 @@ describe("API contract fixtures", () => {
     expect(sf.topValues[0]).toHaveProperty("value");
     expect(sf.topValues[0]).toHaveProperty("description");
     expect(sf.relationalStyle).toBeTypeOf("string");
+    expect(sf.completeness).toBeTypeOf("number");
+    expect(sf.completeness).toBeGreaterThanOrEqual(0);
+    expect(sf.completeness).toBeLessThanOrEqual(1);
   });
 
   // ── get-soul-file ────────────────────────────────────────
@@ -143,5 +146,6 @@ describe("API contract fixtures", () => {
     expect(sf.sections).toHaveProperty("yourTensions");
 
     expect(sf.personalitySpectrum).toHaveProperty("emotionalSensitivity");
+    expect(sf).toHaveProperty("completeness");
   });
 });

@@ -78,7 +78,8 @@
         "description": "Preferring fewer, richer experiences over many shallow ones."
       }
     ],
-    "relationalStyle": "You build trust through consistency and depth rather than charm. People feel safe with you because you show up the same way every time."
+    "relationalStyle": "You build trust through consistency and depth rather than charm. People feel safe with you because you show up the same way every time.",
+    "completeness": 0.67
   },
   "has_messages": true,
   "model_profile_id": "frontier_v1"

@@ -5,7 +5,8 @@ export type ModelTask =
   | "reflection_snapshot"
   | "synthesis_assessment"
   | "synthesis_visible"
-  | "synthesis_hidden";
+  | "synthesis_hidden"
+  | "match_evaluation";
 
 export type ReasoningMode = "default" | "disabled";
 
@@ -64,6 +65,12 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         model: "claude-haiku-4-5-20251001",
         maxTokens: 6144,
         temperature: 0.2
+      },
+      match_evaluation: {
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20251001",
+        maxTokens: 1024,
+        temperature: 0.3
       }
     }
   },
@@ -104,6 +111,13 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         model: "accounts/fireworks/models/deepseek-v3p2",
         maxTokens: 4096,
         temperature: 0.2,
+        reasoningMode: "disabled"
+      },
+      match_evaluation: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/deepseek-v3p2",
+        maxTokens: 1024,
+        temperature: 0.3,
         reasoningMode: "disabled"
       }
     }

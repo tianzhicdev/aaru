@@ -1,37 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildHiddenClinicalPrompt,
-  buildReflectionPrompt,
   buildVisibleNarrativePrompt,
   emptyHiddenSoulFile,
   emptyVisibleSoulFile,
   getHiddenSoulFileJsonSchema,
-  getReflectionNoteJsonSchema,
   getVisibleSoulFileJsonSchema,
   parseHiddenClinical,
-  parseReflectionNote,
   parseVisibleNarrative
 } from "../../src/domain/soulFile.ts";
-import type { ReflectionNote } from "../../src/domain/schemas.ts";
-
-function makeReflectionNote(overrides: Partial<ReflectionNote> = {}): ReflectionNote {
-  return {
-    updatedAt: "2026-03-31T00:00:00Z",
-    factualAnchors: {},
-    tensions: [],
-    recurringThemes: [],
-    notableAbsences: [],
-    emotionalArc: "",
-    currentThreads: [],
-    avoidPastObservations: [],
-    avoidPastQuestions: [],
-    steerToTopics: [],
-    steeringPressure: "minimal",
-    steeringReasoning: "",
-    ...overrides
-  };
-}
-
 describe("empty constructors", () => {
   it("returns visible defaults with the renamed tensions section", () => {
     const empty = emptyVisibleSoulFile();
@@ -54,89 +31,25 @@ describe("prompt builders", () => {
     { role: "user", content: "I build walls when I feel overwhelmed." }
   ];
 
-  it("uses the new reflection steering fields", () => {
-    const prompt = buildReflectionPrompt(messages, 2);
-    expect(prompt).toContain("currentThreads");
-    expect(prompt).toContain("avoidPastObservations");
-    expect(prompt).toContain("avoidPastQuestions");
-    expect(prompt).toContain("steerToTopics");
-    expect(prompt).not.toContain("inferredBigFive");
-  });
-
   it("builds visible and hidden prompts without an assessment step", () => {
-    const note = makeReflectionNote({
-      recurringThemes: ["walls", "overwhelm"],
-      steerToTopics: ["relationships — who gets past the guard"]
-    });
-
-    const visiblePrompt = buildVisibleNarrativePrompt(messages, note);
+    const visiblePrompt = buildVisibleNarrativePrompt(messages);
     expect(visiblePrompt).toContain("yourTensions");
     expect(visiblePrompt).toContain("personalitySpectrum");
     expect(visiblePrompt).not.toContain("Assessment JSON");
 
-    const hiddenPrompt = buildHiddenClinicalPrompt(messages, note);
+    const hiddenPrompt = buildHiddenClinicalPrompt(messages);
     expect(hiddenPrompt).toContain("honestInsights");
     expect(hiddenPrompt).toContain("domainCoverage");
     expect(hiddenPrompt).not.toContain("bigFiveScores");
   });
 
   it("exposes json schemas for structured output calls", () => {
-    expect(getReflectionNoteJsonSchema()).toMatchObject({ type: "object" });
     expect(getVisibleSoulFileJsonSchema()).toMatchObject({ type: "object" });
     expect(getHiddenSoulFileJsonSchema()).toMatchObject({ type: "object" });
   });
 });
 
 describe("parsers", () => {
-  it("parses reflection notes with the new steering fields", () => {
-    const note = parseReflectionNote(JSON.stringify({
-      updatedAt: "2026-03-31T00:10:00Z",
-      factualAnchors: { work: "I keep trying to leave this job" },
-      tensions: ["Wants freedom but clings to stability"],
-      recurringThemes: ["freedom", "work drift"],
-      notableAbsences: ["family"],
-      emotionalArc: "Guarded, then more direct",
-      currentThreads: ["job drift", "creative hunger"],
-      avoidPastObservations: ["You use humor as armor"],
-      avoidPastQuestions: ["What would freedom cost you?"],
-      steerToTopics: ["relationships — you mention women but never stay there"],
-      steeringPressure: "gentle",
-      steeringReasoning: "The current thread is cooling but still useful."
-    }));
-
-    expect(note).not.toBeNull();
-    expect(note?.currentThreads).toContain("job drift");
-    expect(note?.avoidPastQuestions).toContain("What would freedom cost you?");
-    expect(note?.steeringPressure).toBe("gentle");
-  });
-
-  it("coerces structured steer-to-topic objects into flat strings", () => {
-    const note = parseReflectionNote(JSON.stringify({
-      updatedAt: "2026-03-31T00:10:00Z",
-      factualAnchors: {},
-      tensions: [],
-      recurringThemes: [],
-      notableAbsences: [],
-      emotionalArc: "",
-      currentThreads: [],
-      avoidPastObservations: [],
-      avoidPastQuestions: [],
-      steerToTopics: [
-        {
-          domain: "values_and_beliefs",
-          angle: "what stability means when it is chosen instead of inherited"
-        }
-      ],
-      steeringPressure: "moderate",
-      steeringReasoning: "The conversation is circling."
-    }));
-
-    expect(note).not.toBeNull();
-    expect(note?.steerToTopics).toEqual([
-      "Values & Beliefs — what stability means when it is chosen instead of inherited"
-    ]);
-  });
-
   it("parses visible narrative output with your tensions", () => {
     const visible = parseVisibleNarrative(JSON.stringify({
       version: 2,

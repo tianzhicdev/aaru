@@ -99,17 +99,18 @@ export type SteeringPressure = z.infer<typeof steeringPressureSchema>;
 
 export const reflectionNoteSchema = z.object({
   updatedAt: z.string().default(""),
-  factualAnchors: z.record(z.string(), z.string()).default({}),
-  tensions: z.array(z.string()).default([]),
-  recurringThemes: z.array(z.string()).default([]),
-  notableAbsences: z.array(z.string()).default([]),
-  emotionalArc: z.string().default(""),
+
+  // Steering (structured, enforced)
+  domainCoverage: z.array(domainCoverageEntrySchema).default([]),
   currentThreads: z.array(z.string()).default([]),
   avoidPastObservations: z.array(z.string()).default([]),
   avoidPastQuestions: z.array(z.string()).default([]),
   steerToTopics: z.array(z.string()).default([]),
   steeringPressure: steeringPressureSchema.default("minimal"),
-  steeringReasoning: z.string().default("")
+  steeringReasoning: z.string().default(""),
+
+  // Summary (plain text narrative)
+  summary: z.string().default("")
 });
 
 export type ReflectionNote = z.infer<typeof reflectionNoteSchema>;
@@ -142,7 +143,8 @@ export const visibleSoulFileSchema = z.object({
   compassScores: z.record(z.string(), z.number().min(0).max(100).nullable()).default({}),
   personalitySpectrum: personalitySpectrumSchema,
   topValues: z.array(topValueSchema).default([]),
-  relationalStyle: z.string().nullable().default(null)
+  relationalStyle: z.string().nullable().default(null),
+  completeness: z.number().min(0).max(1).default(0)
 });
 
 export type VisibleSoulFile = z.infer<typeof visibleSoulFileSchema>;

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("../../workers/src/matchingPipeline.ts", () => ({
+  runMatchingPipeline: vi.fn().mockResolvedValue(undefined)
+}));
+
 vi.mock("../../workers/src/soulApp.ts", () => ({
   checkHiddenSynthesisNeeded: vi.fn(),
   checkReflectionSnapshotNeeded: vi.fn(),
@@ -16,12 +20,14 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
 }));
 
 import {
+  enqueueMatchingRun,
   enqueueReflectionSnapshot,
   enqueueSynthesisHidden,
   enqueueSynthesisVisible,
   processBackgroundJobsBatch,
   type BackgroundQueueBinding
 } from "../../workers/src/backgroundJobsQueue.ts";
+import { runMatchingPipeline } from "../../workers/src/matchingPipeline.ts";
 import {
   checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
@@ -70,6 +76,17 @@ describe("queue publishers", () => {
     });
     expect(visibleJob.kind).toBe("synthesis_visible");
     expect(hiddenJob.kind).toBe("synthesis_hidden");
+  });
+
+  it("publishes a matching run job", async () => {
+    const queue: BackgroundQueueBinding = { send: vi.fn().mockResolvedValue(undefined) };
+    const job = await enqueueMatchingRun(queue);
+    expect(queue.send).toHaveBeenCalledWith({
+      kind: "matching_run",
+      jobId: expect.any(String),
+      queuedAt: expect.any(String)
+    });
+    expect(job.kind).toBe("matching_run");
   });
 
   it("publishes a reflection snapshot job", async () => {
@@ -154,6 +171,31 @@ describe("processBackgroundJobsBatch", () => {
     });
 
     expect(markHiddenSynthesisFailed).toHaveBeenCalledWith(mockSQL, "user-1");
+  });
+
+  it("runs matching pipeline for matching_run jobs", async () => {
+    vi.mocked(runMatchingPipeline).mockResolvedValue(undefined);
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{ body: { kind: "matching_run", jobId: "job-m1", queuedAt: "2026-04-05T06:00:00.000Z" } }]
+    });
+
+    expect(runMatchingPipeline).toHaveBeenCalledWith(mockSQL, mockEnv);
+  });
+
+  it("logs error but does not throw when matching pipeline fails", async () => {
+    vi.mocked(runMatchingPipeline).mockRejectedValue(new Error("pipeline boom"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{ body: { kind: "matching_run", jobId: "job-m2", queuedAt: "2026-04-05T06:00:00.000Z" } }]
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Queued matching pipeline run failed:",
+      expect.any(Error)
+    );
+    consoleSpy.mockRestore();
   });
 
   it("marks reflection snapshots as failed when the consumer errors", async () => {

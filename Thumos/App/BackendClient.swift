@@ -178,6 +178,68 @@ final class BackendClient {
         )
     }
 
+    func getSoulmateProfile() async throws -> SoulmateProfileResponse {
+        guard endpoint(named: "soulmate-profile") != nil else {
+            return SoulmateProfileResponse(soulmateProfile: nil)
+        }
+        return try await get(
+            "soulmate-profile",
+            retryOnServerError: true
+        )
+    }
+
+    func saveSoulmateProfile(
+        displayName: String,
+        age: Int,
+        gender: String,
+        latitude: Double,
+        longitude: Double,
+        preferredAgeMin: Int,
+        preferredAgeMax: Int,
+        preferredGenders: [String]
+    ) async throws -> SoulmateProfileResponse {
+        let body: [String: Any] = [
+            "display_name": displayName,
+            "age": age,
+            "gender": gender,
+            "latitude": latitude,
+            "longitude": longitude,
+            "preferred_age_min": preferredAgeMin,
+            "preferred_age_max": preferredAgeMax,
+            "preferred_genders": preferredGenders
+        ]
+        return try await postRaw("soulmate-profile", body: body)
+    }
+
+    func getSoulmateMatches() async throws -> SoulmateMatchesResponse {
+        guard endpoint(named: "soulmate-matches") != nil else {
+            return SoulmateMatchesResponse(matches: [])
+        }
+        return try await get(
+            "soulmate-matches",
+            retryOnServerError: true
+        )
+    }
+
+    func getMatchMessages(otherUserId: String, afterId: String? = nil) async throws -> MatchMessagesResponse {
+        var queryString = "match-messages?other_user_id=\(otherUserId)"
+        if let afterId {
+            queryString += "&after_id=\(afterId)"
+        }
+        guard endpoint(named: "match-messages") != nil else {
+            return MatchMessagesResponse(messages: [])
+        }
+        return try await getRaw(queryString)
+    }
+
+    func sendMatchMessage(receiverId: String, content: String) async throws -> MatchMessageResponse {
+        let body: [String: Any] = [
+            "receiver_id": receiverId,
+            "content": content
+        ]
+        return try await postRaw("match-messages", body: body)
+    }
+
     #if DEBUG
     func getDebugInfoRaw() async throws -> (statusCode: Int, rawBody: Data) {
         guard let url = endpoint(named: "get-debug-info") else {
@@ -211,6 +273,99 @@ final class BackendClient {
 
     private func endpoint(named function: String) -> URL? {
         configuration.functionBaseURL?.appendingPathComponent(function)
+    }
+
+    private func get<ResponseType: Decodable>(
+        _ name: String,
+        retryOnServerError: Bool = false
+    ) async throws -> ResponseType {
+        guard let url = endpoint(named: name) else {
+            throw BackendError.missingBaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        if statusCode == 401 || statusCode == 403 {
+            logger.error("Auth failure for \(name, privacy: .public): \(statusCode)")
+            throw BackendError.authenticationFailed
+        }
+
+        if retryOnServerError, statusCode >= 500 && statusCode < 600 {
+            try? await Task.sleep(for: .milliseconds(800))
+            return try await get(name, retryOnServerError: false)
+        }
+
+        guard statusCode == 200 else {
+            let message = String(data: data, encoding: .utf8) ?? ""
+            throw BackendError.invalidResponse(statusCode: statusCode, message: message)
+        }
+
+        return try decoder.decode(ResponseType.self, from: data)
+    }
+
+    private func getRaw<ResponseType: Decodable>(
+        _ pathWithQuery: String
+    ) async throws -> ResponseType {
+        guard let baseURL = configuration.functionBaseURL else {
+            throw BackendError.missingBaseURL
+        }
+        guard let url = URL(string: pathWithQuery, relativeTo: baseURL) else {
+            throw BackendError.missingBaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+        if statusCode == 401 || statusCode == 403 {
+            throw BackendError.authenticationFailed
+        }
+
+        guard statusCode == 200 else {
+            let message = String(data: data, encoding: .utf8) ?? ""
+            throw BackendError.invalidResponse(statusCode: statusCode, message: message)
+        }
+
+        return try decoder.decode(ResponseType.self, from: data)
+    }
+
+    private func postRaw<ResponseType: Decodable>(
+        _ name: String,
+        body: [String: Any],
+        retryOnServerError: Bool = false
+    ) async throws -> ResponseType {
+        guard let url = endpoint(named: name) else {
+            throw BackendError.missingBaseURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        guard statusCode == 200 else {
+            let message = String(data: data, encoding: .utf8) ?? ""
+            throw BackendError.invalidResponse(statusCode: statusCode, message: message)
+        }
+
+        return try decoder.decode(ResponseType.self, from: data)
     }
 
     private func post<ResponseType: Decodable, Body: Encodable>(

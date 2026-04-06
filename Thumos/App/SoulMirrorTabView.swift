@@ -19,6 +19,13 @@ struct SoulMirrorTabView: View {
                     Text("Soul File")
                 }
                 .tag(1)
+
+            SoulmateMatchesView()
+                .tabItem {
+                    Image(systemName: "heart.circle")
+                    Text("Thumos")
+                }
+                .tag(2)
         }
         .tint(Theme.accentBright)
         .preferredColorScheme(.dark)

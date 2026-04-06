@@ -32,7 +32,7 @@ struct SoulmateMatchesView: View {
                 .font(Theme.serif(24, weight: .medium))
                 .foregroundColor(Theme.textPrimary)
 
-            Text("Your soul file is \(Int(model.visibleSoulFile.completeness * 100))% complete. Reach 70% to unlock soulmate matching.")
+            Text("Keep having conversations to unlock this.")
                 .font(Theme.sans(15, weight: .light))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -54,14 +54,9 @@ struct SoulmateMatchesView: View {
                     Image(systemName: "heart.circle")
                         .font(.system(size: 48))
                         .foregroundColor(Theme.textSecondary)
-                    Text("Searching for Your Soulmate...")
+                    Text("No Matches Yet")
                         .font(Theme.serif(24, weight: .medium))
                         .foregroundColor(Theme.textPrimary)
-                    Text("We check for compatible souls daily. You'll see matches here when we find them.")
-                        .font(Theme.sans(15, weight: .light))
-                        .foregroundStyle(Theme.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
                     Spacer()
                 }
             } else {

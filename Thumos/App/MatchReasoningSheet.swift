@@ -24,7 +24,7 @@ struct MatchReasoningSheet: View {
                             .foregroundColor(Theme.textPrimary)
                             .lineSpacing(4)
                     } else {
-                        Text("Match details are being prepared...")
+                        Text("We're still getting to know you both.")
                             .font(.body)
                             .foregroundColor(Theme.textSecondary)
                     }

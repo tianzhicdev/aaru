@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SoulmateMatchesView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var showEditProfile = false
 
     var body: some View {
         NavigationStack {
@@ -16,7 +17,7 @@ struct SoulmateMatchesView: View {
             }
             .navigationTitle("Soulmate")
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color.black)
+            .background(Theme.backgroundGradient)
         }
     }
 
@@ -32,8 +33,8 @@ struct SoulmateMatchesView: View {
                 .foregroundColor(Theme.textPrimary)
 
             Text("Your soul file is \(Int(model.visibleSoulFile.completeness * 100))% complete. Reach 70% to unlock soulmate matching.")
-                .font(.subheadline)
-                .foregroundColor(Theme.textSecondary)
+                .font(Theme.sans(15, weight: .light))
+                .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
@@ -57,8 +58,8 @@ struct SoulmateMatchesView: View {
                         .font(Theme.serif(24, weight: .medium))
                         .foregroundColor(Theme.textPrimary)
                     Text("We check for compatible souls daily. You'll see matches here when we find them.")
-                        .font(.subheadline)
-                        .foregroundColor(Theme.textSecondary)
+                        .font(Theme.sans(15, weight: .light))
+                        .foregroundStyle(Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                     Spacer()
@@ -70,44 +71,63 @@ struct SoulmateMatchesView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                .navigationDestination(for: SoulmateMatch.self) { match in
+                    MatchChatView(match: match)
+                        .environmentObject(model)
+                }
+                .sheet(item: $model.selectedMatchForReasoning) { match in
+                    MatchReasoningSheet(match: match)
+                }
             }
         }
         .task {
             await model.loadSoulmateMatches()
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showEditProfile = true
+                } label: {
+                    Image(systemName: "pencil.circle")
+                        .foregroundColor(Theme.accent)
+                }
+            }
+        }
+        .sheet(isPresented: $showEditProfile) {
+            NavigationStack {
+                SoulmateProfileSetupView()
+                    .environmentObject(model)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Cancel") {
+                                showEditProfile = false
+                            }
+                        }
+                    }
+            }
+        }
     }
 
     private func matchRow(_ match: SoulmateMatch) -> some View {
-        HStack(spacing: 12) {
-            Text(match.displayName)
-                .font(Theme.serif(17, weight: .medium))
-                .foregroundColor(Theme.textPrimary)
-                .lineLimit(1)
+        NavigationLink(value: match) {
+            HStack(spacing: 12) {
+                Text(match.displayName)
+                    .font(Theme.serif(17, weight: .medium))
+                    .foregroundColor(Theme.textPrimary)
+                    .lineLimit(1)
 
-            Spacer()
+                Spacer()
 
-            Button {
-                model.selectedMatchForReasoning = match
-            } label: {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 18))
-                    .foregroundColor(Theme.accent)
+                Button {
+                    model.selectedMatchForReasoning = match
+                } label: {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18))
+                        .foregroundColor(Theme.accent)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-
-            NavigationLink(value: match) {
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 18))
-                    .foregroundColor(Theme.accent)
-            }
-        }
-        .padding(.vertical, 4)
-        .navigationDestination(for: SoulmateMatch.self) { match in
-            MatchChatView(match: match)
-                .environmentObject(model)
-        }
-        .sheet(item: $model.selectedMatchForReasoning) { match in
-            MatchReasoningSheet(match: match)
+            .padding(.vertical, 4)
         }
     }
 }

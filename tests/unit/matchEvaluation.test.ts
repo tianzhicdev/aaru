@@ -139,9 +139,9 @@ describe("buildMatchEvaluationPrompt", () => {
         yourVoice: "Bold"
       }
     }));
-    const prompt = buildMatchEvaluationPrompt(summaryA, summaryB);
-    expect(prompt).toContain("## Person A");
-    expect(prompt).toContain("## Person B");
+    const prompt = buildMatchEvaluationPrompt(summaryA, summaryB, "Luna", "Kai");
+    expect(prompt).toContain("## Luna");
+    expect(prompt).toContain("## Kai");
     expect(prompt).toContain("Deliberate and measured");
     expect(prompt).toContain("Fast and energetic");
   });

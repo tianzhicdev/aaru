@@ -101,12 +101,14 @@ export function formatSoulSummary(label: string, summary: SoulSummary): string {
 
 export function buildMatchEvaluationPrompt(
   summaryA: SoulSummary,
-  summaryB: SoulSummary
+  summaryB: SoulSummary,
+  nameA: string,
+  nameB: string
 ): string {
-  const personA = formatSoulSummary("Person A", summaryA);
-  const personB = formatSoulSummary("Person B", summaryB);
+  const personA = formatSoulSummary(nameA, summaryA);
+  const personB = formatSoulSummary(nameB, summaryB);
 
-  return `You are a soul compatibility evaluator. You are given two anonymized soul profiles and must determine whether these two people would be a good match for a deep, meaningful connection.
+  return `You are a soul compatibility evaluator. You are given two soul profiles and must determine whether these two people would be a good match for a deep, meaningful connection.
 
 Evaluate compatibility across these dimensions:
 1. **Value alignment** — Do they share core values or have complementary values?
@@ -124,5 +126,5 @@ ${personB}
 Return your evaluation as a JSON object with:
 - decision: "match" or "no_match"
 - score: a number between 0 and 1 (0.6+ = match)
-- reasoning: 2-3 sentences explaining why they are or aren't compatible. Be specific about which dimensions align or conflict.`;
+- reasoning: 2-3 sentences written warmly and naturally, as if describing to a friend why these two people clicked (or didn't). Use their names (${nameA} and ${nameB}), not "Person A/B". Keep it readable and human — no jargon, no scores, no dimension labels.`;
 }

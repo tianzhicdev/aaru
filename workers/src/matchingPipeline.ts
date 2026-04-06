@@ -17,6 +17,7 @@ const CANDIDATE_BATCH = 20;
 
 interface ActiveSoulmateUser {
   user_id: string;
+  display_name: string | null;
   age: number;
   gender: string;
   latitude: number;
@@ -29,6 +30,7 @@ interface ActiveSoulmateUser {
 
 interface Candidate {
   user_id: string;
+  display_name: string | null;
   soul_version: number;
   distance_m: number;
 }
@@ -61,8 +63,10 @@ export async function runMatchingPipeline(
       const userBId = user.user_id < candidate.user_id ? candidate.user_id : user.user_id;
       const aSoulVersion = userAId === user.user_id ? user.soul_version : candidate.soul_version;
       const bSoulVersion = userBId === user.user_id ? user.soul_version : candidate.soul_version;
+      const nameA = (userAId === user.user_id ? user.display_name : candidate.display_name) ?? "Someone";
+      const nameB = (userBId === user.user_id ? user.display_name : candidate.display_name) ?? "Someone";
 
-      const result = await evaluateMatch(sql, env, userAId, userBId);
+      const result = await evaluateMatch(sql, env, userAId, userBId, nameA, nameB);
 
       await insertMatchAttempt(
         sql,
@@ -92,7 +96,9 @@ export async function evaluateMatch(
   sql: NeonSQL,
   env: Env,
   userAId: string,
-  userBId: string
+  userBId: string,
+  nameA = "Someone",
+  nameB = "Someone"
 ): Promise<{ outcome: "match" | "no_match" | "error"; score: number | null; reasoning: string | null }> {
   try {
     const [soulA, soulB] = await Promise.all([
@@ -106,7 +112,7 @@ export async function evaluateMatch(
 
     const summaryA = summarizeSoulForMatching(soulA);
     const summaryB = summarizeSoulForMatching(soulB);
-    const prompt = buildMatchEvaluationPrompt(summaryA, summaryB);
+    const prompt = buildMatchEvaluationPrompt(summaryA, summaryB, nameA, nameB);
 
     const profileId = defaultModelProfileIdFromEnv(env);
     const config = getTaskConfig(profileId, "match_evaluation");
@@ -146,7 +152,7 @@ export async function evaluateMatch(
 
 async function getActiveSoulmateUsers(sql: NeonSQL): Promise<ActiveSoulmateUser[]> {
   const rows = await sql`
-    SELECT sp.user_id, sp.age, sp.gender, sp.latitude, sp.longitude,
+    SELECT sp.user_id, sp.display_name, sp.age, sp.gender, sp.latitude, sp.longitude,
            sp.preferred_age_min, sp.preferred_age_max, sp.preferred_genders,
            vsf.version AS soul_version
     FROM soulmate_profiles sp
@@ -168,7 +174,7 @@ async function getCandidates(
   limit: number
 ): Promise<Candidate[]> {
   const rows = await sql`
-    SELECT sp2.user_id,
+    SELECT sp2.user_id, sp2.display_name,
            vsf.version AS soul_version,
            2 * 6371000 * asin(sqrt(
              power(sin(radians(sp2.latitude - ${user.latitude}) / 2), 2) +

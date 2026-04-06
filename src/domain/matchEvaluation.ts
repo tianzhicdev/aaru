@@ -126,5 +126,5 @@ ${personB}
 Return your evaluation as a JSON object with:
 - decision: "match" or "no_match"
 - score: a number between 0 and 1 (0.6+ = match)
-- reasoning: 2-3 sentences written warmly and naturally, as if describing to a friend why these two people clicked (or didn't). Use their names (${nameA} and ${nameB}), not "Person A/B". Keep it readable and human — no jargon, no scores, no dimension labels.`;
+- reasoning: 2-3 sentences written warmly and naturally, as if describing to a friend why these two people clicked (or didn't). Use their names (${nameA} and ${nameB}), not "Person A/B". Keep it readable and human — no jargon, no numeric scores, no percentages, no dimension labels, no technical terms. Pure prose only.`;
 }

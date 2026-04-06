@@ -22,16 +22,15 @@ import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
 import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
-import { runMatchingPipeline } from "./matchingPipeline.ts";
+import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
-import type { NeonSQL } from "./db.ts";
 
-async function handleRunMatching(sql: NeonSQL, env: Env, request: Request) {
+async function handleRunMatching(env: Env, request: Request) {
   const authErr = requireDebugApiToken(request, env);
   if (authErr) return authErr.error;
-  await runMatchingPipeline(sql, env);
-  return jsonResponse(200, { ok: true, message: "Matching pipeline completed" });
+  const job = await enqueueMatchingRun(env.BACKGROUND_QUEUE);
+  return jsonResponse(200, { ok: true, message: "Matching pipeline enqueued", jobId: job.jobId });
 }
 
 export default {
@@ -107,7 +106,7 @@ export default {
 
       case "run-matching":
         return withErrorHandling(request, (_payload, req) =>
-          handleRunMatching(sql, env, req)
+          handleRunMatching(env, req)
         );
 
       case "match-messages":
@@ -129,8 +128,7 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    const sql = createSQL(env.DATABASE_URL);
-    await runMatchingPipeline(sql, env);
+    await enqueueMatchingRun(env.BACKGROUND_QUEUE);
   },
 
   async queue(batch: QueueBatch<BackgroundJob>, env: Env): Promise<void> {

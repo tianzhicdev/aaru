@@ -1,5 +1,6 @@
 import type { NeonSQL } from "./db.ts";
 import type { Env } from "./env.ts";
+import { runMatchingPipeline } from "./matchingPipeline.ts";
 import {
   checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
@@ -37,10 +38,17 @@ export interface ReflectionSnapshotJob {
   throughMessageCount: number;
 }
 
+export interface MatchingRunJob {
+  kind: "matching_run";
+  jobId: string;
+  queuedAt: string;
+}
+
 export type BackgroundJob =
   | SynthesisVisibleJob
   | SynthesisHiddenJob
-  | ReflectionSnapshotJob;
+  | ReflectionSnapshotJob
+  | MatchingRunJob;
 
 export interface BackgroundQueueBinding {
   send(message: BackgroundJob): Promise<void>;
@@ -96,6 +104,26 @@ export async function enqueueReflectionSnapshot(
   };
   await queue.send(job);
   return job;
+}
+
+export async function enqueueMatchingRun(
+  queue: BackgroundQueueBinding
+): Promise<MatchingRunJob> {
+  const job: MatchingRunJob = {
+    kind: "matching_run",
+    jobId: crypto.randomUUID(),
+    queuedAt: new Date().toISOString()
+  };
+  await queue.send(job);
+  return job;
+}
+
+async function processMatchingRunJob(sql: NeonSQL, env: Env): Promise<void> {
+  try {
+    await runMatchingPipeline(sql, env);
+  } catch (error) {
+    console.error("Queued matching pipeline run failed:", error);
+  }
 }
 
 async function processVisibleSynthesisJob(sql: NeonSQL, env: Env, userId: string): Promise<void> {
@@ -166,9 +194,19 @@ export async function processBackgroundJobsBatch(
 ): Promise<void> {
   for (const message of batch.messages) {
     const body = message.body;
-    const userId = body?.userId;
-    if (!userId || !body?.kind) {
+    if (!body?.kind) {
       console.error("Skipping malformed background queue message");
+      continue;
+    }
+
+    if (body.kind === "matching_run") {
+      await processMatchingRunJob(sql, env);
+      continue;
+    }
+
+    const userId = (body as { userId?: string }).userId;
+    if (!userId) {
+      console.error("Skipping malformed background queue message: missing userId");
       continue;
     }
 

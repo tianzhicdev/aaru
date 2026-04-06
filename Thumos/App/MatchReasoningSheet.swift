@@ -13,7 +13,7 @@ struct MatchReasoningSheet: View {
                         .foregroundStyle(Theme.textPrimary)
 
                     if let reasoning = match.reasoning, !reasoning.isEmpty {
-                        Text("Why you matched")
+                        Text("How you connect")
                             .font(Theme.sans(12, weight: .medium))
                             .foregroundStyle(Theme.textSecondary)
                             .textCase(.uppercase)
@@ -33,7 +33,7 @@ struct MatchReasoningSheet: View {
                 .padding(.vertical, 16)
             }
             .background(Theme.backgroundGradient)
-            .navigationTitle("Match Details")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

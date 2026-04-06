@@ -11,7 +11,7 @@ settings:
     PRODUCT_BUNDLE_IDENTIFIER: com.trythumos.app
     SWIFT_VERSION: 5.10
     CURRENT_PROJECT_VERSION: 1
-    MARKETING_VERSION: 1.0.0
+    MARKETING_VERSION: 1.1
 targets:
   Thumos:
     type: application

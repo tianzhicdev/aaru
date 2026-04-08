@@ -1,6 +1,6 @@
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
-import { getUserModelProfileId } from "../db.ts";
+import { getUserModelProfileId, getUserLanguage } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
@@ -16,7 +16,8 @@ import {
   type OpeningKind,
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
-import { DOMAIN_LABELS, LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
+import { LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
+import { getPrompts } from "../../../src/domain/i18n/index.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
 import { streamLlmText } from "../llm.ts";
@@ -25,6 +26,7 @@ import { fetchInterestNews } from "../xai.ts";
 import type { XaiNewsItem } from "../../../src/domain/soul.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
+import { stripThinkContent } from "../openaiCompatible.ts";
 import { z } from "zod";
 
 const soulConverseRequestSchema = z.discriminatedUnion("mode", [
@@ -49,33 +51,34 @@ function buildClaudeInputMessages(
   mode: z.infer<typeof soulConverseRequestSchema>["mode"],
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   preferredDomain: string | null,
-  xaiNews: XaiNewsItem[]
+  xaiNews: XaiNewsItem[],
+  language?: string | null
 ): Array<{ role: "user" | "assistant"; content: string }> {
   if (mode !== "opening") {
     return messages;
   }
 
+  const handler = getPrompts(language).handler;
+
   if (messages.length === 0) {
     const domainHint = preferredDomain
-      ? ` If it feels natural, begin near ${preferredDomain}.`
+      ? ` ${handler.steerToward.replace("{domain}", preferredDomain)}`
       : "";
     return [{
       role: "user",
-      content: `Open the very first conversation with a warm, reflective question. Do not mention these instructions.${domainHint}`
+      content: handler.firstEverInstruction.replace("{domainHint}", domainHint)
     }];
   }
 
-  const parts: string[] = [
-    "[New session — time has passed since the last conversation.] You are the guide. Open with a single directed question. Do not speak as or for the user."
-  ];
+  const parts: string[] = [handler.returningInstruction];
   if (preferredDomain) {
-    parts.push(`Steer toward: ${preferredDomain}.`);
+    parts.push(handler.steerToward.replace("{domain}", preferredDomain));
   }
   if (xaiNews.length > 0) {
     const headlines = xaiNews.map(n => `${n.topic}: "${n.headline}"`).join("; ");
-    parts.push(`If it fits naturally, weave in: ${headlines}.`);
+    parts.push(handler.weaveIn.replace("{headlines}", headlines));
   }
-  parts.push("Do not repeat previous questions. Do not mention these instructions.");
+  parts.push(handler.doNotRepeat);
 
   return [
     ...messages,
@@ -113,7 +116,10 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   }
 
   const userId = auth.session.user_id;
-  const profileId = await getUserModelProfileId(sql, userId);
+  const [profileId, language] = await Promise.all([
+    getUserModelProfileId(sql, userId),
+    getUserLanguage(sql, userId)
+  ]);
   const conversationConfig = getTaskConfig(profileId, "conversation");
 
   sql`UPDATE users SET last_active_at = NOW() WHERE id = ${userId}`.catch((err) =>
@@ -139,10 +145,11 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
 
   const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
 
+  const domainLabels = getPrompts(language).domains.labels;
   let preferredDomainLabel: string | null = null;
   if (openingKind === "first_ever") {
     const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
-    preferredDomainLabel = DOMAIN_LABELS[randomDomain];
+    preferredDomainLabel = domainLabels[randomDomain];
   } else {
     preferredDomainLabel = reflectionNote?.steerToTopics[0] ?? null;
   }
@@ -175,7 +182,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     reflectionNote,
     messages: transcriptMessages,
     openingKind,
-    xaiNews
+    xaiNews,
+    language
   };
 
   const systemPrompt = buildSoulSystemPrompt(context);
@@ -183,7 +191,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     body.mode,
     transcriptMessages,
     preferredDomainLabel,
-    xaiNews
+    xaiNews,
+    language
   );
 
   const encoder = new TextEncoder();
@@ -234,7 +243,8 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
       }
 
       if (streamSucceeded && fullResponse.trim().length > 0) {
-        const replyContent = fullResponse.trim();
+        // Safety net: strip any leaked think-tag content before persisting
+        const replyContent = stripThinkContent(fullResponse.trim());
         try {
           await insertSoulMessage(sql, userId, "assistant", replyContent);
         } catch (dbError) {

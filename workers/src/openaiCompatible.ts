@@ -37,6 +37,7 @@ interface OpenAICompatibleOptions {
   maxTokens?: number;
   temperature?: number;
   reasoningEffort?: "none" | false;
+  thinking?: { type: "enabled"; budget_tokens: number };
   responseFormat?: OpenAICompatibleJsonSchema;
 }
 
@@ -58,9 +59,11 @@ function buildRequestBody(
     max_tokens: options.maxTokens,
     temperature: options.temperature,
     stream,
-    ...(options.reasoningEffort !== undefined
-      ? { reasoning_effort: options.reasoningEffort }
-      : {}),
+    ...(options.thinking
+      ? { thinking: options.thinking }
+      : options.reasoningEffort !== undefined
+        ? { reasoning_effort: options.reasoningEffort }
+        : {}),
     ...(!stream && options.responseFormat
       ? {
           response_format: {
@@ -91,6 +94,22 @@ function extractMessageText(content: OpenAICompatibleMessageContent): string {
     .join("");
 }
 
+/**
+ * Strip leaked think-tag content from model responses.
+ * Handles both <think>...</think> blocks and orphan </think> (when
+ * <think> was in reasoning_content but reasoning leaked into content).
+ */
+export function stripThinkContent(text: string): string {
+  // Strip complete <think>...</think> blocks
+  let result = text.replace(/<think>[\s\S]*?<\/think>/g, "");
+  // Handle orphan </think> (reasoning leaked without opening tag)
+  const closeIdx = result.indexOf("</think>");
+  if (closeIdx !== -1) {
+    result = result.slice(closeIdx + 8);
+  }
+  return result.trimStart();
+}
+
 export async function* streamOpenAICompatible(
   messages: OpenAICompatibleMessage[],
   options: OpenAICompatibleOptions
@@ -114,6 +133,13 @@ export async function* streamOpenAICompatible(
   const decoder = new TextDecoder();
   let buffer = "";
 
+  // Think-tag filtering: some models (e.g. Kimi K2.5) leak reasoning into
+  // the content field even with reasoning_effort:"none". We detect this via
+  // reasoning_content presence in SSE deltas or <think> tags in content,
+  // then suppress everything up to and including </think>.
+  let thinkingDetected = false;
+  let thinkBuffer = "";
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -126,12 +152,51 @@ export async function* streamOpenAICompatible(
       for (const line of lines) {
         const data = extractSseData(line);
         if (data === null) continue;
-        if (data === "[DONE]") return;
+        if (data === "[DONE]") {
+          // Flush any remaining non-think buffer
+          if (!thinkingDetected && thinkBuffer) {
+            yield thinkBuffer;
+          }
+          return;
+        }
 
         try {
           const chunk = JSON.parse(data) as OpenAICompatibleStreamChunk;
-          const content = chunk.choices?.[0]?.delta?.content;
-          if (content) {
+          const delta = chunk.choices?.[0]?.delta;
+
+          // If model sends reasoning_content, it's thinking
+          if (delta?.reasoning_content) {
+            thinkingDetected = true;
+          }
+
+          const content = delta?.content;
+          if (!content) continue;
+
+          if (thinkingDetected) {
+            // Model was/is thinking — buffer content until </think>
+            thinkBuffer += content;
+            const thinkEnd = thinkBuffer.indexOf("</think>");
+            if (thinkEnd !== -1) {
+              const afterThink = thinkBuffer.slice(thinkEnd + 8);
+              thinkBuffer = "";
+              thinkingDetected = false;
+              if (afterThink) yield afterThink;
+            }
+          } else if (content.includes("<think>")) {
+            // Think tag appeared directly in content
+            const thinkStart = content.indexOf("<think>");
+            const before = content.slice(0, thinkStart);
+            if (before) yield before;
+            thinkingDetected = true;
+            thinkBuffer = content.slice(thinkStart + 7);
+            const thinkEnd = thinkBuffer.indexOf("</think>");
+            if (thinkEnd !== -1) {
+              const afterThink = thinkBuffer.slice(thinkEnd + 8);
+              thinkBuffer = "";
+              thinkingDetected = false;
+              if (afterThink) yield afterThink;
+            }
+          } else {
             yield content;
           }
         } catch {
@@ -160,11 +225,11 @@ export async function callOpenAICompatibleText(
   }
 
   const result = (await response.json()) as OpenAICompatibleResponse;
-  const text = extractMessageText(result.choices?.[0]?.message?.content);
-  if (!text) {
+  const rawText = extractMessageText(result.choices?.[0]?.message?.content);
+  if (!rawText) {
     throw new Error("No text content in LLM response");
   }
-  return text;
+  return stripThinkContent(rawText);
 }
 
 export async function callOpenAICompatibleJson<T>(

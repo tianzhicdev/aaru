@@ -1,6 +1,6 @@
 import type { Env } from "./env.ts";
 import type { NeonSQL } from "./db.ts";
-import { getUserModelProfileId } from "./db.ts";
+import { getUserModelProfileId, getUserLanguage } from "./db.ts";
 import type { HiddenSoulFile, ReflectionNote, VisibleSoulFile } from "../../src/domain/schemas.ts";
 import {
   hiddenSoulFileSchema,
@@ -711,7 +711,10 @@ export async function runReflectionSnapshot(
   env: Env,
   userId: string
 ): Promise<ReflectionNote | null> {
-  const profileId = await getUserModelProfileId(sql, userId);
+  const [profileId, language] = await Promise.all([
+    getUserModelProfileId(sql, userId),
+    getUserLanguage(sql, userId)
+  ]);
   const reflectionConfig = getTaskConfig(profileId, "reflection_snapshot");
   const allMessages = await getAllSoulMessages(sql, userId);
   const existingSnapshot = await getLatestReflectionSnapshot(sql, userId);
@@ -722,7 +725,8 @@ export async function runReflectionSnapshot(
 
   const prompt = buildReflectionPrompt(
     allMessages.map((message) => ({ role: message.role, content: message.content })),
-    allMessages.length
+    allMessages.length,
+    language
   );
 
   try {
@@ -809,7 +813,10 @@ export async function runVisibleSynthesis(
   env: Env,
   userId: string
 ): Promise<VisibleSoulFile | null> {
-  const profileId = await getUserModelProfileId(sql, userId);
+  const [profileId, language] = await Promise.all([
+    getUserModelProfileId(sql, userId),
+    getUserLanguage(sql, userId)
+  ]);
   const visibleConfig = getTaskConfig(profileId, "synthesis_visible");
   const [allMessages, existingVisible] = await Promise.all([
     getAllSoulMessages(sql, userId),
@@ -821,7 +828,8 @@ export async function runVisibleSynthesis(
   }
 
   const prompt = buildVisibleNarrativePrompt(
-    allMessages.map((message) => ({ role: message.role, content: message.content }))
+    allMessages.map((message) => ({ role: message.role, content: message.content })),
+    language
   );
 
   try {
@@ -884,7 +892,10 @@ export async function runHiddenSynthesis(
   env: Env,
   userId: string
 ): Promise<HiddenSoulFile | null> {
-  const profileId = await getUserModelProfileId(sql, userId);
+  const [profileId, language] = await Promise.all([
+    getUserModelProfileId(sql, userId),
+    getUserLanguage(sql, userId)
+  ]);
   const hiddenConfig = getTaskConfig(profileId, "synthesis_hidden");
   const [allMessages, existingHidden] = await Promise.all([
     getAllSoulMessages(sql, userId),
@@ -896,7 +907,8 @@ export async function runHiddenSynthesis(
   }
 
   const prompt = buildHiddenClinicalPrompt(
-    allMessages.map((message) => ({ role: message.role, content: message.content }))
+    allMessages.map((message) => ({ role: message.role, content: message.content })),
+    language
   );
 
   try {

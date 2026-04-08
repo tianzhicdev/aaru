@@ -20,6 +20,7 @@ export interface BootstrapSoulWireResponse {
   visible_soul_file: VisibleSoulFile;
   has_messages: boolean;
   model_profile_id: string;
+  language: string;
 }
 
 // ── GET /get-soul-file ───────────────────────────────────────

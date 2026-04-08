@@ -6,6 +6,18 @@ struct SoulConversationScreen: View {
     @State private var showSettings = false
     @FocusState private var isInputFocused: Bool
 
+    private struct SupportedLanguage {
+        let code: String
+        let label: String
+    }
+
+    private static let supportedLanguages: [SupportedLanguage] = [
+        SupportedLanguage(code: "en", label: "English"),
+        SupportedLanguage(code: "zh-CN", label: "中文"),
+        SupportedLanguage(code: "ja", label: "日本語"),
+        SupportedLanguage(code: "fr", label: "Français")
+    ]
+
     private var isWelcomeState: Bool {
         model.soulMessages.isEmpty && !model.isSoulStreaming && !model.isLoading
     }
@@ -49,8 +61,29 @@ struct SoulConversationScreen: View {
 
             Spacer()
 
-            // Balance spacer
-            Color.clear.frame(width: 32, height: 1)
+            if !isWelcomeState {
+                Menu {
+                    ForEach(Self.supportedLanguages, id: \.code) { lang in
+                        Button {
+                            Task { await model.updateLanguage(lang.code) }
+                        } label: {
+                            HStack {
+                                Text(lang.label)
+                                if model.language == lang.code {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "globe")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .frame(width: 32)
+            } else {
+                Color.clear.frame(width: 32, height: 1)
+            }
         }
         .frame(height: 44)
         .padding(.horizontal, 8)
@@ -167,19 +200,45 @@ struct SoulConversationScreen: View {
                 .padding(.horizontal, 40)
                 .padding(.bottom, 48)
             } else {
-                Button {
-                    Task { await model.beginSoulConversation() }
-                } label: {
-                    Text("Begin")
-                        .font(Theme.sans(17, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Theme.accentBright)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                VStack(spacing: 20) {
+                    languagePicker
+
+                    Button {
+                        Task { await model.beginSoulConversation() }
+                    } label: {
+                        Text("Begin")
+                            .font(Theme.sans(17, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Theme.accentBright)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, 40)
                 }
-                .padding(.horizontal, 40)
                 .padding(.bottom, 48)
+            }
+        }
+    }
+
+    private var languagePicker: some View {
+        HStack(spacing: 12) {
+            ForEach(Self.supportedLanguages, id: \.code) { lang in
+                Button {
+                    Task { await model.updateLanguage(lang.code) }
+                } label: {
+                    Text(lang.label)
+                        .font(Theme.sans(15, weight: model.language == lang.code ? .medium : .light))
+                        .foregroundStyle(model.language == lang.code ? .white : Theme.textSecondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            model.language == lang.code
+                                ? AnyShapeStyle(Theme.accentBright)
+                                : AnyShapeStyle(Theme.surface)
+                        )
+                        .clipShape(Capsule())
+                }
             }
         }
     }

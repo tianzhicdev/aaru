@@ -82,5 +82,6 @@
     "completeness": 0.67
   },
   "has_messages": true,
-  "model_profile_id": "frontier_v1"
+  "model_profile_id": "frontier_v1",
+  "language": "en"
 }

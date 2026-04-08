@@ -5,6 +5,7 @@ import {
   LIFE_DOMAINS,
   reflectionNoteSchema
 } from "./schemas.ts";
+import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -24,14 +25,21 @@ export function emptyReflectionNote(): ReflectionNote {
 
 export function buildReflectionPrompt(
   messages: Array<{ role: string; content: string }>,
-  messageCount: number
+  messageCount: number,
+  language?: string | null
 ): string {
+  const prompts = getPrompts(language);
+  const ref = prompts.reflection;
+  const domainLabels = prompts.domains.labels;
   const transcript = buildTranscript(messages);
   const domainChecklist = LIFE_DOMAINS
-    .map((domain) => `  - ${domain}: ${DOMAIN_LABELS[domain]}`)
+    .map((domain) => `  - ${domain}: ${domainLabels[domain]}`)
     .join("\n");
 
-  return `You are Thumos's conversation-state tracker. Read the full transcript and produce a clean-slate reflection note.
+  const steeringWithDomains = ref.steeringSection.replace("{domainChecklist}", domainChecklist);
+  const languageDirective = getLanguageDirective(language);
+
+  return `${ref.preamble}
 
 Total messages: ${messageCount}
 
@@ -40,45 +48,11 @@ ${transcript}
 
 Output ONE valid JSON object:
 
-== STEERING (fill these carefully — they drive the next conversation) ==
+${steeringWithDomains}
 
-"domainCoverage": Rate ALL 7 domains below. For each, how deeply has the conversation explored it?
-${domainChecklist}
-  Rate each:
-  - "untouched": never discussed
-  - "mentioned": referenced briefly, no depth
-  - "explored": some real discussion
-  - "deep": thoroughly covered, multiple exchanges
-  Format: [{"domain": "origins", "depth": "untouched", "evidence": "brief note"}, ...]
+${ref.summarySection}
 
-"steerToTopics": max 4 strings. Format: "Domain Label — concrete question".
-  PICK FROM DOMAINS RATED "untouched" OR "mentioned".
-  Bad: "Relationships". Good: "Relationships — who do they turn to when things get hard? Any romantic life?"
-
-"steeringPressure": "minimal" | "gentle" | "moderate" | "strong"
-  - minimal: fresh material flowing across multiple domains
-  - gentle: current thread cooling, natural bridge would help
-  - moderate: conversation narrowing to 1-2 domains, others untouched
-  - strong: circling same topic, user signaling closure
-
-"steeringReasoning": 1-2 sentences on why this pressure level
-
-"avoidPastObservations": max 6 observations Thumos already made
-  (scan assistant messages for reflections it repeated)
-
-"avoidPastQuestions": max 8 questions Thumos already asked
-  (scan assistant messages for questions — exact or near-exact)
-
-"currentThreads": max 4 topics alive right now
-
-== SUMMARY (300-500 words, plain text) ==
-
-"summary": Write a narrative summary of the conversation so far. Cover: who this person is (facts, background), what they care about, what emotional territory has surfaced, what tensions or contradictions you notice, and what remains unexplored. Use their own words where powerful. This is Thumos's memory — it should read like a therapist's session notes, not a data dump.
-
-"updatedAt": ISO timestamp
-
-Rules:
-- Respond with ONLY valid JSON.`;
+${ref.rules}${languageDirective}`;
 }
 
 export function parseReflectionNote(raw: string): ReflectionNote | null {

@@ -22,6 +22,7 @@ import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
 import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
+import { handleUpdateLanguage } from "./handlers/update-language.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
@@ -117,6 +118,11 @@ export default {
         }
         return withErrorHandling(request, (payload, req) =>
           handlePostMatchMessage(sql, payload, req)
+        );
+
+      case "update-language":
+        return withErrorHandling(request, (payload, req) =>
+          handleUpdateLanguage(sql, payload, req)
         );
 
       default:

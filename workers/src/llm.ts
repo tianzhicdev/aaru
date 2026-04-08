@@ -58,7 +58,14 @@ function getFireworksHeaders(context: LlmInvocationContext): Record<string, stri
 }
 
 function getFireworksReasoningEffort(config: ModelTaskConfig): "none" | false | undefined {
-  return config.reasoningMode === "disabled" ? "none" : undefined;
+  if (config.reasoningMode === "thinking") return undefined;
+  if (config.reasoningMode === "disabled") return "none";
+  return undefined;
+}
+
+function getFireworksThinking(config: ModelTaskConfig): { type: "enabled"; budget_tokens: number } | undefined {
+  if (config.reasoningMode !== "thinking" || !config.thinkingBudget) return undefined;
+  return { type: "enabled", budget_tokens: config.thinkingBudget };
 }
 
 const anthropicClient: LlmProviderClient = {
@@ -102,7 +109,8 @@ const fireworksOpenAIClient: LlmProviderClient = {
       maxTokens: config.maxTokens,
       temperature: config.temperature,
       extraHeaders: getFireworksHeaders(context),
-      reasoningEffort: getFireworksReasoningEffort(config)
+      reasoningEffort: getFireworksReasoningEffort(config),
+      thinking: getFireworksThinking(config)
     });
   },
 
@@ -113,7 +121,8 @@ const fireworksOpenAIClient: LlmProviderClient = {
       maxTokens: config.maxTokens,
       temperature: config.temperature,
       extraHeaders: getFireworksHeaders(context),
-      reasoningEffort: getFireworksReasoningEffort(config)
+      reasoningEffort: getFireworksReasoningEffort(config),
+      thinking: getFireworksThinking(config)
     });
   },
 
@@ -132,6 +141,7 @@ const fireworksOpenAIClient: LlmProviderClient = {
       temperature: config.temperature,
       extraHeaders: getFireworksHeaders(context),
       reasoningEffort: getFireworksReasoningEffort(config),
+      thinking: getFireworksThinking(config),
       responseFormat: outputSchema
     });
   }

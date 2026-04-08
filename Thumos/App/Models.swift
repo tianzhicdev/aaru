@@ -242,19 +242,22 @@ struct SoulBootstrapResponse: Codable {
     let token: String?
     let visibleSoulFile: VisibleSoulFile?
     let hasMessages: Bool
+    let language: String?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case token
         case visibleSoulFile = "visible_soul_file"
         case hasMessages = "has_messages"
+        case language
     }
 
-    init(userId: UUID, token: String?, visibleSoulFile: VisibleSoulFile?, hasMessages: Bool) {
+    init(userId: UUID, token: String?, visibleSoulFile: VisibleSoulFile?, hasMessages: Bool, language: String? = nil) {
         self.userId = userId
         self.token = token
         self.visibleSoulFile = visibleSoulFile
         self.hasMessages = hasMessages
+        self.language = language
     }
 
     init(from decoder: Decoder) throws {
@@ -263,6 +266,17 @@ struct SoulBootstrapResponse: Codable {
         token = try container.decodeIfPresent(String.self, forKey: .token)
         visibleSoulFile = try container.decodeIfPresent(VisibleSoulFile.self, forKey: .visibleSoulFile)
         hasMessages = try container.decodeIfPresent(Bool.self, forKey: .hasMessages) ?? false
+        language = try container.decodeIfPresent(String.self, forKey: .language)
+    }
+}
+
+struct UpdateLanguageResponse: Codable {
+    let userId: String
+    let language: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case language
     }
 }
 

@@ -17,6 +17,7 @@ interface FireworksOptions {
   temperature?: number;
   extraHeaders?: Record<string, string>;
   reasoningEffort?: "none" | false;
+  thinking?: { type: "enabled"; budget_tokens: number };
 }
 
 const FIREWORKS_CHAT_COMPLETIONS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
@@ -45,7 +46,8 @@ export function streamFireworks(
       model: options.model,
       maxTokens: options.maxTokens,
       temperature: options.temperature,
-      reasoningEffort: options.reasoningEffort
+      reasoningEffort: options.reasoningEffort,
+      thinking: options.thinking
     }
   );
 }
@@ -66,7 +68,8 @@ export function callFireworks(
       model: options.model,
       maxTokens: options.maxTokens,
       temperature: options.temperature,
-      reasoningEffort: options.reasoningEffort
+      reasoningEffort: options.reasoningEffort,
+      thinking: options.thinking
     }
   );
 }
@@ -88,6 +91,7 @@ export function callFireworksJson<T>(
       maxTokens: options.maxTokens,
       temperature: options.temperature,
       reasoningEffort: options.reasoningEffort,
+      thinking: options.thinking,
       responseFormat: options.responseFormat
     }
   );

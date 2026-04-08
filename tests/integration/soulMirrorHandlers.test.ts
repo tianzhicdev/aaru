@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../workers/src/db.ts", () => ({
   getActiveSessionByTokenHash: vi.fn(),
   getUserModelProfileId: vi.fn(),
+  getUserLanguage: vi.fn(),
   updateUserModelProfileId: vi.fn(),
   touchDeviceSession: vi.fn(),
   ensureUser: vi.fn(),
@@ -79,6 +80,7 @@ import { readSessionToken, hashSessionToken, issueSessionToken } from "../../wor
 import {
   getActiveSessionByTokenHash,
   getUserModelProfileId,
+  getUserLanguage,
   updateUserModelProfileId,
   touchDeviceSession,
   ensureUser,
@@ -138,6 +140,7 @@ describe("bootstrap + sync", () => {
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
       needed: true,
@@ -172,7 +175,8 @@ describe("bootstrap + sync", () => {
       id: "new-user",
       device_id: "new-device",
       display_name: "Soul abc1",
-      model_profile_id: "frontier_v1"
+      model_profile_id: "frontier_v1",
+      language: "en"
     });
     vi.mocked(issueSessionToken).mockResolvedValue({
       token: "new-token",
@@ -182,6 +186,7 @@ describe("bootstrap + sync", () => {
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
       needed: false,
       pending: false,
@@ -276,6 +281,7 @@ describe("handleSoulConverse", () => {
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
     vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(getAllSoulMessages).mockResolvedValue([]);

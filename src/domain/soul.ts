@@ -1,5 +1,6 @@
-import type { DomainCoverageEntry, LifeDomain, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
-import { DOMAIN_LABELS, LIFE_DOMAINS } from "./schemas.ts";
+import type { LifeDomain, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
+import { LIFE_DOMAINS } from "./schemas.ts";
+import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
 
 export type OpeningKind = "first_ever" | "returning";
 
@@ -15,38 +16,8 @@ export interface SoulConversationContext {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   openingKind?: OpeningKind | null;
   xaiNews?: XaiNewsItem[];
+  language?: string | null;
 }
-
-const DOMAIN_OPENING_POOL: Record<LifeDomain, string[]> = {
-  origins: [
-    "What's a memory that shaped you more than you understood at the time?",
-    "When you think about where you came from, what scene rises first?"
-  ],
-  relationships: [
-    "Who brings out the truest version of you?",
-    "What does trust feel like in your body when it's actually there?"
-  ],
-  work_and_purpose: [
-    "What's a part of your life that feels most alive right now, or most stuck?",
-    "What are you building toward, even if you don't fully have words for it yet?"
-  ],
-  values_and_beliefs: [
-    "What's something you believe deeply but rarely say out loud?",
-    "What would you betray yourself to keep, and what would you refuse to trade away?"
-  ],
-  emotional_life: [
-    "What's the truest thing about how you've been feeling lately?",
-    "What feeling keeps returning, even when you try to move past it?"
-  ],
-  growth_and_change: [
-    "What's something in you that's changing, even if the change feels unfinished?",
-    "Where in your life are you outgrowing an old version of yourself?"
-  ],
-  aspirations: [
-    "What's quietly important to you about the future right now?",
-    "If something real shifted in your life over the next year, what would you want it to be?"
-  ]
-};
 
 function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
   const parts: string[] = [];
@@ -98,21 +69,26 @@ function buildSummarySection(note: ReflectionNote): string {
 
 function buildNavigationSection(
   note: ReflectionNote,
-  recentQuestions: string[]
+  recentQuestions: string[],
+  language?: string | null
 ): string {
-  const lines: string[] = ["NAVIGATION:"];
+  const prompts = getPrompts(language);
+  const nav = prompts.navigation;
+  const domainLabels = prompts.domains.labels;
+
+  const lines: string[] = [nav.header];
 
   // Territory map
   if (note.domainCoverage.length > 0) {
     const coverageMap = new Map(note.domainCoverage.map((entry) => [entry.domain, entry]));
     lines.push("");
-    lines.push("TERRITORY MAP:");
+    lines.push(nav.territoryMapHeader);
     for (const domain of LIFE_DOMAINS) {
       const entry = coverageMap.get(domain);
       const depth = entry?.depth ?? "untouched";
-      const label = DOMAIN_LABELS[domain];
-      const marker = depth === "untouched" || depth === "mentioned" ? " ← EXPLORE" : "";
-      const saturated = depth === "deep" ? " (saturated)" : "";
+      const label = domainLabels[domain];
+      const marker = depth === "untouched" || depth === "mentioned" ? nav.exploreMarker : "";
+      const saturated = depth === "deep" ? nav.saturatedMarker : "";
       lines.push(`- ${label}: ${depth}${saturated}${marker}`);
     }
   }
@@ -120,17 +96,17 @@ function buildNavigationSection(
   // Steering pressure + reasoning
   lines.push("");
   lines.push(
-    `Pressure: ${note.steeringPressure.toUpperCase()}${note.steeringReasoning ? ` — ${note.steeringReasoning}` : ""}`
+    `${nav.pressureLabel} ${note.steeringPressure.toUpperCase()}${note.steeringReasoning ? ` — ${note.steeringReasoning}` : ""}`
   );
 
   // Active threads
   if (note.currentThreads.length > 0) {
-    lines.push(`Active threads: ${note.currentThreads.join(", ")}`);
+    lines.push(`${nav.activeThreadsLabel} ${note.currentThreads.join(", ")}`);
   }
 
   // Steer-to topics
   if (note.steerToTopics.length > 0) {
-    lines.push("Steer toward:");
+    lines.push(nav.steerTowardLabel);
     note.steerToTopics.forEach((topic, i) => {
       lines.push(`  ${i + 1}. ${topic}`);
     });
@@ -139,7 +115,7 @@ function buildNavigationSection(
   // Avoid-lists from reflection note
   if (note.avoidPastObservations.length > 0) {
     lines.push("");
-    lines.push("Observations already made (DO NOT repeat):");
+    lines.push(nav.avoidObservationsLabel);
     note.avoidPastObservations.forEach((obs, i) => {
       lines.push(`${i + 1}. ${obs}`);
     });
@@ -154,7 +130,7 @@ function buildNavigationSection(
   }
   if (allQuestions.length > 0) {
     lines.push("");
-    lines.push("Questions already asked (DO NOT repeat or rephrase):");
+    lines.push(nav.avoidQuestionsLabel);
     allQuestions.slice(0, 12).forEach((question, i) => {
       lines.push(`${i + 1}. "${question}"`);
     });
@@ -171,10 +147,11 @@ export function extractRecentAssistantQuestions(
   for (const message of messages) {
     if (message.role !== "assistant") continue;
 
-    const sentences = message.content.split(/(?<=[.!?])\s+/);
+    // Split on sentence-ending punctuation (including Chinese ？)
+    const sentences = message.content.split(/(?<=[.!?？。！])\s*/);
     for (const sentence of sentences) {
       const trimmed = sentence.trim();
-      if (trimmed.endsWith("?") && trimmed.length > 10) {
+      if ((trimmed.endsWith("?") || trimmed.endsWith("？")) && trimmed.length > 10) {
         questions.push(trimmed);
       }
     }
@@ -195,19 +172,21 @@ export function extractRecentAssistantQuestions(
 }
 
 function buildOpeningSection(context: SoulConversationContext): string {
+  const prompts = getPrompts(context.language);
   switch (context.openingKind) {
     case "first_ever":
-      return `\nOPENING MODE:
-This is their very first conversation. Open warmly and specifically. Do not ask "how are you?" Pick one genuine reflective opener.`;
+      return `\n${prompts.soul.openingFirstEver}`;
     case "returning":
-      return `\nOPENING MODE:
-This person is returning. Open with a single directed question that follows the current emotional reality while gently honoring the navigation guidance. If the last message is from the user, respond to it directly. Do not repeat previous questions.`;
+      return `\n${prompts.soul.openingReturning}`;
     default:
       return "";
   }
 }
 
 export function buildSoulSystemPrompt(context: SoulConversationContext): string {
+  const prompts = getPrompts(context.language);
+  const soul = prompts.soul;
+
   const soulFileSection = context.visibleSoulFile
     ? buildVisibleSoulFileContext(context.visibleSoulFile)
     : "No soul file yet.";
@@ -219,7 +198,7 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
   const recentQuestions = extractRecentAssistantQuestions(context.messages);
 
   const navigationSection = context.reflectionNote
-    ? buildNavigationSection(context.reflectionNote, recentQuestions)
+    ? buildNavigationSection(context.reflectionNote, recentQuestions, context.language)
     : "";
 
   const openingSection = buildOpeningSection(context);
@@ -230,20 +209,11 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
       ).join("\n")}`
     : "";
 
-  return `You are Thumos, a soul mirror. Your purpose is to help someone understand who they really are through reflection. You are a mirror, not a therapist.
+  const languageDirective = getLanguageDirective(context.language);
 
-CONVERSATION PRINCIPLES:
-- Reflect, don't diagnose. Notice tensions without flattening them into labels.
-- Ask for stories, not self-assessments. Prefer concrete questions (who, when, where, what happened) over abstract ones (how does that feel).
-- When a user mentions a person, follow up on that person within 2 exchanges.
-- If you've echoed the user's metaphor more than twice, stop. Ask for a specific memory, person, or scene.
-- If the TERRITORY MAP shows underexplored domains, bridge toward them within 2-3 exchanges.
-- Memory matters. Reference what they have already said when it helps them feel seen.
-- One question at a time. Never stack questions.
-- Short responses. Usually 2-4 sentences.
-- Do not ask a substantially similar question to one you already asked unless you explicitly say you are revisiting it and why.
-- If there is an unresolved thread already alive in the conversation, prefer deepening it over opening a new generic topic.
-- If the latest user message already gives you something clear to respond to, respond to it directly before introducing a new question.
+  return `${soul.preamble}
+
+${soul.principles}
 
 THEIR SOUL FILE:
 ${soulFileSection}
@@ -252,23 +222,11 @@ ${navigationSection}
 ${currentEventsSection}
 ${openingSection}
 
-PACING:
-- There is no time limit. This conversation can continue as long as the person wants.
-- Never force closure. If they want to continue, continue.
-- Never accept premature closure. If they try to wrap up while meaningful territory remains, redirect with curiosity toward something still alive or underexplored.
-- If they break frame or go meta about the exercise, gently bring it back to their actual life.
-- If they seem emotionally full, you may suggest a pause without shutting the door.
+${soul.pacing}
 
-HANDLING DIFFICULT MOMENTS:
-- If they share trauma or deep pain: acknowledge it, don't probe.
-- If they give one-word answers: don't push. Offer a grounded observation instead of interrogating.
-- If they ask you personal questions: "I don't have a soul of my own. But I'm building a picture of yours."
-- If they ask for therapy advice: "I'm not a therapist — I'm a mirror. I can reflect what I see, but I can't prescribe what to do."
+${soul.difficultMoments}
 
-WHAT MAKES A GOOD RESPONSE:
-- Creates a "yes, that's exactly it" moment
-- Avoids repeated questions
-- Advances an existing thread or opens a new one only when it truly fits`;
+${soul.goodResponse}${languageDirective}`;
 }
 
 function extractDomainHint(topic: string): string | null {
@@ -281,12 +239,15 @@ function extractDomainHint(topic: string): string | null {
   return null;
 }
 
-export function pickOpening(preferredTopic?: string | null): string {
+export function pickOpening(preferredTopic?: string | null, language?: string | null): string {
+  const prompts = getPrompts(language);
+  const pool = prompts.domains.openingPool;
+
   const hintedDomain = preferredTopic ? extractDomainHint(preferredTopic) as LifeDomain | null : null;
-  const domain = hintedDomain && DOMAIN_OPENING_POOL[hintedDomain]
+  const domain = hintedDomain && pool[hintedDomain]
     ? hintedDomain
     : LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
-  const options = DOMAIN_OPENING_POOL[domain];
+  const options = pool[domain];
   return options[Math.floor(Math.random() * options.length)];
 }
 
@@ -302,38 +263,33 @@ function findLastUserMessage(
 }
 
 export function buildSoulFallbackResponse(context: SoulConversationContext): string {
+  const prompts = getPrompts(context.language);
+  const fb = prompts.fallbacks;
   const preferredTopic = context.reflectionNote?.steerToTopics[0] ?? null;
 
   if (context.openingKind === "first_ever") {
-    return pickOpening(preferredTopic);
+    return pickOpening(preferredTopic, context.language);
   }
 
   if (context.openingKind === "returning") {
     const portrait = context.visibleSoulFile?.portrait;
     if (portrait) {
-      return `Last time, something about you stayed with me: "${portrait.slice(0, 120)}..." What feels most alive for you right now?`;
+      return fb.returningWithPortrait.replace("{portrait}", portrait.slice(0, 120));
     }
 
     if (preferredTopic) {
-      return `There's something I want to understand more clearly: ${preferredTopic}. Where does that land for you right now?`;
+      return fb.returningWithTopic.replace("{topic}", preferredTopic);
     }
 
     const lastUserMessage = findLastUserMessage(context.messages);
     if (lastUserMessage) {
-      return `You said "${lastUserMessage.slice(0, 140)}". What feels most important in that for you right now?`;
+      return fb.returningWithLastMessage.replace("{message}", lastUserMessage.slice(0, 140));
     }
 
-    return "It's been a minute since we last spoke. What's been sitting with you lately?";
+    return fb.returningDefault;
   }
 
-  const fallbacks = [
-    "Tell me more about that.",
-    "What does that feel like when you sit with it?",
-    "That sounds important. What's underneath it?",
-    "You said something worth staying with. What stands out to you in your own words?"
-  ];
-
-  return fallbacks[context.messages.length % fallbacks.length];
+  return fb.generic[context.messages.length % fb.generic.length];
 }
 
 export function detectSoftSessionGap(

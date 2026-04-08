@@ -1,4 +1,4 @@
-export type ModelProfileId = "frontier_v1" | "value_v1";
+export type ModelProfileId = "frontier_v1" | "value_v1" | "value_v2";
 export type ModelProvider = "anthropic" | "fireworks_openai";
 export type ModelTask =
   | "conversation"
@@ -8,7 +8,7 @@ export type ModelTask =
   | "synthesis_hidden"
   | "match_evaluation";
 
-export type ReasoningMode = "default" | "disabled";
+export type ReasoningMode = "default" | "disabled" | "thinking";
 
 export interface ModelTaskConfig {
   provider: ModelProvider;
@@ -16,6 +16,7 @@ export interface ModelTaskConfig {
   maxTokens: number;
   temperature: number;
   reasoningMode?: ReasoningMode;
+  thinkingBudget?: number;
 }
 
 export interface ModelProfile {
@@ -29,7 +30,7 @@ export interface ModelProfileOption {
   label: string;
 }
 
-export const DEFAULT_MODEL_PROFILE_ID: ModelProfileId = "frontier_v1";
+export const DEFAULT_MODEL_PROFILE_ID: ModelProfileId = "value_v2";
 
 const PROFILES: Record<ModelProfileId, ModelProfile> = {
   frontier_v1: {
@@ -121,11 +122,66 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         reasoningMode: "disabled"
       }
     }
+  },
+  value_v2: {
+    id: "value_v2",
+    label: "Fireworks Kimi K2 Thinking value stack",
+    tasks: {
+      conversation: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 1024,
+        temperature: 0.8,
+        reasoningMode: "thinking",
+        thinkingBudget: 2048
+      },
+      reflection_snapshot: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 2000,
+        temperature: 0.2,
+        reasoningMode: "thinking",
+        thinkingBudget: 4096
+      },
+      synthesis_assessment: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 4096,
+        temperature: 0.2,
+        reasoningMode: "thinking",
+        thinkingBudget: 4096
+      },
+      synthesis_visible: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 4096,
+        temperature: 0.5,
+        reasoningMode: "thinking",
+        thinkingBudget: 4096
+      },
+      synthesis_hidden: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 4096,
+        temperature: 0.2,
+        reasoningMode: "thinking",
+        thinkingBudget: 4096
+      },
+      match_evaluation: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 1024,
+        temperature: 0.3,
+        reasoningMode: "thinking",
+        thinkingBudget: 1024
+      }
+    }
   }
 };
 
 export function normalizeModelProfileId(value: unknown): ModelProfileId {
-  return value === "value_v1" ? "value_v1" : DEFAULT_MODEL_PROFILE_ID;
+  if (value === "value_v1" || value === "value_v2" || value === "frontier_v1") return value;
+  return DEFAULT_MODEL_PROFILE_ID;
 }
 
 export function defaultModelProfileIdFromEnv(env: {
@@ -139,7 +195,7 @@ export function getModelProfile(profileId: ModelProfileId): ModelProfile {
 }
 
 export function isModelProfileId(value: unknown): value is ModelProfileId {
-  return value === "frontier_v1" || value === "value_v1";
+  return value === "frontier_v1" || value === "value_v1" || value === "value_v2";
 }
 
 export function listModelProfiles(): ModelProfileOption[] {

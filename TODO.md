@@ -21,6 +21,18 @@
 - Local `value_v1` routing/plumbing succeeded with a temporary Fireworks binding and default-profile override.
 - On March 30, 2026, Fireworks live inference returned `HTTP 412 PRECONDITION_FAILED` because the account was suspended for billing/account-state reasons, and the server correctly fell back to the built-in fallback response.
 
+## Deferred: Per-User Language Match Reasoning
+
+When two matched users speak different languages, the match reasoning should ideally be generated once per user's language. Currently, match evaluation + reasoning runs once in English for simplicity. Generating two separate reasoning calls can lead to inconsistencies, so this was deferred.
+
+**When to revisit:** Once the user base includes meaningful cross-language matches.
+
+**What to do:**
+- Add `reasoning_a` and `reasoning_b` columns to `matches` table (one per user in the pair)
+- After `evaluateMatch()` returns a match decision, generate reasoning twice: once per user's language
+- Update `get-matches` handler to return the appropriate reasoning based on which user is requesting
+- If both users share the same language, both reasoning strings will be identical (still two calls for simplicity)
+
 ## Tomorrow
 
 - Create a new Cloudflare account for stronger prod/dev isolation.

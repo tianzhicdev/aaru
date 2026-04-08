@@ -5,7 +5,8 @@ import { issueSessionToken } from "../auth.ts";
 import {
   ensureUser,
   createDeviceSession,
-  getUserModelProfileId
+  getUserModelProfileId,
+  getUserLanguage
 } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
@@ -50,9 +51,12 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
     token = issued.token;
   }
 
-  const visibleSoulFile = await getVisibleSoulFile(sql, userId);
-  const reflectionState = await checkReflectionSnapshotNeeded(sql, userId);
-  const modelProfileId = await getUserModelProfileId(sql, userId);
+  const [visibleSoulFile, reflectionState, modelProfileId, language] = await Promise.all([
+    getVisibleSoulFile(sql, userId),
+    checkReflectionSnapshotNeeded(sql, userId),
+    getUserModelProfileId(sql, userId),
+    getUserLanguage(sql, userId)
+  ]);
   const hasMessages = reflectionState.totalMessageCount > 0 || visibleSoulFile !== null;
 
   if (reflectionState.needed && !reflectionState.pending) {
@@ -78,6 +82,7 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
     ...(token ? { token } : {}),
     visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
     has_messages: hasMessages,
-    model_profile_id: modelProfileId
+    model_profile_id: modelProfileId,
+    language
   });
 }

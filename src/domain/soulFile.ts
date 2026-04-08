@@ -10,6 +10,7 @@ import {
   visibleSoulFileSchema
 } from "./schemas.ts";
 import { computeSoulFileCompleteness } from "./matching.ts";
+import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
 
 const SPECTRUM_KEYS = [
   "openness",
@@ -93,11 +94,14 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
 }
 
 export function buildVisibleNarrativePrompt(
-  messages: Array<{ role: string; content: string }>
+  messages: Array<{ role: string; content: string }>,
+  language?: string | null
 ): string {
   const transcript = buildTranscript(messages);
+  const prompts = getPrompts(language);
+  const languageDirective = getLanguageDirective(language);
 
-  return `You are writing the visible soul file for a person. It should feel accurate, warm, honest, and grounded in their own words.
+  return `${prompts.synthesis.visiblePreamble}
 
 Transcript:
 ${transcript}
@@ -139,18 +143,12 @@ Output ONE valid JSON object with these fields:
   "relationalStyle": "2-3 sentence narrative" | null
 }
 
-Rules:
-- Use second person throughout: "you" and "your".
-- "yourTensions" should name growth edges, contradictions, or honest tensions directly but compassionately.
-- Derive personality spectrum, values, and relational style independently from the transcript.
-- Keep sections short, specific, and non-clinical.
-- Use exact quotes for crystallized moments.
-- Prefer null over guessing.
-- Respond with ONLY valid JSON.`;
+${prompts.synthesis.visibleRules}${languageDirective}`;
 }
 
 export function buildHiddenClinicalPrompt(
-  messages: Array<{ role: string; content: string }>
+  messages: Array<{ role: string; content: string }>,
+  language?: string | null
 ): string {
   const transcript = buildTranscript(messages);
   const userMessageCount = messages.filter((message) => message.role === "user").length;
@@ -158,8 +156,10 @@ export function buildHiddenClinicalPrompt(
   const domainCoverageSpec = LIFE_DOMAINS.map((domain) =>
     `    {"domain": "${domain}", "depth": "untouched|mentioned|explored|deep", "evidence": "brief factual note"}`
   ).join(",\n");
+  const prompts = getPrompts(language);
+  const languageDirective = getLanguageDirective(language);
 
-  return `You are writing the hidden clinical soul file for Thumos. This is private process guidance, not user-facing prose.
+  return `${prompts.synthesis.hiddenPreamble}
 
 Transcript:
 ${transcript}
@@ -195,13 +195,7 @@ ${domainCoverageSpec}
   "honestInsights": ["clear, blunt but grounded observation"]
 }
 
-Rules:
-- No psychometric score fields. Those belong in the visible file only.
-- Each expert reflection must be genuinely distinct. Max 6 per lens.
-- Rate all 7 domains in depthMap.domainCoverage.
-- honestInsights should surface the most useful hard truths. Max 3.
-- Keep this clinically useful, concrete, and non-redundant.
-- Respond with ONLY valid JSON.`;
+${prompts.synthesis.hiddenRules}${languageDirective}`;
 }
 
 export function parseVisibleNarrative(raw: string): VisibleSoulFile | null {

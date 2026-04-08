@@ -23,6 +23,7 @@ final class AppModel: ObservableObject {
     @Published var isSoulStreaming = false
     @Published var isSoulFileUpdating = false
     @Published var isDeletingAccount = false
+    @Published var language: String = "en"
     @Published var soulmateProfile: SoulmateProfile?
     @Published var soulmateMatches: [SoulmateMatch] = []
     @Published var selectedMatchForReasoning: SoulmateMatch?
@@ -148,6 +149,7 @@ final class AppModel: ObservableObject {
         appUpdateMessage = nil
         userID = nil
         errorMessage = nil
+        language = "en"
         soulmateProfile = nil
         soulmateMatches = []
         selectedMatchForReasoning = nil
@@ -202,6 +204,9 @@ final class AppModel: ObservableObject {
             }
             visibleSoulFile = response.visibleSoulFile ?? .empty
             hasMessages = response.hasMessages
+            if let lang = response.language {
+                language = lang
+            }
             cacheVisibleSoulFile(visibleSoulFile)
             await syncSoulMessages()
             await maybeRequestOpeningIfNeeded()
@@ -448,6 +453,20 @@ final class AppModel: ObservableObject {
         guard hasMessages else { return }
         guard shouldAutoRequestOpening() else { return }
         await beginSoulConversation()
+    }
+
+    // MARK: - Language
+
+    func updateLanguage(_ newLanguage: String) async {
+        let previousLanguage = language
+        language = newLanguage
+        do {
+            _ = try await backend.updateLanguage(newLanguage)
+            logger.info("Language updated to \(newLanguage, privacy: .public)")
+        } catch {
+            language = previousLanguage
+            logger.error("Language update failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - Soulmate

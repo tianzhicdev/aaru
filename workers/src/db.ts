@@ -17,6 +17,7 @@ export interface UserRow {
   device_id: string;
   display_name: string;
   model_profile_id: string;
+  language: string;
 }
 
 export interface DeviceSessionRow {
@@ -40,7 +41,7 @@ export async function ensureUser(
     INSERT INTO users (device_id, display_name, model_profile_id)
     VALUES (${deviceId}, ${"Soul " + deviceId.slice(-4)}, ${modelProfileId})
     ON CONFLICT (device_id) DO UPDATE SET device_id = EXCLUDED.device_id
-    RETURNING id, device_id, display_name, model_profile_id
+    RETURNING id, device_id, display_name, model_profile_id, language
   `;
   return rows[0] as UserRow;
 }
@@ -102,6 +103,29 @@ export async function touchDeviceSession(sql: NeonSQL, sessionId: string): Promi
   await sql`
     UPDATE device_sessions SET last_seen_at = NOW() WHERE id = ${sessionId}
   `;
+}
+
+// ── Language ──────────────────────────────────────────────────
+
+export async function getUserLanguage(
+  sql: NeonSQL,
+  userId: string
+): Promise<string> {
+  const rows = await sql`
+    SELECT language FROM users WHERE id = ${userId} LIMIT 1
+  `;
+  return (rows[0]?.language as string) ?? "en";
+}
+
+export async function updateUserLanguage(
+  sql: NeonSQL,
+  userId: string,
+  language: string
+): Promise<string> {
+  const rows = await sql`
+    UPDATE users SET language = ${language} WHERE id = ${userId} RETURNING language
+  `;
+  return (rows[0]?.language as string) ?? "en";
 }
 
 // ── Delete user (CASCADE handles all dependent tables) ────────

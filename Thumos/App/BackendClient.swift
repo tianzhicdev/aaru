@@ -168,6 +168,16 @@ final class BackendClient {
         )
     }
 
+    func updateLanguage(_ language: String) async throws -> UpdateLanguageResponse {
+        guard endpoint(named: "update-language") != nil else {
+            return UpdateLanguageResponse(userId: "", language: language)
+        }
+        return try await post(
+            "update-language",
+            body: ["language": language]
+        )
+    }
+
     func deleteAccount() async throws -> DeleteAccountResponse {
         guard endpoint(named: "delete-account") != nil else {
             return DeleteAccountResponse(deleted: true)

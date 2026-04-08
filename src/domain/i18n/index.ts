@@ -5,13 +5,19 @@ import { zhCN } from "./zh-CN.ts";
 import { ja } from "./ja.ts";
 import { fr } from "./fr.ts";
 import { es } from "./es.ts";
+import { ko } from "./ko.ts";
+import { ptBR } from "./pt-BR.ts";
+import { de } from "./de.ts";
 
 const PROMPTS: Record<Language, LocalizedPrompts> = {
   "en": en,
   "zh-CN": zhCN,
   "ja": ja,
   "fr": fr,
-  "es": es
+  "es": es,
+  "ko": ko,
+  "pt-BR": ptBR,
+  "de": de
 };
 
 export function getPrompts(language?: string | null): LocalizedPrompts {

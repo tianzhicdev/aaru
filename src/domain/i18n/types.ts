@@ -1,8 +1,8 @@
 import type { LifeDomain } from "../schemas.ts";
 
-export type Language = "en" | "zh-CN" | "ja" | "fr" | "es";
+export type Language = "en" | "zh-CN" | "ja" | "fr" | "es" | "ko" | "pt-BR" | "de";
 
-export const SUPPORTED_LANGUAGES: readonly Language[] = ["en", "zh-CN", "ja", "fr", "es"] as const;
+export const SUPPORTED_LANGUAGES: readonly Language[] = ["en", "zh-CN", "ja", "fr", "es", "ko", "pt-BR", "de"] as const;
 export const DEFAULT_LANGUAGE: Language = "en";
 
 export interface LanguageMeta {
@@ -16,7 +16,10 @@ export const LANGUAGE_META: Record<Language, LanguageMeta> = {
   "zh-CN": { code: "zh-CN", label: "Chinese", nativeName: "简体中文" },
   "ja": { code: "ja", label: "Japanese", nativeName: "日本語" },
   "fr": { code: "fr", label: "French", nativeName: "Français" },
-  "es": { code: "es", label: "Spanish", nativeName: "Español" }
+  "es": { code: "es", label: "Spanish", nativeName: "Español" },
+  "ko": { code: "ko", label: "Korean", nativeName: "한국어" },
+  "pt-BR": { code: "pt-BR", label: "Portuguese", nativeName: "Português" },
+  "de": { code: "de", label: "German", nativeName: "Deutsch" }
 };
 
 // ── Prompt string interfaces ─────────────────────────────────

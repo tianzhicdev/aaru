@@ -3,18 +3,17 @@ import { describe, expect, it } from "vitest";
 import { getPrompts, isValidLanguage, getLanguageDirective, SUPPORTED_LANGUAGES } from "../../src/domain/i18n/index.ts";
 
 describe("i18n", () => {
-  it("supports en, zh-CN, ja, fr", () => {
-    expect(SUPPORTED_LANGUAGES).toContain("en");
-    expect(SUPPORTED_LANGUAGES).toContain("zh-CN");
-    expect(SUPPORTED_LANGUAGES).toContain("ja");
-    expect(SUPPORTED_LANGUAGES).toContain("fr");
+  it("supports all 8 languages", () => {
+    for (const lang of ["en", "zh-CN", "ja", "fr", "es", "ko", "pt-BR", "de"]) {
+      expect(SUPPORTED_LANGUAGES).toContain(lang);
+    }
   });
 
   it("isValidLanguage accepts all supported languages", () => {
     for (const lang of SUPPORTED_LANGUAGES) {
       expect(isValidLanguage(lang)).toBe(true);
     }
-    expect(isValidLanguage("de")).toBe(false);
+    expect(isValidLanguage("sv")).toBe(false);
   });
 
   it("getPrompts returns prompts for each language", () => {
@@ -27,7 +26,7 @@ describe("i18n", () => {
   });
 
   it("getPrompts falls back to en for unknown language", () => {
-    const p = getPrompts("de");
+    const p = getPrompts("sv");
     expect(p.soul.preamble).toContain("Thumos");
     expect(p.soul.preamble).toContain("soul mirror");
   });

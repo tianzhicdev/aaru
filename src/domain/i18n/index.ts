@@ -4,12 +4,14 @@ import { en } from "./en.ts";
 import { zhCN } from "./zh-CN.ts";
 import { ja } from "./ja.ts";
 import { fr } from "./fr.ts";
+import { es } from "./es.ts";
 
 const PROMPTS: Record<Language, LocalizedPrompts> = {
   "en": en,
   "zh-CN": zhCN,
   "ja": ja,
-  "fr": fr
+  "fr": fr,
+  "es": es
 };
 
 export function getPrompts(language?: string | null): LocalizedPrompts {

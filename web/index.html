@@ -3,37 +3,83 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>THUMOS | Only the one matters</title>
-    <meta name="description" content="THUMOS is a private soul mirror for iPhone. Only the one matters." />
-    <meta name="robots" content="index,follow" />
+    <title>THUMOS | Private AI Soul Mirror for iPhone</title>
+    <meta
+      name="description"
+      content="THUMOS is a private AI soul mirror for iPhone. Honest conversation reveals your soul and builds a living portrait over time."
+    />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
     <meta name="theme-color" content="#000000" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="THUMOS" />
-    <meta property="og:description" content="Only the one matters." />
+    <meta property="og:site_name" content="THUMOS" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="THUMOS | Private AI Soul Mirror for iPhone" />
+    <meta
+      property="og:description"
+      content="Private AI reflection for iPhone. Honest conversation reveals your soul and builds a living portrait over time."
+    />
     <meta property="og:image" content="https://trythumos.com/assets/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="THUMOS" />
+    <meta
+      property="og:image:alt"
+      content="THUMOS, a private AI soul mirror for iPhone"
+    />
     <meta property="og:url" content="https://trythumos.com/" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="THUMOS" />
-    <meta name="twitter:description" content="Only the one matters." />
+    <meta name="twitter:title" content="THUMOS | Private AI Soul Mirror for iPhone" />
+    <meta
+      name="twitter:description"
+      content="Private AI reflection for iPhone. Honest conversation reveals your soul and builds a living portrait over time."
+    />
     <meta name="twitter:image" content="https://trythumos.com/assets/og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="THUMOS, a private AI soul mirror for iPhone"
+    />
     <link rel="canonical" href="https://trythumos.com/" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png" />
     <link rel="icon" href="/assets/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+    />
     <link rel="stylesheet" href="/style.css" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "THUMOS",
-        "operatingSystem": "iOS",
-        "applicationCategory": "LifestyleApplication",
-        "offers": { "@type": "Offer", "price": "0" },
-        "description": "A private soul mirror for iPhone. Only the one matters."
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://trythumos.com/#website",
+            "url": "https://trythumos.com/",
+            "name": "THUMOS",
+            "alternateName": "Thumos",
+            "description": "A private AI soul mirror for iPhone."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "THUMOS - The Soul Mirror",
+            "alternateName": "THUMOS",
+            "applicationCategory": "LifestyleApplication",
+            "operatingSystem": "iOS 17.0 or later",
+            "description": "A private AI soul mirror for iPhone. Honest conversation reveals your soul and builds a living portrait over time.",
+            "url": "https://trythumos.com/",
+            "sameAs": "https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301",
+            "downloadUrl": "https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301",
+            "image": "https://trythumos.com/assets/app-icon.png",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "url": "https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301"
+            }
+          }
+        ]
       }
     </script>
   </head>
@@ -70,13 +116,21 @@
 
             <div class="hero-meta" aria-label="Product highlights">
               <span>Private by default</span>
+              <span>AI soul mirror</span>
               <span>iPhone only</span>
             </div>
           </div>
 
           <div class="hero-stage">
             <div class="hero-image-frame">
-              <img src="/assets/crowd.png" alt="" width="832" height="1248" aria-hidden="true" />
+              <img
+                src="/assets/crowd.png"
+                alt="Illustration of a woman standing apart from a crowd"
+                width="832"
+                height="1248"
+                fetchpriority="high"
+                decoding="async"
+              />
             </div>
           </div>
         </section>
@@ -84,7 +138,15 @@
         <section class="section-card section-conversation">
           <div class="feature-layout">
             <div class="visual-panel visual-panel-conversation">
-              <img class="conversation-art" src="/assets/girl-conversation.png" alt="" aria-hidden="true" />
+              <img
+                class="conversation-art"
+                src="/assets/girl-conversation.png"
+                alt="Illustration of a woman in reflective conversation"
+                width="784"
+                height="1168"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
 
             <div class="feature-copy">
@@ -101,8 +163,15 @@
               </h2>
             </div>
 
-            <div class="signal-visual" aria-hidden="true">
-              <img src="/assets/signaling.png" alt="" />
+            <div class="signal-visual">
+              <img
+                src="/assets/signaling.png"
+                alt="Illustration of a soul portrait signaling outward"
+                width="784"
+                height="1168"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
           </div>
         </section>
@@ -210,7 +279,15 @@
             </div>
 
             <div class="visual-panel visual-panel-found">
-              <img class="found-art" src="/assets/found-couple.png" alt="" aria-hidden="true" />
+              <img
+                class="found-art"
+                src="/assets/found-couple.png"
+                alt="Illustration of two people finding each other"
+                width="784"
+                height="1168"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
           </div>
         </section>

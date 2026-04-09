@@ -1,7 +1,8 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { NeonSQL } from "../db.ts";
-import { updateUserLanguage } from "../db.ts";
+import { getUserModelProfileId, updateUserLanguage, updateUserModelProfileId } from "../db.ts";
 import { isValidLanguage } from "../../../src/domain/i18n/index.ts";
+import { profileForLanguage } from "../modelProfiles.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
 import { z } from "zod";
 
@@ -27,14 +28,20 @@ export async function handleUpdateLanguage(
     });
   }
 
-  const language = await updateUserLanguage(
-    sql,
-    auth.session.user_id,
-    body.language
-  );
+  const userId = auth.session.user_id;
+  const language = await updateUserLanguage(sql, userId, body.language);
+
+  // Auto-derive model profile from language (unless user is on frontier)
+  const currentProfile = await getUserModelProfileId(sql, userId);
+  if (currentProfile !== "frontier") {
+    const derivedProfile = profileForLanguage(body.language);
+    if (derivedProfile !== currentProfile) {
+      await updateUserModelProfileId(sql, userId, derivedProfile);
+    }
+  }
 
   return jsonResponse(200, {
-    user_id: auth.session.user_id,
+    user_id: userId,
     language
   });
 }

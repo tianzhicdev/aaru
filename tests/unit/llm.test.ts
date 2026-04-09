@@ -34,7 +34,7 @@ describe("llm routing", () => {
       },
       "system",
       [{ role: "user", content: "Hi" }],
-      { profileId: "frontier_v1", task: "conversation", userId: "user-1" }
+      { profileId: "frontier", task: "conversation", userId: "user-1" }
     );
 
     expect(result).toBe("hello");
@@ -61,7 +61,7 @@ describe("llm routing", () => {
       },
       "system",
       [{ role: "user", content: "Hi" }],
-      { profileId: "value_v1", task: "conversation", userId: "user-1" }
+      { profileId: "value_cjk", task: "conversation", userId: "user-1" }
     );
 
     expect(result).toBe("hello");
@@ -97,7 +97,7 @@ describe("llm routing", () => {
         },
         "system",
         [{ role: "user", content: "Hi" }],
-        { profileId: "value_v1", task: "conversation", userId: "user-1" }
+        { profileId: "value_cjk", task: "conversation", userId: "user-1" }
       )
     ).rejects.toThrow("Missing Fireworks API key");
   });
@@ -125,7 +125,7 @@ describe("llm routing", () => {
       },
       "system",
       [{ role: "user", content: "Hi" }],
-      { profileId: "value_v1", task: "conversation", userId: "user-1" }
+      { profileId: "value_cjk", task: "conversation", userId: "user-1" }
     )) {
       chunks.push(chunk);
     }
@@ -155,7 +155,7 @@ describe("llm routing", () => {
       },
       "system",
       [{ role: "user", content: "Hi" }],
-      { profileId: "value_v1", task: "reflection_snapshot", userId: "user-1" },
+      { profileId: "value_cjk", task: "reflection_snapshot", userId: "user-1" },
       {
         name: "reflection_note",
         schema: {

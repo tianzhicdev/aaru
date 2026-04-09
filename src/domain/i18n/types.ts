@@ -51,14 +51,6 @@ export interface DomainStrings {
   openingPool: Record<LifeDomain, string[]>;
 }
 
-export interface FallbackStrings {
-  generic: string[];
-  returningWithPortrait: string;   // template: {portrait}
-  returningWithTopic: string;      // template: {topic}
-  returningWithLastMessage: string; // template: {message}
-  returningDefault: string;
-}
-
 export interface SynthesisStrings {
   visiblePreamble: string;
   visibleRules: string;
@@ -77,7 +69,6 @@ export interface HandlerStrings {
   firstEverInstruction: string;    // template: {domainHint}
   returningInstruction: string;
   steerToward: string;             // template: {domain}
-  weaveIn: string;                 // template: {headlines}
   doNotRepeat: string;
 }
 
@@ -85,7 +76,6 @@ export interface LocalizedPrompts {
   soul: SoulPromptStrings;
   navigation: NavigationStrings;
   domains: DomainStrings;
-  fallbacks: FallbackStrings;
   synthesis: SynthesisStrings;
   reflection: ReflectionStrings;
   handler: HandlerStrings;

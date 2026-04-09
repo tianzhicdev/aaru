@@ -1,21 +1,14 @@
-import type { LifeDomain, ReflectionNote, VisibleSoulFile } from "./schemas.ts";
+import type { LifeDomain, ReflectionNote, UserOpenness, VisibleSoulFile } from "./schemas.ts";
 import { LIFE_DOMAINS } from "./schemas.ts";
 import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
 
 export type OpeningKind = "first_ever" | "returning";
-
-export interface XaiNewsItem {
-  topic: string;
-  headline: string;
-  summary: string;
-}
 
 export interface SoulConversationContext {
   visibleSoulFile: VisibleSoulFile | null;
   reflectionNote: ReflectionNote | null;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   openingKind?: OpeningKind | null;
-  xaiNews?: XaiNewsItem[];
   language?: string | null;
 }
 
@@ -65,6 +58,19 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
 function buildSummarySection(note: ReflectionNote): string {
   if (!note.summary) return "";
   return `\nCONVERSATION SUMMARY (from last reflection):\n${note.summary}`;
+}
+
+const DEPTH_GUIDANCE: Record<UserOpenness, string> = {
+  guarded: "DEPTH GUIDANCE: Keep it light and warm. One concrete, easy question. No probing.",
+  warming: "DEPTH GUIDANCE: Match their pace. You can lean in a little, but don't push past where they've gone.",
+  open: "DEPTH GUIDANCE: They're ready for depth. Explore tensions, contradictions, the real stuff.",
+  deep: "DEPTH GUIDANCE: Go as deep as they're going. Mine the rich material."
+};
+
+export function buildDepthGuidance(note: ReflectionNote | null): string {
+  if (!note) return "";
+  const openness = note.userOpenness ?? "warming";
+  return `\n${DEPTH_GUIDANCE[openness]}`;
 }
 
 function buildNavigationSection(
@@ -201,13 +207,9 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
     ? buildNavigationSection(context.reflectionNote, recentQuestions, context.language)
     : "";
 
-  const openingSection = buildOpeningSection(context);
+  const depthGuidanceSection = buildDepthGuidance(context.reflectionNote);
 
-  const currentEventsSection = context.xaiNews && context.xaiNews.length > 0
-    ? `\nCURRENT CONTEXT (use naturally, don't force):\n${context.xaiNews.map((item) =>
-        `- ${item.topic}: "${item.headline}" — ${item.summary}`
-      ).join("\n")}`
-    : "";
+  const openingSection = buildOpeningSection(context);
 
   const languageDirective = getLanguageDirective(context.language);
 
@@ -219,7 +221,7 @@ THEIR SOUL FILE:
 ${soulFileSection}
 ${summarySection}
 ${navigationSection}
-${currentEventsSection}
+${depthGuidanceSection}
 ${openingSection}
 
 ${soul.pacing}
@@ -227,69 +229,6 @@ ${soul.pacing}
 ${soul.difficultMoments}
 
 ${soul.goodResponse}${languageDirective}`;
-}
-
-function extractDomainHint(topic: string): string | null {
-  const normalized = topic.toLowerCase();
-  for (const domain of LIFE_DOMAINS) {
-    if (normalized.includes(domain.replaceAll("_", " "))) {
-      return domain;
-    }
-  }
-  return null;
-}
-
-export function pickOpening(preferredTopic?: string | null, language?: string | null): string {
-  const prompts = getPrompts(language);
-  const pool = prompts.domains.openingPool;
-
-  const hintedDomain = preferredTopic ? extractDomainHint(preferredTopic) as LifeDomain | null : null;
-  const domain = hintedDomain && pool[hintedDomain]
-    ? hintedDomain
-    : LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
-  const options = pool[domain];
-  return options[Math.floor(Math.random() * options.length)];
-}
-
-function findLastUserMessage(
-  messages: Array<{ role: "user" | "assistant"; content: string }>
-): string | null {
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    if (messages[i].role === "user") {
-      return messages[i].content;
-    }
-  }
-  return null;
-}
-
-export function buildSoulFallbackResponse(context: SoulConversationContext): string {
-  const prompts = getPrompts(context.language);
-  const fb = prompts.fallbacks;
-  const preferredTopic = context.reflectionNote?.steerToTopics[0] ?? null;
-
-  if (context.openingKind === "first_ever") {
-    return pickOpening(preferredTopic, context.language);
-  }
-
-  if (context.openingKind === "returning") {
-    const portrait = context.visibleSoulFile?.portrait;
-    if (portrait) {
-      return fb.returningWithPortrait.replace("{portrait}", portrait.slice(0, 120));
-    }
-
-    if (preferredTopic) {
-      return fb.returningWithTopic.replace("{topic}", preferredTopic);
-    }
-
-    const lastUserMessage = findLastUserMessage(context.messages);
-    if (lastUserMessage) {
-      return fb.returningWithLastMessage.replace("{message}", lastUserMessage.slice(0, 140));
-    }
-
-    return fb.returningDefault;
-  }
-
-  return fb.generic[context.messages.length % fb.generic.length];
 }
 
 export function detectSoftSessionGap(

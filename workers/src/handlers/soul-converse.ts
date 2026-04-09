@@ -11,7 +11,6 @@ import {
   type SoulMessageRow
 } from "../soulApp.ts";
 import {
-  buildSoulFallbackResponse,
   buildSoulSystemPrompt,
   type OpeningKind,
   type SoulConversationContext
@@ -20,10 +19,8 @@ import { LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
 import { getPrompts } from "../../../src/domain/i18n/index.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
-import { streamLlmText } from "../llm.ts";
-import { getTaskConfig } from "../modelProfiles.ts";
-import { fetchInterestNews } from "../xai.ts";
-import type { XaiNewsItem } from "../../../src/domain/soul.ts";
+import { callLlmText, streamLlmText } from "../llm.ts";
+import { getTaskConfig, type ModelProfileId } from "../modelProfiles.ts";
 import { jsonResp, sseHeaders } from "../edge.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
 import { stripThinkContent } from "../openaiCompatible.ts";
@@ -51,7 +48,6 @@ function buildClaudeInputMessages(
   mode: z.infer<typeof soulConverseRequestSchema>["mode"],
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   preferredDomain: string | null,
-  xaiNews: XaiNewsItem[],
   language?: string | null
 ): Array<{ role: "user" | "assistant"; content: string }> {
   if (mode !== "opening") {
@@ -73,10 +69,6 @@ function buildClaudeInputMessages(
   const parts: string[] = [handler.returningInstruction];
   if (preferredDomain) {
     parts.push(handler.steerToward.replace("{domain}", preferredDomain));
-  }
-  if (xaiNews.length > 0) {
-    const headlines = xaiNews.map(n => `${n.topic}: "${n.headline}"`).join("; ");
-    parts.push(handler.weaveIn.replace("{headlines}", headlines));
   }
   parts.push(handler.doNotRepeat);
 
@@ -159,30 +151,11 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     content: message.content
   }));
 
-  let xaiNews: XaiNewsItem[] = [];
-  if (body.mode === "opening" && env.XAI_TOKEN) {
-    const topics: string[] = [];
-    if (visibleSoulFile?.openThreads) {
-      topics.push(...visibleSoulFile.openThreads);
-    }
-    if (reflectionNote?.currentThreads) {
-      topics.push(...reflectionNote.currentThreads);
-    }
-    if (topics.length > 0) {
-      try {
-        xaiNews = await fetchInterestNews(topics.slice(0, 5), env.XAI_TOKEN);
-      } catch (err) {
-        console.warn("xAI news fetch failed, proceeding without:", err);
-      }
-    }
-  }
-
   const context: SoulConversationContext = {
     visibleSoulFile,
     reflectionNote,
     messages: transcriptMessages,
     openingKind,
-    xaiNews,
     language
   };
 
@@ -191,16 +164,88 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
     body.mode,
     transcriptMessages,
     preferredDomainLabel,
-    xaiNews,
     language
   );
 
+  const acceptHeader = request.headers.get("Accept") || "";
+  const wantsJson = acceptHeader.includes("application/json");
+
+  if (wantsJson) {
+    return handleJsonMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages);
+  }
+
+  return handleSseMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages);
+}
+
+async function handleJsonMode(
+  sql: NeonSQL,
+  env: Env,
+  userId: string,
+  body: z.infer<typeof soulConverseRequestSchema>,
+  context: SoulConversationContext,
+  systemPrompt: string,
+  claudeMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  conversationConfig: ReturnType<typeof getTaskConfig>,
+  profileId: ModelProfileId,
+  openingKind: OpeningKind | null,
+  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<Response> {
+  const llmContext = { profileId, task: "conversation" as const, userId };
+  let fullResponse = "";
+  let attemptCount = 1;
+
+  try {
+    fullResponse = await callLlmText(env, conversationConfig, systemPrompt, claudeMessages, llmContext);
+  } catch (error) {
+    console.error("Conversation call error:", error);
+    try {
+      attemptCount = 2;
+      fullResponse = await callLlmText(env, conversationConfig, systemPrompt, claudeMessages, llmContext);
+    } catch (retryError) {
+      console.error("Conversation call retry failed:", retryError);
+      return jsonResp(503, { code: 503, message: "Service temporarily unavailable" });
+    }
+  }
+
+  const replyContent = stripThinkContent(fullResponse.trim());
+  if (!replyContent) {
+    return jsonResp(503, { code: 503, message: "Service temporarily unavailable" });
+  }
+
+  try {
+    await insertSoulMessage(sql, userId, "assistant", replyContent);
+  } catch (dbError) {
+    console.error("DB write failed for soul message:", dbError);
+    try {
+      await insertSoulMessage(sql, userId, "assistant", replyContent);
+    } catch (retryDbError) {
+      console.error("DB write retry failed:", retryDbError);
+    }
+  }
+
+  runPostResponseTasks(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, fullResponse, attemptCount);
+
+  return jsonResp(200, { role: "assistant", content: replyContent });
+}
+
+async function handleSseMode(
+  sql: NeonSQL,
+  env: Env,
+  userId: string,
+  body: z.infer<typeof soulConverseRequestSchema>,
+  context: SoulConversationContext,
+  systemPrompt: string,
+  claudeMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  conversationConfig: ReturnType<typeof getTaskConfig>,
+  profileId: ModelProfileId,
+  openingKind: OpeningKind | null,
+  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       let fullResponse = "";
       let streamSucceeded = false;
-      let usedFallback = false;
       let attemptCount = 1;
 
       async function runModelAttempt(): Promise<void> {
@@ -235,15 +280,14 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
           streamSucceeded = true;
         } catch (retryError) {
           console.error("Conversation stream retry failed:", retryError);
-          fullResponse = buildSoulFallbackResponse(context);
-          usedFallback = true;
-          streamSucceeded = true;
-          controller.enqueue(encoder.encode(sseEvent("token", { text: fullResponse })));
+          controller.enqueue(encoder.encode(sseEvent("error", {
+            type: "llm_failure",
+            message: "Service temporarily unavailable"
+          })));
         }
       }
 
       if (streamSucceeded && fullResponse.trim().length > 0) {
-        // Safety net: strip any leaked think-tag content before persisting
         const replyContent = stripThinkContent(fullResponse.trim());
         try {
           await insertSoulMessage(sql, userId, "assistant", replyContent);
@@ -260,33 +304,7 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
           }
         }
 
-        const postStreamTasks = await Promise.allSettled([
-          maybeQueueReflectionSnapshot(sql, env, userId),
-          recordClaudeDebugTrace(sql, env, {
-            userId,
-            traceKind: "conversation",
-            model: conversationConfig.model,
-            systemPrompt,
-            inputMessages: claudeMessages,
-            rawResponse: fullResponse,
-            meta: {
-              provider: conversationConfig.provider,
-              model_profile_id: profileId,
-              mode: body.mode,
-              opening_kind: openingKind,
-              attempt_count: attemptCount,
-              used_fallback: usedFallback,
-              message_count: transcriptMessages.length
-            }
-          })
-        ]);
-
-        if (postStreamTasks[0]?.status === "rejected") {
-          console.error("Failed to queue reflection snapshot after conversation:", postStreamTasks[0].reason);
-        }
-        if (postStreamTasks[1]?.status === "rejected") {
-          console.error("Failed to record conversation debug trace:", postStreamTasks[1].reason);
-        }
+        runPostResponseTasks(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, fullResponse, attemptCount);
       }
 
       controller.enqueue(encoder.encode(sseEvent("done", {})));
@@ -295,4 +313,47 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   });
 
   return new Response(stream, { headers: sseHeaders() });
+}
+
+function runPostResponseTasks(
+  sql: NeonSQL,
+  env: Env,
+  userId: string,
+  body: z.infer<typeof soulConverseRequestSchema>,
+  _context: SoulConversationContext,
+  systemPrompt: string,
+  claudeMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  conversationConfig: ReturnType<typeof getTaskConfig>,
+  profileId: ModelProfileId,
+  openingKind: OpeningKind | null,
+  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  fullResponse: string,
+  attemptCount: number
+): void {
+  Promise.allSettled([
+    maybeQueueReflectionSnapshot(sql, env, userId),
+    recordClaudeDebugTrace(sql, env, {
+      userId,
+      traceKind: "conversation",
+      model: conversationConfig.model,
+      systemPrompt,
+      inputMessages: claudeMessages,
+      rawResponse: fullResponse,
+      meta: {
+        provider: conversationConfig.provider,
+        model_profile_id: profileId,
+        mode: body.mode,
+        opening_kind: openingKind,
+        attempt_count: attemptCount,
+        message_count: transcriptMessages.length
+      }
+    })
+  ]).then((results) => {
+    if (results[0]?.status === "rejected") {
+      console.error("Failed to queue reflection snapshot after conversation:", results[0].reason);
+    }
+    if (results[1]?.status === "rejected") {
+      console.error("Failed to record conversation debug trace:", results[1].reason);
+    }
+  });
 }

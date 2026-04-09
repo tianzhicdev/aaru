@@ -41,7 +41,7 @@ interface LlmProviderClient {
 function getFireworksApiKey(env: Env): string {
   const apiKey = env.FIREWORKS_API_KEY;
   if (!apiKey) {
-    throw new Error("Missing Fireworks API key for value_v1 model profile");
+    throw new Error("Missing Fireworks API key for value model profile");
   }
   return apiKey;
 }

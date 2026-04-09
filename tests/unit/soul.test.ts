@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildSoulFallbackResponse,
+  buildDepthGuidance,
   buildSoulSystemPrompt,
   detectSoftSessionGap,
   extractRecentAssistantQuestions
@@ -49,6 +49,8 @@ function makeReflectionNote(overrides: Partial<ReflectionNote> = {}): Reflection
     steerToTopics: [],
     steeringPressure: "minimal",
     steeringReasoning: "",
+    userOpenness: "warming",
+    opennessEvidence: "",
     summary: "",
     ...overrides
   };
@@ -121,42 +123,57 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("What are you protecting with those walls?");
   });
 
-  it("includes opening guidance and current events when provided", () => {
+  it("includes opening guidance when provided", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
-      openingKind: "returning",
-      xaiNews: [
-        { topic: "AI safety", headline: "New regulations proposed", summary: "The EU proposed new AI safety regulations." }
-      ]
+      openingKind: "returning"
     }));
 
     expect(prompt).toContain("OPENING MODE");
-    expect(prompt).toContain("CURRENT CONTEXT");
-    expect(prompt).toContain("AI safety");
   });
 });
 
-describe("buildSoulFallbackResponse", () => {
-  it("returns an opening question for a first conversation", () => {
-    const response = buildSoulFallbackResponse(makeContext({
-      openingKind: "first_ever",
-      reflectionNote: makeReflectionNote({
-        steerToTopics: ["relationships — who gets past the guard"]
-      })
-    }));
-
-    expect(response.length).toBeGreaterThan(20);
-    expect(response).toMatch(/\?$/);
+describe("buildDepthGuidance", () => {
+  it("returns empty for null reflection note", () => {
+    expect(buildDepthGuidance(null)).toBe("");
   });
 
-  it("uses the preferred steer-to topic for returning users when no portrait exists", () => {
-    const response = buildSoulFallbackResponse(makeContext({
-      openingKind: "returning",
-      reflectionNote: makeReflectionNote({
-        steerToTopics: ["origins — the first time they learned to be funny to stay safe"]
-      })
-    }));
+  it("returns guarded guidance for guarded openness", () => {
+    const note = makeReflectionNote({ userOpenness: "guarded" });
+    const guidance = buildDepthGuidance(note);
+    expect(guidance).toContain("light and warm");
+    expect(guidance).toContain("No probing");
+  });
 
-    expect(response).toContain("origins");
+  it("returns warming guidance for warming openness", () => {
+    const note = makeReflectionNote({ userOpenness: "warming" });
+    const guidance = buildDepthGuidance(note);
+    expect(guidance).toContain("Match their pace");
+  });
+
+  it("returns open guidance for open openness", () => {
+    const note = makeReflectionNote({ userOpenness: "open" });
+    const guidance = buildDepthGuidance(note);
+    expect(guidance).toContain("ready for depth");
+  });
+
+  it("returns deep guidance for deep openness", () => {
+    const note = makeReflectionNote({ userOpenness: "deep" });
+    const guidance = buildDepthGuidance(note);
+    expect(guidance).toContain("as deep as they're going");
+  });
+
+  it("defaults to warming when userOpenness is undefined", () => {
+    const note = makeReflectionNote({});
+    const guidance = buildDepthGuidance(note);
+    expect(guidance).toContain("Match their pace");
+  });
+
+  it("injects depth guidance into system prompt", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ userOpenness: "guarded" })
+    }));
+    expect(prompt).toContain("DEPTH GUIDANCE");
+    expect(prompt).toContain("light and warm");
   });
 });
 

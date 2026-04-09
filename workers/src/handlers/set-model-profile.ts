@@ -2,7 +2,7 @@ import { jsonResponse } from "../../../src/lib/http.ts";
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import { updateUserModelProfileId } from "../db.ts";
-import { isModelProfileId } from "../modelProfiles.ts";
+import { normalizeModelProfileId } from "../modelProfiles.ts";
 import { requireDebugApiToken, requireDeviceSession } from "../requestAuth.ts";
 import { z } from "zod";
 
@@ -27,17 +27,12 @@ export async function handleSetModelProfile(
   }
 
   const body = setModelProfileRequestSchema.parse(payload);
-  if (!isModelProfileId(body.model_profile_id)) {
-    return jsonResponse(400, {
-      code: 400,
-      message: `Unknown model profile id: ${body.model_profile_id}`
-    });
-  }
+  const profileId = normalizeModelProfileId(body.model_profile_id);
 
   const modelProfileId = await updateUserModelProfileId(
     sql,
     auth.session.user_id,
-    body.model_profile_id
+    profileId
   );
 
   return jsonResponse(200, {

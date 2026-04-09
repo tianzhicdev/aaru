@@ -139,7 +139,7 @@ describe("bootstrap + sync", () => {
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier");
     vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
@@ -175,7 +175,7 @@ describe("bootstrap + sync", () => {
       id: "new-user",
       device_id: "new-device",
       display_name: "Soul abc1",
-      model_profile_id: "frontier_v1",
+      model_profile_id: "frontier",
       language: "en"
     });
     vi.mocked(issueSessionToken).mockResolvedValue({
@@ -185,7 +185,7 @@ describe("bootstrap + sync", () => {
     });
     vi.mocked(createDeviceSession).mockResolvedValue(mockDeviceSession);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
-    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier");
     vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
       needed: false,
@@ -280,7 +280,7 @@ describe("handleSoulConverse", () => {
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
     vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
-    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier_v1");
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier");
     vi.mocked(getUserLanguage).mockResolvedValue("en");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
@@ -335,7 +335,7 @@ describe("debug routes", () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(getUserModelProfileId).mockResolvedValue("value_v1");
+    vi.mocked(getUserModelProfileId).mockResolvedValue("value_default");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue({
       updatedAt: "2026-03-31T00:00:00Z",
       domainCoverage: [
@@ -347,6 +347,8 @@ describe("debug routes", () => {
       steerToTopics: ["relationships — the guard around intimacy"],
       steeringPressure: "gentle",
       steeringReasoning: "The current thread is cooling.",
+      userOpenness: "warming",
+      opennessEvidence: "Testing trust with medium-length responses.",
       summary: "They're drifting at work and using humor as armor."
     });
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
@@ -363,7 +365,7 @@ describe("debug routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("model_profile_id", "value_v1");
+    expect(response.body).toHaveProperty("model_profile_id", "value_default");
     expect(response.body).toHaveProperty("steering_preview.steer_to_topics");
   });
 
@@ -371,12 +373,12 @@ describe("debug routes", () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
-    vi.mocked(updateUserModelProfileId).mockResolvedValue("value_v1");
+    vi.mocked(updateUserModelProfileId).mockResolvedValue("value_default");
 
     const response = await handleSetModelProfile(
       mockSQL,
       mockEnv,
-      { model_profile_id: "value_v1" },
+      { model_profile_id: "value_default" },
       makeRequest({
         "x-thumos-session": "valid-token",
         "x-thumos-debug-token": "debug-token"
@@ -384,7 +386,7 @@ describe("debug routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("model_profile_id", "value_v1");
-    expect(updateUserModelProfileId).toHaveBeenCalledWith(mockSQL, "user-1", "value_v1");
+    expect(response.body).toHaveProperty("model_profile_id", "value_default");
+    expect(updateUserModelProfileId).toHaveBeenCalledWith(mockSQL, "user-1", "value_default");
   });
 });

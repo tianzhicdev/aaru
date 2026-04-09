@@ -6,7 +6,7 @@ struct DebugView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var deviceIDInput = ""
     @State private var selectedEnvironment = BackendEnvironmentKind.dev
-    @State private var selectedModelProfileID = "frontier_v1"
+    @State private var selectedModelProfileID = "value_default"
     @State private var customBaseURLInput = ""
     @State private var debugTokenInput = ""
     @State private var backendStatusMessage: String?
@@ -94,8 +94,9 @@ struct DebugView: View {
             return options
         }
         return [
-            DebugModelProfileOption(id: "frontier_v1", label: "Current Anthropic frontier stack"),
-            DebugModelProfileOption(id: "value_v1", label: "Fireworks DeepSeek value stack")
+            DebugModelProfileOption(id: "value_default", label: "Kimi K2 Thinking"),
+            DebugModelProfileOption(id: "value_cjk", label: "DeepSeek V3.2 (CJK)"),
+            DebugModelProfileOption(id: "frontier", label: "Anthropic frontier stack")
         ]
     }
 

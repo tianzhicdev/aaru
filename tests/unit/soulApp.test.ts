@@ -12,7 +12,7 @@ vi.mock("../../workers/src/db.ts", async (importOriginal) => {
   return {
     ...actual,
     createSQL: vi.fn(() => mockSQL),
-    getUserModelProfileId: vi.fn().mockResolvedValue("frontier_v1"),
+    getUserModelProfileId: vi.fn().mockResolvedValue("frontier"),
     getUserLanguage: vi.fn().mockResolvedValue("en")
   };
 });

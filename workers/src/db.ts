@@ -35,7 +35,7 @@ export interface DeviceSessionRow {
 export async function ensureUser(
   sql: NeonSQL,
   deviceId: string,
-  modelProfileId: ModelProfileId = "frontier_v1"
+  modelProfileId: ModelProfileId = "value_default"
 ): Promise<UserRow> {
   const rows = await sql`
     INSERT INTO users (device_id, display_name, model_profile_id)

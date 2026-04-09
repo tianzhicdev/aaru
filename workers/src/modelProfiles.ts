@@ -1,4 +1,4 @@
-export type ModelProfileId = "frontier_v1" | "value_v1" | "value_v2";
+export type ModelProfileId = "frontier" | "value_cjk" | "value_default";
 export type ModelProvider = "anthropic" | "fireworks_openai";
 export type ModelTask =
   | "conversation"
@@ -30,12 +30,19 @@ export interface ModelProfileOption {
   label: string;
 }
 
-export const DEFAULT_MODEL_PROFILE_ID: ModelProfileId = "value_v2";
+export const DEFAULT_MODEL_PROFILE_ID: ModelProfileId = "value_default";
+
+const CJK_LANGUAGES = new Set(["zh-CN", "ja", "ko"]);
+
+export function profileForLanguage(language?: string | null): ModelProfileId {
+  if (language && CJK_LANGUAGES.has(language)) return "value_cjk";
+  return "value_default";
+}
 
 const PROFILES: Record<ModelProfileId, ModelProfile> = {
-  frontier_v1: {
-    id: "frontier_v1",
-    label: "Current Anthropic frontier stack",
+  frontier: {
+    id: "frontier",
+    label: "Anthropic frontier stack",
     tasks: {
       conversation: {
         provider: "anthropic",
@@ -75,9 +82,9 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
       }
     }
   },
-  value_v1: {
-    id: "value_v1",
-    label: "Fireworks DeepSeek value stack",
+  value_cjk: {
+    id: "value_cjk",
+    label: "DeepSeek V3.2 (CJK)",
     tasks: {
       conversation: {
         provider: "fireworks_openai",
@@ -123,9 +130,9 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
       }
     }
   },
-  value_v2: {
-    id: "value_v2",
-    label: "Fireworks Kimi K2 Thinking value stack",
+  value_default: {
+    id: "value_default",
+    label: "Kimi K2 Thinking",
     tasks: {
       conversation: {
         provider: "fireworks_openai",
@@ -180,7 +187,9 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
 };
 
 export function normalizeModelProfileId(value: unknown): ModelProfileId {
-  if (value === "value_v1" || value === "value_v2" || value === "frontier_v1") return value;
+  if (value === "frontier" || value === "frontier_v1") return "frontier";
+  if (value === "value_cjk" || value === "value_v1") return "value_cjk";
+  if (value === "value_default" || value === "value_v2") return "value_default";
   return DEFAULT_MODEL_PROFILE_ID;
 }
 
@@ -195,7 +204,7 @@ export function getModelProfile(profileId: ModelProfileId): ModelProfile {
 }
 
 export function isModelProfileId(value: unknown): value is ModelProfileId {
-  return value === "frontier_v1" || value === "value_v1" || value === "value_v2";
+  return value === "frontier" || value === "value_cjk" || value === "value_default";
 }
 
 export function listModelProfiles(): ModelProfileOption[] {

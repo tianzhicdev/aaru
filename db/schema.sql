@@ -9,7 +9,8 @@ CREATE TABLE public.users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id text NOT NULL UNIQUE,
   display_name text NOT NULL DEFAULT 'Wandering Soul',
-  model_profile_id text NOT NULL DEFAULT 'frontier_v1',
+  model_profile_id text NOT NULL DEFAULT 'value_default'
+    CHECK (model_profile_id IN ('frontier', 'value_cjk', 'value_default')),
   last_active_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()

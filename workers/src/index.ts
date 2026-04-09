@@ -3,7 +3,9 @@ import { createSQL } from "./db.ts";
 import type { BackgroundJob, QueueBatch } from "./backgroundJobsQueue.ts";
 import { processBackgroundJobsBatch } from "./backgroundJobsQueue.ts";
 
-interface ExecutionContext {}
+interface ExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
 interface ScheduledEvent {
   cron: string;
   scheduledTime: number;
@@ -63,7 +65,7 @@ export default {
         );
 
       case "soul-converse":
-        return handleSoulConverse(sql, env, request);
+        return handleSoulConverse(sql, env, request, _ctx);
 
       case "get-soul-file":
         return withErrorHandling(request, (payload, req) =>

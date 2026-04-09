@@ -175,11 +175,13 @@ if [[ -z "$ENABLE_DEBUG_TRACES_VALUE" && "$TARGET" == "dev" ]]; then
 fi
 
 [[ -n "$THUMOS_SESSION_SECRET_VALUE" ]] || die "Missing THUMOS_SESSION_SECRET for $TARGET"
+[[ -n "$DEFAULT_MODEL_PROFILE_ID_VALUE" ]] || die "Missing DEFAULT_MODEL_PROFILE_ID for $TARGET"
 
 export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN_VALUE"
 export CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID_VALUE"
 
 echo "Deploy target: $TARGET"
+echo "Default model profile: $DEFAULT_MODEL_PROFILE_ID_VALUE"
 ensure_queue
 
 echo "Syncing Worker secrets"

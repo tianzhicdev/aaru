@@ -19,6 +19,8 @@ export function emptyReflectionNote(): ReflectionNote {
     steerToTopics: [],
     steeringPressure: "minimal",
     steeringReasoning: "",
+    userOpenness: "warming",
+    opennessEvidence: "",
     summary: ""
   };
 }

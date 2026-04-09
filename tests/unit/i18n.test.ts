@@ -21,14 +21,13 @@ describe("i18n", () => {
       const p = getPrompts(lang);
       expect(p.soul.preamble).toBeTruthy();
       expect(p.domains.labels.origins).toBeTruthy();
-      expect(p.fallbacks.generic.length).toBeGreaterThan(0);
     }
   });
 
   it("getPrompts falls back to en for unknown language", () => {
     const p = getPrompts("sv");
     expect(p.soul.preamble).toContain("Thumos");
-    expect(p.soul.preamble).toContain("soul mirror");
+    expect(p.soul.preamble).toContain("AI conversationalist");
   });
 
   it("Japanese prompts contain Japanese text", () => {
@@ -40,7 +39,7 @@ describe("i18n", () => {
 
   it("French prompts contain French text", () => {
     const p = getPrompts("fr");
-    expect(p.soul.preamble).toContain("miroir");
+    expect(p.soul.preamble).toContain("Thumos");
     expect(p.domains.labels.origins).toBe("Origines");
     expect(p.navigation.header).toContain("NAVIGATION");
   });

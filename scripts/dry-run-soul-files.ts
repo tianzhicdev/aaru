@@ -132,7 +132,8 @@ function scaleSessionPlan(totalExchanges: number): number[] {
 
 function serverHeaders(sessionToken?: string): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "Accept": "application/json"
   };
   if (sessionToken) {
     headers["x-thumos-session"] = sessionToken;
@@ -151,7 +152,17 @@ async function serverPost(endpoint: string, body: unknown, sessionToken?: string
   });
 }
 
-async function readSSEResponse(res: Response): Promise<string> {
+async function readConverseResponse(res: Response): Promise<string> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const payload = await res.json() as { content?: string };
+    const content = typeof payload.content === "string" ? payload.content : "";
+    if (content) {
+      process.stdout.write(content);
+    }
+    return content;
+  }
+
   const body = res.body;
   if (!body) {
     throw new Error("No response body from soul-converse");
@@ -521,7 +532,7 @@ async function runCharacter(
     }
 
     process.stdout.write("  Thumos: ");
-    let openingText = await readSSEResponse(openingRes);
+    let openingText = await readConverseResponse(openingRes);
     console.log();
 
     if (!openingText.trim()) {
@@ -555,13 +566,13 @@ async function runCharacter(
           break;
         }
         process.stdout.write("  Thumos: ");
-        const retryText = await readSSEResponse(retryRes);
+        const retryText = await readConverseResponse(retryRes);
         console.log();
         conversation.push({ role: "assistant", content: retryText || "(no response)", exchange: globalExchange, session: sessionNum });
         continue;
       }
 
-      let thumosResponse = await readSSEResponse(converseRes);
+      let thumosResponse = await readConverseResponse(converseRes);
       if (!thumosResponse.trim()) {
         thumosResponse = "(reflection)";
         console.log("  [fallback] Thumos returned empty response");
@@ -618,7 +629,7 @@ async function runCharacter(
     const openingAgainRes = await serverPost("soul-converse", { mode: "opening" }, token);
     if (openingAgainRes.ok) {
       process.stdout.write("  [opening] ");
-      const openingAgainText = await readSSEResponse(openingAgainRes);
+      const openingAgainText = await readConverseResponse(openingAgainRes);
       console.log();
       if (openingAgainText && openingAgainText.length > 10) {
         followupOpening = openingAgainText;

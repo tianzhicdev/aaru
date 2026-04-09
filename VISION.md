@@ -100,13 +100,18 @@ each step we should invoke claude code.
 
 On Implementation
 
+0. users can not see other users conversations or soul files without debug build or debug secret. 
+
 1. we use device it to identify user id. everything else is connected to user id. 
 2. for the server code, all model profiles share the same interface using wrappers. it is easy to add new model profiles or backend llm apis using the same interface. 
 3. for conversations between thumos and users, we use streaming from LLM api and SSE to the ios device with no reponse_format. 
 4. for reflective note and soul files we force response schema
 5. we have a queue for reflective note, hidden soul file and visible soul file. 
 6. reflective note, hidden soul file and visible soul file are all versioned but only the latest ones can be used.
-
+7. for reflective note, all messages are included and it is executed every 3 messages. input for hidden soul file and visible soul file is simply all messaeges too.  
+8. soul file must be 70% complete before the users can enable the social feature.
+9. users can select name, age, gender, location for themselves and preferred age + gender, once the social feature is enabled. 
+10. 
 
 
 

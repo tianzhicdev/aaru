@@ -70,8 +70,8 @@ Required Worker runtime secrets:
 
 Optional worker secrets:
 
-- `FIREWORKS_API_KEY` for the `value_v1` open-model profile
-- `DEFAULT_MODEL_PROFILE_ID` to choose the default profile for newly created users (`frontier_v1` by default)
+- `FIREWORKS_API_KEY` for the `value_default` and `value_cjk` open-model profiles
+- `DEFAULT_MODEL_PROFILE_ID` to choose the default profile for newly created users (`value_default` by default)
 - `XAI_TOKEN` for opening-mode current-events context
 - `DEBUG_API_TOKEN` to unlock the debug endpoints
 - `ENABLE_DEBUG_TRACES=true` to persist raw LLM traces for debug inspection

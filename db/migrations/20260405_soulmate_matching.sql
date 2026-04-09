@@ -1,5 +1,5 @@
 -- Soulmate profiles (demographics + preferences)
-CREATE TABLE soulmate_profiles (
+CREATE TABLE IF NOT EXISTS soulmate_profiles (
   user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   age int NOT NULL CHECK (age >= 18),
   gender text NOT NULL CHECK (gender IN ('male', 'female', 'non_binary')),
@@ -14,7 +14,7 @@ CREATE TABLE soulmate_profiles (
 );
 
 -- All match attempts (the golden table)
-CREATE TABLE matches (
+CREATE TABLE IF NOT EXISTS matches (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_a_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   user_b_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -26,8 +26,8 @@ CREATE TABLE matches (
   CONSTRAINT matches_ordered CHECK (user_a_id < user_b_id),
   UNIQUE (user_a_id, user_b_id, a_soul_version, b_soul_version)
 );
-CREATE INDEX idx_matches_user_a ON matches(user_a_id);
-CREATE INDEX idx_matches_user_b ON matches(user_b_id);
+CREATE INDEX IF NOT EXISTS idx_matches_user_a ON matches(user_a_id);
+CREATE INDEX IF NOT EXISTS idx_matches_user_b ON matches(user_b_id);
 
 -- Completeness on visible soul files (part of the soul file itself)
 ALTER TABLE visible_soul_files ADD COLUMN IF NOT EXISTS completeness float DEFAULT 0;

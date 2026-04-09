@@ -30,49 +30,19 @@ async function converse(body, token) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      accept: "text/event-stream",
+      accept: "application/json",
       "x-thumos-session": token,
       ...(debugToken ? { "x-thumos-debug-token": debugToken } : {})
     },
     body: JSON.stringify(body)
   });
 
-  if (!response.ok || !response.body) {
-    throw new Error(`SSE failed: ${response.status} ${await response.text()}`);
+  if (!response.ok) {
+    throw new Error(`Converse failed: ${response.status} ${await response.text()}`);
   }
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let currentEvent = "message";
-  let fullText = "";
-
-  for await (const chunk of response.body) {
-    buffer += decoder.decode(chunk, { stream: true });
-    while (buffer.includes("\n\n")) {
-      const index = buffer.indexOf("\n\n");
-      const frame = buffer.slice(0, index);
-      buffer = buffer.slice(index + 2);
-
-      for (const line of frame.split("\n")) {
-        if (line.startsWith("event: ")) {
-          currentEvent = line.slice(7).trim();
-          continue;
-        }
-        if (!line.startsWith("data: ")) {
-          continue;
-        }
-
-        const payload = JSON.parse(line.slice(6));
-        if (currentEvent === "token" && payload.text) {
-          fullText += payload.text;
-        }
-      }
-
-      currentEvent = "message";
-    }
-  }
-
-  return fullText.trim();
+  const payload = await response.json();
+  return String(payload.content ?? "").trim();
 }
 
 function assert(condition, message) {

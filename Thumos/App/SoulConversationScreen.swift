@@ -109,18 +109,17 @@ struct SoulConversationScreen: View {
                         }
                     }
 
-                    // Streaming indicator
-                    if model.isSoulStreaming && !model.soulStreamingText.isEmpty {
-                        streamingBubble
-                            .id("streaming")
-                    } else if model.isSoulStreaming {
-                        typingIndicator
-                            .id("typing")
+                    // Thinking indicator
+                    if model.isSoulStreaming {
+                        thinkingIndicator
+                            .id("thinking")
                     }
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .defaultScrollAnchor(.bottom)
             .onTapGesture {
                 isInputFocused = false
             }
@@ -131,9 +130,13 @@ struct SoulConversationScreen: View {
                     }
                 }
             }
-            .onChange(of: model.soulStreamingText) {
-                withAnimation {
-                    proxy.scrollTo("streaming", anchor: .bottom)
+            .onChange(of: isInputFocused) {
+                if isInputFocused, let last = model.soulMessages.last {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
                 }
             }
         }
@@ -312,31 +315,17 @@ struct SoulConversationScreen: View {
         .padding(.horizontal, 40)
     }
 
-    private var streamingBubble: some View {
-        HStack {
-            Text(model.soulStreamingText)
-                .font(Theme.serif(19))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Theme.assistantBubble)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+    @State private var thinkingDotPhase = 0
 
-            Spacer(minLength: 60)
-        }
-    }
-
-    @State private var typingDotPhase = 0
-
-    private var typingIndicator: some View {
+    private var thinkingIndicator: some View {
         HStack {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(Theme.textSecondary.opacity(typingDotPhase == i ? 1.0 : 0.4))
+                        .fill(Theme.textSecondary.opacity(thinkingDotPhase == i ? 1.0 : 0.4))
                         .frame(width: 6, height: 6)
-                        .scaleEffect(typingDotPhase == i ? 1.3 : 1.0)
-                        .animation(.easeInOut(duration: 0.3), value: typingDotPhase)
+                        .scaleEffect(thinkingDotPhase == i ? 1.3 : 1.0)
+                        .animation(.easeInOut(duration: 0.3), value: thinkingDotPhase)
                 }
             }
             .padding(.horizontal, 16)
@@ -346,7 +335,7 @@ struct SoulConversationScreen: View {
             .task {
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(400))
-                    typingDotPhase = (typingDotPhase + 1) % 3
+                    thinkingDotPhase = (thinkingDotPhase + 1) % 3
                 }
             }
 

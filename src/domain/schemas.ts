@@ -97,6 +97,15 @@ export type SteeringPressure = z.infer<typeof steeringPressureSchema>;
 
 // ── Reflection Note ───────────────────────────────────────────
 
+export const userOpennessSchema = z.enum([
+  "guarded",
+  "warming",
+  "open",
+  "deep"
+]);
+
+export type UserOpenness = z.infer<typeof userOpennessSchema>;
+
 export const reflectionNoteSchema = z.object({
   updatedAt: z.string().default(""),
 
@@ -108,6 +117,10 @@ export const reflectionNoteSchema = z.object({
   steerToTopics: z.array(z.string()).default([]),
   steeringPressure: steeringPressureSchema.default("minimal"),
   steeringReasoning: z.string().default(""),
+
+  // Depth matching
+  userOpenness: userOpennessSchema.default("warming"),
+  opennessEvidence: z.string().default(""),
 
   // Summary (plain text narrative)
   summary: z.string().default("")

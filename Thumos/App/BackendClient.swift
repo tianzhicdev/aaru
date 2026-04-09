@@ -100,61 +100,39 @@ final class BackendClient {
         )
     }
 
-    func soulConverseStream(
+    func soulConverse(
         mode: SoulConverseMode,
-        message: String? = nil,
-        onToken: @escaping (String) -> Void,
-        onError: @escaping (String) -> Void
-    ) async throws {
+        message: String? = nil
+    ) async throws -> SoulConverseResponse {
         guard let url = endpoint(named: "soul-converse") else {
-            let fallback = "I see you. What's something most people don't notice about you?"
-            for char in fallback {
-                onToken(String(char))
-                try? await Task.sleep(for: .milliseconds(20))
-            }
-            return
+            return SoulConverseResponse(role: "assistant", content: "I see you. What's something most people don't notice about you?")
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        // Opus can take a while to produce the first streamed token.
         request.timeoutInterval = 300
         let body = SoulConverseRequest(mode: mode.rawValue, message: message)
         request.httpBody = try encoder.encode(body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let sessionToken {
             request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
         }
 
-        let (bytes, response) = try await session.bytes(for: request)
+        let (data, response) = try await session.data(for: request)
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
 
         if statusCode == 401 || statusCode == 403 {
-            logger.error("Auth failure in SSE stream: \(statusCode)")
+            logger.error("Auth failure in soul converse: \(statusCode)")
             throw BackendError.authenticationFailed
         }
 
         guard statusCode == 200 else {
-            throw BackendError.invalidResponse(statusCode: statusCode, message: "SSE stream failed")
+            let errorMessage = String(data: data, encoding: .utf8) ?? ""
+            throw BackendError.invalidResponse(statusCode: statusCode, message: errorMessage)
         }
 
-        for try await line in bytes.lines {
-            if line.hasPrefix("event: ") {
-                continue
-            }
-            guard line.hasPrefix("data: ") else { continue }
-            let jsonString = String(line.dropFirst(6))
-            guard let jsonData = jsonString.data(using: .utf8) else { continue }
-
-            if let tokenEvent = try? decoder.decode(SSETokenEvent.self, from: jsonData),
-               tokenEvent.text != nil {
-                onToken(tokenEvent.text!)
-            } else if let errorEvent = try? decoder.decode(SSEErrorEvent.self, from: jsonData),
-                      errorEvent.message != nil {
-                onError(errorEvent.message!)
-            }
-        }
+        return try decoder.decode(SoulConverseResponse.self, from: data)
     }
 
     func checkVersion() async throws -> VersionCheckResponse {
@@ -432,13 +410,9 @@ private struct SoulConverseRequest: Encodable {
     let message: String?
 }
 
-// MARK: - SSE Event Types
+// MARK: - Soul Converse Response
 
-private struct SSETokenEvent: Decodable {
-    let text: String?
-}
-
-private struct SSEErrorEvent: Decodable {
-    let type: String?
-    let message: String?
+struct SoulConverseResponse: Decodable {
+    let role: String
+    let content: String
 }

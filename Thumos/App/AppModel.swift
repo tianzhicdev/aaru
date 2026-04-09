@@ -338,27 +338,27 @@ final class AppModel: ObservableObject {
         await sendSoulMessage(lastUserMessage.content)
     }
 
+    private static let minimumResponseTime: TimeInterval = 6.0
+
     private func performSoulConverse(message: String? = nil, mode: SoulConverseMode) async throws {
-        try await backend.soulConverseStream(
+        let startTime = Date()
+
+        let response = try await backend.soulConverse(
             mode: mode,
-            message: message,
-            onToken: { [weak self] token in
-                Task { @MainActor in
-                    self?.soulStreamingText += token
-                }
-            },
-            onError: { [weak self] message in
-                Task { @MainActor in
-                    self?.logger.error("SSE error: \(message, privacy: .public)")
-                }
-            }
+            message: message
         )
 
-        if !soulStreamingText.isEmpty {
+        // Enforce minimum response time so replies feel human, not instant
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed < Self.minimumResponseTime {
+            try? await Task.sleep(for: .seconds(Self.minimumResponseTime - elapsed))
+        }
+
+        if !response.content.isEmpty {
             let assistantMessage = SoulMessage(
                 id: "local-\(UUID().uuidString)",
                 role: "assistant",
-                content: soulStreamingText,
+                content: response.content,
                 createdAt: iso8601Formatter.string(from: Date())
             )
             soulMessages.append(assistantMessage)

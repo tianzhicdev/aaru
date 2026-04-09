@@ -26,6 +26,10 @@ import { requireDeviceSession } from "../requestAuth.ts";
 import { stripThinkContent } from "../openaiCompatible.ts";
 import { z } from "zod";
 
+interface WaitUntilContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
 const soulConverseRequestSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("opening")
@@ -97,7 +101,12 @@ async function maybeQueueReflectionSnapshot(sql: NeonSQL, env: Env, userId: stri
   await enqueueReflectionSnapshot(env.BACKGROUND_QUEUE, userId, state.totalMessageCount);
 }
 
-export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Request): Promise<Response> {
+export async function handleSoulConverse(
+  sql: NeonSQL,
+  env: Env,
+  request: Request,
+  ctx?: WaitUntilContext
+): Promise<Response> {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: sseHeaders() });
   }
@@ -171,10 +180,10 @@ export async function handleSoulConverse(sql: NeonSQL, env: Env, request: Reques
   const wantsJson = acceptHeader.includes("application/json");
 
   if (wantsJson) {
-    return handleJsonMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages);
+    return handleJsonMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, ctx);
   }
 
-  return handleSseMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages);
+  return handleSseMode(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, ctx);
 }
 
 async function handleJsonMode(
@@ -188,7 +197,8 @@ async function handleJsonMode(
   conversationConfig: ReturnType<typeof getTaskConfig>,
   profileId: ModelProfileId,
   openingKind: OpeningKind | null,
-  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>
+  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  ctx?: WaitUntilContext
 ): Promise<Response> {
   const llmContext = { profileId, task: "conversation" as const, userId };
   let fullResponse = "";
@@ -223,7 +233,24 @@ async function handleJsonMode(
     }
   }
 
-  runPostResponseTasks(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, fullResponse, attemptCount);
+  schedulePostResponseTasks(
+    ctx,
+    runPostResponseTasks(
+      sql,
+      env,
+      userId,
+      body,
+      context,
+      systemPrompt,
+      claudeMessages,
+      conversationConfig,
+      profileId,
+      openingKind,
+      transcriptMessages,
+      fullResponse,
+      attemptCount
+    )
+  );
 
   return jsonResp(200, { role: "assistant", content: replyContent });
 }
@@ -239,7 +266,8 @@ async function handleSseMode(
   conversationConfig: ReturnType<typeof getTaskConfig>,
   profileId: ModelProfileId,
   openingKind: OpeningKind | null,
-  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>
+  transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  ctx?: WaitUntilContext
 ): Promise<Response> {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -304,7 +332,24 @@ async function handleSseMode(
           }
         }
 
-        runPostResponseTasks(sql, env, userId, body, context, systemPrompt, claudeMessages, conversationConfig, profileId, openingKind, transcriptMessages, fullResponse, attemptCount);
+        schedulePostResponseTasks(
+          ctx,
+          runPostResponseTasks(
+            sql,
+            env,
+            userId,
+            body,
+            context,
+            systemPrompt,
+            claudeMessages,
+            conversationConfig,
+            profileId,
+            openingKind,
+            transcriptMessages,
+            fullResponse,
+            attemptCount
+          )
+        );
       }
 
       controller.enqueue(encoder.encode(sseEvent("done", {})));
@@ -315,7 +360,19 @@ async function handleSseMode(
   return new Response(stream, { headers: sseHeaders() });
 }
 
-function runPostResponseTasks(
+function schedulePostResponseTasks(
+  ctx: WaitUntilContext | undefined,
+  task: Promise<void>
+): void {
+  if (ctx) {
+    ctx.waitUntil(task);
+    return;
+  }
+
+  void task;
+}
+
+async function runPostResponseTasks(
   sql: NeonSQL,
   env: Env,
   userId: string,
@@ -329,8 +386,8 @@ function runPostResponseTasks(
   transcriptMessages: Array<{ role: "user" | "assistant"; content: string }>,
   fullResponse: string,
   attemptCount: number
-): void {
-  Promise.allSettled([
+): Promise<void> {
+  const results = await Promise.allSettled([
     maybeQueueReflectionSnapshot(sql, env, userId),
     recordClaudeDebugTrace(sql, env, {
       userId,
@@ -348,12 +405,12 @@ function runPostResponseTasks(
         message_count: transcriptMessages.length
       }
     })
-  ]).then((results) => {
-    if (results[0]?.status === "rejected") {
-      console.error("Failed to queue reflection snapshot after conversation:", results[0].reason);
-    }
-    if (results[1]?.status === "rejected") {
-      console.error("Failed to record conversation debug trace:", results[1].reason);
-    }
-  });
+  ]);
+
+  if (results[0]?.status === "rejected") {
+    console.error("Failed to queue reflection snapshot after conversation:", results[0].reason);
+  }
+  if (results[1]?.status === "rejected") {
+    console.error("Failed to record conversation debug trace:", results[1].reason);
+  }
 }

@@ -33,6 +33,12 @@ When two matched users speak different languages, the match reasoning should ide
 - Update `get-matches` handler to return the appropriate reasoning based on which user is requesting
 - If both users share the same language, both reasoning strings will be identical (still two calls for simplicity)
 
+## Deferred: Raise Soulmate Matching Threshold
+
+The current soulmate matching gate is 70% soul file completeness, which may be too low — users could match before they've had enough meaningful conversation. Consider replacing or supplementing with a minimum message count (e.g., 30–50 messages) to ensure soul files are substantive before matching.
+
+**When to revisit:** Before scaling the user base or if early matches feel shallow.
+
 ## Tomorrow
 
 - Create a new Cloudflare account for stronger prod/dev isolation.

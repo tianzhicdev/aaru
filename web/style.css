@@ -289,11 +289,11 @@ a {
 .hero-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: clamp(3.75rem, 8vw, 6.8rem);
+  font-size: clamp(3.15rem, 7vw, 5.85rem);
   font-weight: 700;
   line-height: 0.86;
   letter-spacing: -0.05em;
-  max-width: 8ch;
+  max-width: 10.5ch;
   text-wrap: balance;
 }
 
@@ -858,7 +858,7 @@ a {
   }
 
   .hero-title {
-    font-size: clamp(3.05rem, 14vw, 4.2rem);
+    font-size: clamp(2.7rem, 12vw, 3.9rem);
   }
 
   .hero-panel,

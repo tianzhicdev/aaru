@@ -26,6 +26,7 @@ function checkMonitoringAuth(
 }
 
 interface RecentMessage {
+  userId: string;
   role: string;
   content: string;
   createdAt: string;
@@ -50,7 +51,7 @@ export async function fetchStats(sql: NeonSQL): Promise<Stats> {
       sql`SELECT COUNT(*) AS n FROM users`,
       sql`SELECT COUNT(*) AS n FROM soul_messages`,
       sql`SELECT COUNT(*) AS n FROM matches WHERE result = 'match'`,
-      sql`SELECT role, content, created_at FROM soul_messages ORDER BY created_at DESC LIMIT 50`,
+      sql`SELECT user_id, role, content, created_at FROM soul_messages ORDER BY created_at DESC LIMIT 50`,
     ]);
 
   return {
@@ -61,6 +62,7 @@ export async function fetchStats(sql: NeonSQL): Promise<Stats> {
     totalMessages: Number(totalMessages[0].n),
     totalMatches: Number(totalMatches[0].n),
     recentMessages: recentRows.map((r: any) => ({
+      userId: String(r.user_id),
       role: String(r.role),
       content: String(r.content),
       createdAt: String(r.created_at),
@@ -91,7 +93,7 @@ function renderDashboard(stats: Stats): string {
   .msg .role { font-weight: 600; color: #aaa; text-transform: uppercase; font-size: 0.7rem; }
   .msg .role.assistant { color: #7b9ff0; }
   .msg .role.user { color: #a0d995; }
-  .msg .body { font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 6rem; overflow: hidden; }
+  .msg .body { font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
   .ts { margin-top: 2rem; font-size: 0.75rem; color: #555; }
 </style>
 </head>
@@ -117,7 +119,7 @@ function renderDashboard(stats: Stats): string {
   <h2>Latest Messages</h2>
   <div class="messages">
     ${stats.recentMessages.map(m => `<div class="msg">
-      <div class="meta"><span class="role ${esc(m.role)}">${esc(m.role)}</span> &middot; ${esc(m.createdAt)}</div>
+      <div class="meta"><span class="role ${esc(m.role)}">${esc(m.role)}</span> &middot; ${esc(m.userId.slice(0, 8))} &middot; ${esc(m.createdAt)}</div>
       <div class="body">${esc(m.content)}</div>
     </div>`).join("\n    ")}
   </div>

@@ -91,8 +91,8 @@ describe("handleMonitoring", () => {
         .mockResolvedValueOnce([{ n: "999" }]) // total messages
         .mockResolvedValueOnce([{ n: "12" }])  // total matches
         .mockResolvedValueOnce([              // recent messages
-          { role: "user", content: "hello world", created_at: "2026-04-10T00:00:00Z" },
-          { role: "assistant", content: "hi there", created_at: "2026-04-10T00:00:01Z" },
+          { user_id: "u-abc", role: "user", content: "hello world", created_at: "2026-04-10T00:00:00Z" },
+          { user_id: "u-abc", role: "assistant", content: "hi there", created_at: "2026-04-10T00:00:01Z" },
         ]);
 
       const res = await handleMonitoring(
@@ -124,7 +124,7 @@ describe("fetchStats", () => {
       .mockResolvedValueOnce([{ n: "50" }])
       .mockResolvedValueOnce([{ n: "500" }])
       .mockResolvedValueOnce([{ n: "8" }])
-      .mockResolvedValueOnce([{ role: "user", content: "test", created_at: "2026-04-10T00:00:00Z" }]);
+      .mockResolvedValueOnce([{ user_id: "u-xyz", role: "user", content: "test", created_at: "2026-04-10T00:00:00Z" }]);
 
     const stats = await fetchStats(sql);
     expect(stats).toEqual({
@@ -134,7 +134,7 @@ describe("fetchStats", () => {
       totalUsers: 50,
       totalMessages: 500,
       totalMatches: 8,
-      recentMessages: [{ role: "user", content: "test", createdAt: "2026-04-10T00:00:00Z" }],
+      recentMessages: [{ userId: "u-xyz", role: "user", content: "test", createdAt: "2026-04-10T00:00:00Z" }],
     });
   });
 });

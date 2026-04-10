@@ -135,9 +135,16 @@ export async function handleMonitoring(
   const authErr = checkMonitoringAuth(request, env);
   if (authErr) return authErr;
 
-  const stats = await fetchStats(sql);
-  return new Response(renderDashboard(stats), {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+  try {
+    const stats = await fetchStats(sql);
+    return new Response(renderDashboard(stats), {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  } catch (err) {
+    return new Response(`Error: ${err instanceof Error ? err.message : String(err)}`, {
+      status: 500,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
 }

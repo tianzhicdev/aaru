@@ -15,7 +15,11 @@ struct SoulConversationScreen: View {
         SupportedLanguage(code: "en", label: "English"),
         SupportedLanguage(code: "zh-CN", label: "中文"),
         SupportedLanguage(code: "ja", label: "日本語"),
-        SupportedLanguage(code: "fr", label: "Français")
+        SupportedLanguage(code: "fr", label: "Français"),
+        SupportedLanguage(code: "es", label: "Español"),
+        SupportedLanguage(code: "ko", label: "한국어"),
+        SupportedLanguage(code: "pt-BR", label: "Português"),
+        SupportedLanguage(code: "de", label: "Deutsch")
     ]
 
     private var isWelcomeState: Bool {
@@ -225,24 +229,27 @@ struct SoulConversationScreen: View {
     }
 
     private var languagePicker: some View {
-        HStack(spacing: 12) {
-            ForEach(Self.supportedLanguages, id: \.code) { lang in
-                Button {
-                    Task { await model.updateLanguage(lang.code) }
-                } label: {
-                    Text(lang.label)
-                        .font(Theme.sans(15, weight: model.language == lang.code ? .medium : .light))
-                        .foregroundStyle(model.language == lang.code ? .white : Theme.textSecondary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            model.language == lang.code
-                                ? AnyShapeStyle(Theme.accentBright)
-                                : AnyShapeStyle(Theme.surface)
-                        )
-                        .clipShape(Capsule())
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(Self.supportedLanguages, id: \.code) { lang in
+                    Button {
+                        Task { await model.updateLanguage(lang.code) }
+                    } label: {
+                        Text(lang.label)
+                            .font(Theme.sans(14, weight: model.language == lang.code ? .medium : .light))
+                            .foregroundStyle(model.language == lang.code ? .white : Theme.textSecondary)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                model.language == lang.code
+                                    ? AnyShapeStyle(Theme.accentBright)
+                                    : AnyShapeStyle(Theme.surface)
+                            )
+                            .clipShape(Capsule())
+                    }
                 }
             }
+            .padding(.horizontal, 16)
         }
     }
 

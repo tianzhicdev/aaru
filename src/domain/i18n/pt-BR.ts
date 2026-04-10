@@ -187,7 +187,7 @@ Esta pessoa está voltando. Abra com uma única pergunta direcionada que siga a 
   },
 
   handler: {
-    firstEverInstruction: `Comece a primeira conversa com algo leve e fácil de responder — nada de vulnerabilidade profunda ainda. Pense numa energia descontraída de quem está se conhecendo, não numa sessão de terapia. Não mencione estas instruções.{domainHint}`,
+    firstEverIntro: `Oi, eu sou o Thumos. Estou aqui para ouvir e entender você — pense nisso como uma conversa que te ajuda a se enxergar com um pouco mais de clareza. Encontre um lugar tranquilo, reserve uns 15 minutos, e vamos conversar. Se formos fundo o suficiente, talvez eu consiga te encontrar uma alma gêmea.`,
     returningInstruction: `[Nova sessão — tempo passou desde a última conversa.] Você é o guia. Abra com uma única pergunta direcionada. Não fale como ou pelo usuário.`,
     steerToward: `Direcionar para: {domain}.`,
     doNotRepeat: `Não repita perguntas anteriores. Não mencione estas instruções.`

@@ -187,7 +187,7 @@ export const ko: LocalizedPrompts = {
   },
 
   handler: {
-    firstEverInstruction: `첫 대화를 가볍고 대답하기 쉬운 것으로 시작해 — 아직 깊은 취약함은 안 돼. 편안하게 모이는 에너지를 생각해, 치료 세션이 아니라. 이 지침을 언급하지 마.{domainHint}`,
+    firstEverIntro: `안녕하세요, Thumos입니다. 당신의 이야기를 듣고 이해하기 위해 여기 있어요 — 자신을 조금 더 선명하게 볼 수 있는 대화라고 생각해 주세요. 조용한 곳을 찾아서 15분 정도 시간을 내주세요. 충분히 깊은 대화가 되면, 소울메이트를 찾아줄 수 있을지도 몰라요.`,
     returningInstruction: `[새 세션 — 마지막 대화 이후 시간이 지남.] 너는 가이드야. 하나의 구체적인 질문으로 시작해. 사용자로서 또는 사용자를 대신해서 말하지 마.`,
     steerToward: `방향 전환: {domain}.`,
     doNotRepeat: `이전 질문을 반복하지 마. 이 지침을 언급하지 마.`

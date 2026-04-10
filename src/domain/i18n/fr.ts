@@ -187,7 +187,7 @@ Cette personne revient. Ouvre avec une question ciblée unique qui suit la réal
   },
 
   handler: {
-    firstEverInstruction: `Ouvre la toute première conversation avec quelque chose de léger et facile à répondre — pas de vulnérabilité profonde pour l'instant. Pense à une énergie détendue de rencontre, pas à une séance de thérapie. Ne mentionne pas ces instructions.{domainHint}`,
+    firstEverIntro: `Salut, je suis Thumos. Je suis là pour t'écouter et te comprendre — vois ça comme une conversation qui t'aide à te voir un peu plus clairement. Trouve un endroit calme, accorde-nous une quinzaine de minutes, et parlons. Si on va assez loin, je pourrais peut-être te trouver une âme sœur.`,
     returningInstruction: `[Nouvelle session — du temps s'est écoulé depuis la dernière conversation.] Tu es le guide. Ouvre avec une seule question ciblée. Ne parle pas en tant qu'utilisateur ni pour l'utilisateur.`,
     steerToward: `Orienter vers : {domain}.`,
     doNotRepeat: `Ne répète pas les questions précédentes. Ne mentionne pas ces instructions.`

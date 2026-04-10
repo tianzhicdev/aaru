@@ -48,6 +48,14 @@ function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
   return messages.length === 0 ? "first_ever" : "returning";
 }
 
+function buildFirstEverMessage(language?: string | null): string {
+  const prompts = getPrompts(language);
+  const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
+  const pool = prompts.domains.openingPool[randomDomain];
+  const question = pool[Math.floor(Math.random() * pool.length)];
+  return `${prompts.handler.firstEverIntro}\n\n${question}`;
+}
+
 function buildClaudeInputMessages(
   mode: z.infer<typeof soulConverseRequestSchema>["mode"],
   messages: Array<{ role: "user" | "assistant"; content: string }>,
@@ -59,16 +67,6 @@ function buildClaudeInputMessages(
   }
 
   const handler = getPrompts(language).handler;
-
-  if (messages.length === 0) {
-    const domainHint = preferredDomain
-      ? ` ${handler.steerToward.replace("{domain}", preferredDomain)}`
-      : "";
-    return [{
-      role: "user",
-      content: handler.firstEverInstruction.replace("{domainHint}", domainHint)
-    }];
-  }
 
   const parts: string[] = [handler.returningInstruction];
   if (preferredDomain) {
@@ -146,14 +144,14 @@ export async function handleSoulConverse(
 
   const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
 
-  const domainLabels = getPrompts(language).domains.labels;
-  let preferredDomainLabel: string | null = null;
+  // First-ever opening: hardcoded intro + random question, no LLM call
   if (openingKind === "first_ever") {
-    const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
-    preferredDomainLabel = domainLabels[randomDomain];
-  } else {
-    preferredDomainLabel = reflectionNote?.steerToTopics[0] ?? null;
+    const message = buildFirstEverMessage(language);
+    await insertSoulMessage(sql, userId, "assistant", message);
+    return jsonResp(200, { role: "assistant", content: message });
   }
+
+  const preferredDomainLabel: string | null = reflectionNote?.steerToTopics[0] ?? null;
 
   const transcriptMessages = allMessages.map((message) => ({
     role: message.role,

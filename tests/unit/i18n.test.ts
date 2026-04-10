@@ -52,6 +52,14 @@ describe("i18n", () => {
     expect(getLanguageDirective(null)).toBe("");
   });
 
+  it("all languages have a non-empty firstEverIntro", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const p = getPrompts(lang);
+      expect(p.handler.firstEverIntro).toBeTruthy();
+      expect(p.handler.firstEverIntro.length).toBeGreaterThan(20);
+    }
+  });
+
   it("all languages have 7 domain labels and 7 opening pools", () => {
     for (const lang of SUPPORTED_LANGUAGES) {
       const p = getPrompts(lang);

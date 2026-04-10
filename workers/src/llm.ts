@@ -164,6 +164,60 @@ function getProviderClient(provider: ModelTaskConfig["provider"]): LlmProviderCl
   throw new Error(`Unsupported LLM provider: ${unreachableProvider}`);
 }
 
+// --- Fallback chain: profile config → DeepSeek V3 → Claude Opus ---
+
+const DEEPSEEK_FALLBACK = {
+  provider: "fireworks_openai" as const,
+  model: "accounts/fireworks/models/deepseek-v3p2",
+};
+
+const CLAUDE_FALLBACK = {
+  provider: "anthropic" as const,
+  model: "claude-opus-4-20250514",
+};
+
+function buildFallbackConfigs(primary: ModelTaskConfig, env: Env): ModelTaskConfig[] {
+  const fallbacks: ModelTaskConfig[] = [];
+
+  if (
+    !(primary.provider === DEEPSEEK_FALLBACK.provider && primary.model === DEEPSEEK_FALLBACK.model) &&
+    env.FIREWORKS_API_KEY
+  ) {
+    fallbacks.push({
+      provider: DEEPSEEK_FALLBACK.provider,
+      model: DEEPSEEK_FALLBACK.model,
+      maxTokens: primary.maxTokens,
+      temperature: primary.temperature,
+      reasoningMode: "disabled",
+    });
+  }
+
+  if (
+    !(primary.provider === CLAUDE_FALLBACK.provider && primary.model === CLAUDE_FALLBACK.model)
+  ) {
+    fallbacks.push({
+      provider: CLAUDE_FALLBACK.provider,
+      model: CLAUDE_FALLBACK.model,
+      maxTokens: primary.maxTokens,
+      temperature: primary.temperature,
+    });
+  }
+
+  return fallbacks;
+}
+
+function logFallback(
+  from: ModelTaskConfig,
+  to: ModelTaskConfig,
+  task: string,
+  error: unknown
+): void {
+  console.warn(
+    `LLM fallback: ${from.provider}/${from.model} → ${to.provider}/${to.model} [task=${task}]`,
+    error
+  );
+}
+
 export async function* streamLlmText(
   env: Env,
   config: ModelTaskConfig,
@@ -171,13 +225,26 @@ export async function* streamLlmText(
   messages: LlmMessage[],
   context: LlmInvocationContext
 ): AsyncGenerator<string, void, undefined> {
-  yield* getProviderClient(config.provider).streamText({
-    env,
-    config,
-    systemPrompt,
-    messages,
-    context
-  });
+  const configs = [config, ...buildFallbackConfigs(config, env)];
+
+  for (let i = 0; i < configs.length; i++) {
+    let tokensYielded = false;
+    try {
+      const stream = getProviderClient(configs[i].provider).streamText({
+        env, config: configs[i], systemPrompt, messages, context
+      });
+      for await (const chunk of stream) {
+        tokensYielded = true;
+        yield chunk;
+      }
+      return;
+    } catch (err) {
+      if (tokensYielded || i === configs.length - 1) {
+        throw err;
+      }
+      logFallback(configs[i], configs[i + 1], context.task, err);
+    }
+  }
 }
 
 export async function callLlmText(
@@ -187,13 +254,23 @@ export async function callLlmText(
   messages: LlmMessage[],
   context: LlmInvocationContext
 ): Promise<string> {
-  return getProviderClient(config.provider).callText({
-    env,
-    config,
-    systemPrompt,
-    messages,
-    context
-  });
+  const configs = [config, ...buildFallbackConfigs(config, env)];
+  let lastError: unknown;
+
+  for (let i = 0; i < configs.length; i++) {
+    try {
+      return await getProviderClient(configs[i].provider).callText({
+        env, config: configs[i], systemPrompt, messages, context
+      });
+    } catch (err) {
+      lastError = err;
+      if (i < configs.length - 1) {
+        logFallback(configs[i], configs[i + 1], context.task, err);
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 export async function callLlmJson<T>(
@@ -204,12 +281,21 @@ export async function callLlmJson<T>(
   context: LlmInvocationContext,
   outputSchema: LlmJsonSchema
 ): Promise<T> {
-  return getProviderClient(config.provider).callJson<T>({
-    env,
-    config,
-    systemPrompt,
-    messages,
-    context,
-    outputSchema
-  });
+  const configs = [config, ...buildFallbackConfigs(config, env)];
+  let lastError: unknown;
+
+  for (let i = 0; i < configs.length; i++) {
+    try {
+      return await getProviderClient(configs[i].provider).callJson<T>({
+        env, config: configs[i], systemPrompt, messages, context, outputSchema
+      });
+    } catch (err) {
+      lastError = err;
+      if (i < configs.length - 1) {
+        logFallback(configs[i], configs[i + 1], context.task, err);
+      }
+    }
+  }
+
+  throw lastError;
 }

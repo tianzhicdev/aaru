@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/claude.ts", () => ({
   callClaude: vi.fn(),
+  callClaudeJson: vi.fn(),
   streamClaude: vi.fn()
 }));
 
@@ -11,11 +12,15 @@ vi.mock("../../workers/src/fireworks.ts", () => ({
   streamFireworks: vi.fn()
 }));
 
-import { callClaude, streamClaude } from "../../workers/src/claude.ts";
+import { callClaude, callClaudeJson, streamClaude } from "../../workers/src/claude.ts";
 import { callFireworks, callFireworksJson, streamFireworks } from "../../workers/src/fireworks.ts";
 import { callLlmJson, callLlmText, streamLlmText } from "../../workers/src/llm.ts";
 
 describe("llm routing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("routes anthropic tasks to Claude", async () => {
     vi.mocked(callClaude).mockResolvedValueOnce("hello");
 
@@ -79,27 +84,30 @@ describe("llm routing", () => {
     );
   });
 
-  it("throws when a fireworks profile is selected without a fireworks key", async () => {
-    await expect(
-      callLlmText(
-        {
-          DATABASE_URL: "mock",
-          ANTHROPIC_API_KEY: "anthropic-key",
-          THUMOS_SESSION_SECRET: "secret",
-          BACKGROUND_QUEUE: { send: vi.fn() }
-        },
-        {
-          provider: "fireworks_openai",
-          model: "accounts/fireworks/models/deepseek-v3p2",
-          maxTokens: 1024,
-          temperature: 0.8,
-          reasoningMode: "disabled"
-        },
-        "system",
-        [{ role: "user", content: "Hi" }],
-        { profileId: "value_cjk", task: "conversation", userId: "user-1" }
-      )
-    ).rejects.toThrow("Missing Fireworks API key");
+  it("falls back to Claude when fireworks key is missing", async () => {
+    vi.mocked(callClaude).mockResolvedValueOnce("claude-fallback");
+
+    const result = await callLlmText(
+      {
+        DATABASE_URL: "mock",
+        ANTHROPIC_API_KEY: "anthropic-key",
+        THUMOS_SESSION_SECRET: "secret",
+        BACKGROUND_QUEUE: { send: vi.fn() }
+      },
+      {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/deepseek-v3p2",
+        maxTokens: 1024,
+        temperature: 0.8,
+        reasoningMode: "disabled"
+      },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "value_cjk", task: "conversation", userId: "user-1" }
+    );
+
+    expect(result).toBe("claude-fallback");
+    expect(callClaude).toHaveBeenCalledOnce();
   });
 
   it("streams via the matching provider", async () => {
@@ -177,5 +185,152 @@ describe("llm routing", () => {
         }
       })
     );
+  });
+});
+
+describe("llm fallback chain", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const baseEnv = {
+    DATABASE_URL: "mock",
+    ANTHROPIC_API_KEY: "anthropic-key",
+    THUMOS_SESSION_SECRET: "secret",
+    FIREWORKS_API_KEY: "fireworks-key",
+    BACKGROUND_QUEUE: { send: vi.fn() }
+  };
+
+  it("falls back to DeepSeek when primary Anthropic fails", async () => {
+    vi.mocked(callClaude).mockRejectedValueOnce(new Error("Anthropic down"));
+    vi.mocked(callFireworks).mockResolvedValueOnce("deepseek-rescue");
+
+    const result = await callLlmText(
+      baseEnv,
+      { provider: "anthropic", model: "claude-opus-4-20250514", maxTokens: 1024, temperature: 0.8 },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "frontier", task: "conversation", userId: "user-1" }
+    );
+
+    expect(result).toBe("deepseek-rescue");
+    expect(callClaude).toHaveBeenCalledOnce();
+    expect(callFireworks).toHaveBeenCalledOnce();
+  });
+
+  it("falls back to Claude when primary and DeepSeek both fail", async () => {
+    vi.mocked(callFireworks)
+      .mockRejectedValueOnce(new Error("Kimi down"))
+      .mockRejectedValueOnce(new Error("DeepSeek down"));
+    vi.mocked(callClaude).mockResolvedValueOnce("claude-rescue");
+
+    const result = await callLlmText(
+      baseEnv,
+      {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/kimi-k2-thinking",
+        maxTokens: 1024,
+        temperature: 0.8,
+        reasoningMode: "thinking",
+        thinkingBudget: 2048
+      },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "value_default", task: "conversation", userId: "user-1" }
+    );
+
+    expect(result).toBe("claude-rescue");
+    expect(callFireworks).toHaveBeenCalledTimes(2);
+    expect(callClaude).toHaveBeenCalledOnce();
+  });
+
+  it("skips DeepSeek fallback when primary is already DeepSeek", async () => {
+    vi.mocked(callFireworks).mockRejectedValueOnce(new Error("DeepSeek down"));
+    vi.mocked(callClaude).mockResolvedValueOnce("claude-rescue");
+
+    const result = await callLlmText(
+      baseEnv,
+      {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/deepseek-v3p2",
+        maxTokens: 1024,
+        temperature: 0.8,
+        reasoningMode: "disabled"
+      },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "value_cjk", task: "conversation", userId: "user-1" }
+    );
+
+    expect(result).toBe("claude-rescue");
+    expect(callFireworks).toHaveBeenCalledOnce();
+    expect(callClaude).toHaveBeenCalledOnce();
+  });
+
+  it("logs warning on each fallback step", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(callClaude).mockRejectedValueOnce(new Error("Anthropic down"));
+    vi.mocked(callFireworks).mockResolvedValueOnce("ok");
+
+    await callLlmText(
+      baseEnv,
+      { provider: "anthropic", model: "claude-opus-4-20250514", maxTokens: 1024, temperature: 0.8 },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "frontier", task: "conversation", userId: "user-1" }
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("LLM fallback:"),
+      expect.any(Error)
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("streaming falls back when no tokens were yielded", async () => {
+    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+      throw new Error("Claude stream failed");
+    })());
+    vi.mocked(streamFireworks).mockReturnValueOnce((async function* () {
+      yield "rescue-chunk";
+    })());
+
+    const chunks: string[] = [];
+    for await (const chunk of streamLlmText(
+      baseEnv,
+      { provider: "anthropic", model: "claude-opus-4-20250514", maxTokens: 1024, temperature: 0.8 },
+      "system",
+      [{ role: "user", content: "Hi" }],
+      { profileId: "frontier", task: "conversation", userId: "user-1" }
+    )) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual(["rescue-chunk"]);
+    expect(streamClaude).toHaveBeenCalledOnce();
+    expect(streamFireworks).toHaveBeenCalledOnce();
+  });
+
+  it("streaming does not fall back after tokens were already yielded", async () => {
+    vi.mocked(streamClaude).mockReturnValueOnce((async function* () {
+      yield "partial";
+      throw new Error("Mid-stream failure");
+    })());
+
+    const chunks: string[] = [];
+    await expect(async () => {
+      for await (const chunk of streamLlmText(
+        baseEnv,
+        { provider: "anthropic", model: "claude-opus-4-20250514", maxTokens: 1024, temperature: 0.8 },
+        "system",
+        [{ role: "user", content: "Hi" }],
+        { profileId: "frontier", task: "conversation", userId: "user-1" }
+      )) {
+        chunks.push(chunk);
+      }
+    }).rejects.toThrow("Mid-stream failure");
+
+    expect(chunks).toEqual(["partial"]);
+    expect(streamFireworks).not.toHaveBeenCalled();
   });
 });

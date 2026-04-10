@@ -66,7 +66,7 @@ export interface ReflectionStrings {
 }
 
 export interface HandlerStrings {
-  firstEverInstruction: string;    // template: {domainHint}
+  firstEverIntro: string;          // hardcoded intro shown to new users
   returningInstruction: string;
   steerToward: string;             // template: {domain}
   doNotRepeat: string;

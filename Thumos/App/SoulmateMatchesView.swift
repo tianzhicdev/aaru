@@ -29,26 +29,38 @@ struct SoulmateMatchesView: View {
         }
     }
 
-    private var lockedView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "lock.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Theme.textSecondary)
+    private var progressPercent: Int {
+        let raw = model.visibleSoulFile.completeness / 0.7
+        return min(Int(raw * 100), 99)
+    }
 
-            Text("Keep Reflecting to Unlock")
+    private var lockedView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(Theme.textSecondary.opacity(0.2), lineWidth: 6)
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .trim(from: 0, to: CGFloat(model.visibleSoulFile.completeness / 0.7))
+                    .stroke(Theme.accentBright, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .frame(width: 120, height: 120)
+                    .rotationEffect(.degrees(-90))
+                Text("\(progressPercent)%")
+                    .font(Theme.sans(28, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+
+            Text("Getting to Know You")
                 .font(Theme.serif(24, weight: .medium))
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("Keep having conversations to unlock this.")
+            Text("We need to understand you a little more before we can find your soulmate.")
                 .font(Theme.sans(15, weight: .light))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-
-            ProgressView(value: model.visibleSoulFile.completeness, total: 0.7)
-                .tint(Theme.accentBright)
-                .padding(.horizontal, 48)
 
             Spacer()
         }

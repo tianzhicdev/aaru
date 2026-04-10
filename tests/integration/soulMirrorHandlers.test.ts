@@ -275,7 +275,7 @@ describe("handleSoulConverse", () => {
     vi.clearAllMocks();
   });
 
-  it("seeds opening mode with a synthetic prompt when there is no prior conversation", async () => {
+  it("returns a hardcoded intro message for first-ever opening without calling the LLM", async () => {
     vi.mocked(readSessionToken).mockReturnValue("valid-token");
     vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
     vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
@@ -286,30 +286,24 @@ describe("handleSoulConverse", () => {
     vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
     vi.mocked(getAllSoulMessages).mockResolvedValue([]);
     vi.mocked(insertSoulMessage).mockResolvedValue(undefined);
-    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
-      needed: false,
-      pending: false,
-      totalMessageCount: 1,
-      lastMessageCreatedAt: "2026-03-29T20:00:00Z"
-    });
     mockSQL.mockResolvedValue([]);
-
-    vi.mocked(streamLlmText).mockReturnValueOnce((async function* () {
-      yield "What part of you has been hardest to say out loud lately?";
-    })());
 
     const response = await handleSoulConverse(
       mockSQL,
       mockEnv,
-      makeRequest({ "x-thumos-session": "valid-token" }, { mode: "opening" })
+      makeRequest({ "x-thumos-session": "valid-token", "Accept": "application/json" }, { mode: "opening" })
     );
-    await response.text();
     expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.role).toBe("assistant");
+    expect(body.content).toContain("Hi, I'm Thumos. I'm here to listen and understand you");
+    expect(body.content).toContain("?"); // ends with a question from the opening pool
+    expect(streamLlmText).not.toHaveBeenCalled();
     expect(insertSoulMessage).toHaveBeenCalledWith(
       mockSQL,
       "user-1",
       "assistant",
-      "What part of you has been hardest to say out loud lately?"
+      expect.stringContaining("Hi, I'm Thumos. I'm here to listen and understand you")
     );
   });
 });

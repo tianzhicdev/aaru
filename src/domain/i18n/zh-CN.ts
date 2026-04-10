@@ -187,7 +187,7 @@ export const zhCN: LocalizedPrompts = {
   },
 
   handler: {
-    firstEverInstruction: `用轻松且容易回答的方式开启第一次对话——不要涉及深层脆弱。营造轻松聚会的氛围，而不是治疗环节。不要提到这些指令。{domainHint}`,
+    firstEverIntro: `嗨，我是 Thumos。我在这里倾听和了解你——把这当作一场帮助你更清晰地认识自己的对话。找个安静的地方，给我们大约15分钟，好好聊聊。如果我们聊得够深入，我也许能帮你找到灵魂伴侣。`,
     returningInstruction: `[新的对话——距离上次对话已经过了一段时间。] 你是引导者。用一个有针对性的问题开场。不要以用户的身份说话或代替用户说话。`,
     steerToward: `引导方向：{domain}。`,
     doNotRepeat: `不要重复之前的问题。不要提到这些指令。`

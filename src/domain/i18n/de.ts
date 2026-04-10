@@ -187,7 +187,7 @@ Diese Person kehrt zurück. Eröffne mit einer einzigen gezielten Frage, die der
   },
 
   handler: {
-    firstEverInstruction: `Beginne das allererste Gespräch mit etwas Leichtem und einfach zu Beantwortenden — noch keine tiefe Verletzlichkeit. Denke an entspannte Sammlung-Energie, nicht Therapiesitzung. Erwähne diese Anweisungen nicht.{domainHint}`,
+    firstEverIntro: `Hi, ich bin Thumos. Ich bin hier, um dir zuzuhören und dich zu verstehen — sieh das als ein Gespräch, das dir hilft, dich selbst etwas klarer zu sehen. Such dir einen ruhigen Ort, gib uns etwa 15 Minuten, und lass uns reden. Wenn wir tief genug kommen, kann ich dir vielleicht einen Seelenverwandten finden.`,
     returningInstruction: `[Neue Sitzung — Zeit ist seit dem letzten Gespräch vergangen.] Du bist der Leitfaden. Eröffne mit einer einzigen gezielten Frage. Sprich nicht als oder für den Nutzer.`,
     steerToward: `Lenke zu: {domain}.`,
     doNotRepeat: `Wiederhole keine früheren Fragen. Erwähne diese Anweisungen nicht.`

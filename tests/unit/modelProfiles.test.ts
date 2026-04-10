@@ -45,7 +45,7 @@ describe("model profiles", () => {
     expect(conversation.provider).toBe("fireworks_openai");
     expect(conversation.model).toContain("kimi-k2-thinking");
     expect(conversation.reasoningMode).toBe("thinking");
-    expect(conversation.thinkingBudget).toBe(2048);
+    expect(conversation.thinkingBudget).toBe(512);
   });
 
   it("isModelProfileId recognizes all profiles", () => {

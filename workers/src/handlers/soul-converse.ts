@@ -15,7 +15,7 @@ import {
   type OpeningKind,
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
-import { LIFE_DOMAINS } from "../../../src/domain/schemas.ts";
+import { PHASE_CONFIGS } from "../../../src/domain/schemas.ts";
 import { getPrompts } from "../../../src/domain/i18n/index.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
@@ -50,7 +50,8 @@ function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
 
 function buildFirstEverMessage(language?: string | null): string {
   const prompts = getPrompts(language);
-  const randomDomain = LIFE_DOMAINS[Math.floor(Math.random() * LIFE_DOMAINS.length)];
+  const sparkDomains = PHASE_CONFIGS.spark.allowedDomains;
+  const randomDomain = sparkDomains[Math.floor(Math.random() * sparkDomains.length)];
   const pool = prompts.domains.openingPool[randomDomain];
   const question = pool[Math.floor(Math.random() * pool.length)];
   return `${prompts.handler.firstEverIntro}\n\n${question}`;

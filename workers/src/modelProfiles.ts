@@ -140,7 +140,7 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         maxTokens: 1024,
         temperature: 0.8,
         reasoningMode: "thinking",
-        thinkingBudget: 2048
+        thinkingBudget: 512
       },
       reflection_snapshot: {
         provider: "fireworks_openai",

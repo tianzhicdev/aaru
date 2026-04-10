@@ -386,7 +386,7 @@ a {
   position: absolute;
   left: 50%;
   bottom: -13rem;
-  width: min(72rem, 96vw);
+  width: min(54rem, 80vw);
   min-height: 0;
   transform: translateX(-34%);
   overflow: hidden;
@@ -818,7 +818,7 @@ a {
   .hero-image-frame {
     left: 50%;
     bottom: -3rem;
-    width: 132vw;
+    width: 110vw;
     transform: translateX(-50%);
   }
 
@@ -858,13 +858,36 @@ a {
   }
 
   .hero-title {
-    font-size: clamp(2.7rem, 12vw, 3.9rem);
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
   }
 
-  .hero-panel,
-  .hero-stage,
+  .hero-copy {
+    top: 1rem;
+    max-width: 100%;
+    position: relative;
+    z-index: 2;
+    padding: 0 1rem;
+  }
+
+  .hero-panel {
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-stage {
+    position: relative;
+    min-height: 28rem;
+  }
+
+  .hero-image-frame {
+    bottom: -6rem;
+    width: 100vw;
+    transform: translateX(-50%);
+  }
+
   .hero-image-frame img {
-    min-height: 38rem;
+    min-height: 28rem;
   }
 
   .hero-meta span,

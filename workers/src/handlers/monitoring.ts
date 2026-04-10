@@ -1,6 +1,10 @@
 import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function checkMonitoringAuth(
   request: Request,
   env: { DEBUG_API_TOKEN?: string }
@@ -21,6 +25,12 @@ function checkMonitoringAuth(
   return null;
 }
 
+interface RecentMessage {
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
 interface Stats {
   activeUsers24h: number;
   messages24h: number;
@@ -28,10 +38,11 @@ interface Stats {
   totalUsers: number;
   totalMessages: number;
   totalMatches: number;
+  recentMessages: RecentMessage[];
 }
 
 export async function fetchStats(sql: NeonSQL): Promise<Stats> {
-  const [activeUsers24h, messages24h, dms24h, totalUsers, totalMessages, totalMatches] =
+  const [activeUsers24h, messages24h, dms24h, totalUsers, totalMessages, totalMatches, recentRows] =
     await Promise.all([
       sql`SELECT COUNT(DISTINCT user_id) AS n FROM soul_messages WHERE created_at > NOW() - INTERVAL '24 hours'`,
       sql`SELECT COUNT(*) AS n FROM soul_messages WHERE created_at > NOW() - INTERVAL '24 hours'`,
@@ -39,6 +50,7 @@ export async function fetchStats(sql: NeonSQL): Promise<Stats> {
       sql`SELECT COUNT(*) AS n FROM users`,
       sql`SELECT COUNT(*) AS n FROM soul_messages`,
       sql`SELECT COUNT(*) AS n FROM matches WHERE result = 'match'`,
+      sql`SELECT role, content, created_at FROM soul_messages ORDER BY created_at DESC LIMIT 50`,
     ]);
 
   return {
@@ -48,6 +60,11 @@ export async function fetchStats(sql: NeonSQL): Promise<Stats> {
     totalUsers: Number(totalUsers[0].n),
     totalMessages: Number(totalMessages[0].n),
     totalMatches: Number(totalMatches[0].n),
+    recentMessages: recentRows.map((r: any) => ({
+      role: r.role,
+      content: r.content,
+      createdAt: r.created_at,
+    })),
   };
 }
 
@@ -68,6 +85,13 @@ function renderDashboard(stats: Stats): string {
   .card .value { font-size: 2rem; font-weight: 700; color: #fff; }
   .section { margin-bottom: 1.5rem; }
   .section h2 { font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 0.75rem; }
+  .messages { max-width: 800px; margin-top: 0.5rem; }
+  .msg { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem; }
+  .msg .meta { font-size: 0.7rem; color: #666; margin-bottom: 0.25rem; }
+  .msg .role { font-weight: 600; color: #aaa; text-transform: uppercase; font-size: 0.7rem; }
+  .msg .role.assistant { color: #7b9ff0; }
+  .msg .role.user { color: #a0d995; }
+  .msg .body { font-size: 0.85rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 6rem; overflow: hidden; }
   .ts { margin-top: 2rem; font-size: 0.75rem; color: #555; }
 </style>
 </head>
@@ -87,6 +111,15 @@ function renderDashboard(stats: Stats): string {
     <div class="card"><div class="label">Total Users</div><div class="value">${stats.totalUsers}</div></div>
     <div class="card"><div class="label">Total Messages</div><div class="value">${stats.totalMessages}</div></div>
     <div class="card"><div class="label">Total Matches</div><div class="value">${stats.totalMatches}</div></div>
+  </div>
+</div>
+<div class="section">
+  <h2>Latest Messages</h2>
+  <div class="messages">
+    ${stats.recentMessages.map(m => `<div class="msg">
+      <div class="meta"><span class="role ${esc(m.role)}">${esc(m.role)}</span> &middot; ${esc(m.createdAt)}</div>
+      <div class="body">${esc(m.content)}</div>
+    </div>`).join("\n    ")}
   </div>
 </div>
 <div class="ts">Generated at ${new Date().toISOString()}</div>

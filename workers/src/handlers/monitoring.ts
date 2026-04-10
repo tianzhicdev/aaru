@@ -61,9 +61,9 @@ export async function fetchStats(sql: NeonSQL): Promise<Stats> {
     totalMessages: Number(totalMessages[0].n),
     totalMatches: Number(totalMatches[0].n),
     recentMessages: recentRows.map((r: any) => ({
-      role: r.role,
-      content: r.content,
-      createdAt: r.created_at,
+      role: String(r.role),
+      content: String(r.content),
+      createdAt: String(r.created_at),
     })),
   };
 }

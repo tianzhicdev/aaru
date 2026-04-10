@@ -25,6 +25,7 @@ import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { handleUpdateLanguage } from "./handlers/update-language.ts";
+import { handleMonitoring } from "./handlers/monitoring.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
@@ -52,7 +53,7 @@ export default {
         return toEdgeResponse(handlePing());
 
       case "version":
-        return withErrorHandling(request, (payload) => handleVersion(payload));
+        return withErrorHandling(request, (payload) => handleVersion(payload, env));
 
       case "bootstrap-soul":
         return withErrorHandling(request, (payload, req) =>
@@ -126,6 +127,9 @@ export default {
         return withErrorHandling(request, (payload, req) =>
           handleUpdateLanguage(sql, payload, req)
         );
+
+      case "monitoring":
+        return handleMonitoring(sql, env, request);
 
       default:
         return new Response(JSON.stringify({ code: 404, message: "Not found" }), {

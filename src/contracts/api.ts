@@ -4,7 +4,7 @@
  * These types describe the EXACT JSON shape that crosses the iOS ↔ server boundary.
  * Wire format rules:
  *   - Envelope keys: snake_case (user_id, visible_soul_file, has_messages)
- *   - Nested domain objects: camelCase (lastUpdated, howYouMove, personalitySpectrum)
+ *   - Nested domain objects: camelCase (lastUpdated, howYouLightUp, personalitySpectrum)
  *
  * GOLD contract — do not change without updating contracts/*.json fixtures
  * and verifying both TypeScript and Swift test suites pass.

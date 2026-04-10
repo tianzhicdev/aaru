@@ -8,7 +8,8 @@ import {
   markHiddenSynthesisFailed,
   markHiddenSynthesisPending,
   markSynthesisPending,
-  markSynthesisFailed
+  markSynthesisFailed,
+  withCompatSections
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import {
@@ -72,10 +73,11 @@ export async function handleGetSoulFile(
     }
   }
 
+  const file = visibleSoulFile ?? emptyVisibleSoulFile();
   return jsonResponse(200, {
-    visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
-    version: visibleSoulFile?.version ?? 0,
-    last_updated: visibleSoulFile?.lastUpdated ?? null,
+    visible_soul_file: withCompatSections(file), // COMPAT: remove after MIN_SUPPORTED_VERSION bump
+    version: file.version ?? 0,
+    last_updated: file.lastUpdated ?? null,
     synthesis_pending: synthesisPending
   });
 }

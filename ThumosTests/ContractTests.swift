@@ -28,14 +28,14 @@ final class ContractTests: XCTestCase {
         let response = try JSONDecoder().decode(SoulBootstrapResponse.self, from: data)
         let sf = response.visibleSoulFile!
 
-        // Sections present and non-empty
-        XCTAssertFalse(sf.sections.howYouMove.isEmpty)
-        XCTAssertFalse(sf.sections.howYouThink.isEmpty)
-        XCTAssertFalse(sf.sections.howYouConnect.isEmpty)
-        XCTAssertFalse(sf.sections.whatYouCarry.isEmpty)
-        XCTAssertFalse(sf.sections.whatLightsYouUp.isEmpty)
-        XCTAssertFalse(sf.sections.yourTensions.isEmpty)
-        XCTAssertFalse(sf.sections.yourVoice.isEmpty)
+        // Sections present and non-empty (new romance-pivot keys)
+        XCTAssertFalse(sf.sections.howYouLightUp.isEmpty)
+        XCTAssertFalse(sf.sections.howYouShowUp.isEmpty)
+        XCTAssertFalse(sf.sections.howYouLove.isEmpty)
+        XCTAssertFalse(sf.sections.howYouWeatherStorms.isEmpty)
+        XCTAssertFalse(sf.sections.whatYoureLookingFor.isEmpty)
+        XCTAssertFalse(sf.sections.yourGrowingEdges.isEmpty)
+        XCTAssertFalse(sf.sections.yourWarmth.isEmpty)
 
         // Psychometrics
         XCTAssertGreaterThan(sf.crystallizedMoments.count, 0)
@@ -58,7 +58,7 @@ final class ContractTests: XCTestCase {
         XCTAssertGreaterThan(response.version, 0)
         XCTAssertNotNil(response.lastUpdated)
         XCTAssertFalse(response.synthesisPending)
-        XCTAssertFalse(response.visibleSoulFile.sections.howYouMove.isEmpty)
+        XCTAssertFalse(response.visibleSoulFile.sections.howYouLightUp.isEmpty)
         XCTAssertGreaterThanOrEqual(response.visibleSoulFile.completeness, 0)
     }
 
@@ -113,7 +113,7 @@ final class ContractTests: XCTestCase {
         """.data(using: .utf8)!
         let sf = try JSONDecoder().decode(VisibleSoulFile.self, from: minimal)
         XCTAssertEqual(sf.version, 1)
-        XCTAssertEqual(sf.sections.howYouMove, "")
+        XCTAssertEqual(sf.sections.howYouLightUp, "")
         XCTAssertEqual(sf.crystallizedMoments.count, 0)
         XCTAssertEqual(sf.openThreads.count, 0)
         XCTAssertEqual(sf.completeness, 0)

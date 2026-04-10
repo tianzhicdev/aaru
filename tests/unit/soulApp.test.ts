@@ -49,7 +49,7 @@ describe("reflection snapshots", () => {
       note: {
         updatedAt: "2026-03-31",
         domainCoverage: [
-          { domain: "work_and_purpose", depth: "deep", evidence: "Repeated job discussion" }
+          { domain: "daily_rhythm", depth: "deep", evidence: "Repeated job discussion" }
         ],
         currentThreads: ["job drift"],
         avoidPastObservations: ["You use humor as armor"],
@@ -62,7 +62,7 @@ describe("reflection snapshots", () => {
     }]);
 
     const note = await getLatestReflectionSnapshot(mockSQL, "user-1");
-    expect(note?.domainCoverage[0]?.domain).toBe("work_and_purpose");
+    expect(note?.domainCoverage[0]?.domain).toBe("daily_rhythm");
     expect(note?.avoidPastQuestions).toContain("What are you avoiding?");
     expect(note?.steeringPressure).toBe("gentle");
     expect(note?.summary).toContain("engineer");
@@ -115,13 +115,13 @@ describe("reflection snapshots", () => {
     vi.mocked(callLlmJson).mockResolvedValueOnce({
       updatedAt: "2026-03-26T00:10:00Z",
       domainCoverage: [
-        { domain: "emotional_life", depth: "explored", evidence: "Painting as emotional regulation" },
-        { domain: "work_and_purpose", depth: "mentioned", evidence: "Proving usefulness" }
+        { domain: "play_and_joy", depth: "explored", evidence: "Painting as emotional regulation" },
+        { domain: "daily_rhythm", depth: "mentioned", evidence: "Proving usefulness" }
       ],
       currentThreads: ["painting", "fear of being swallowed"],
       avoidPastObservations: ["You use walls as emotional architecture"],
       avoidPastQuestions: ["What does losing time mean for you?"],
-      steerToTopics: ["origins — when time first started feeling scarce"],
+      steerToTopics: ["values_and_worldview — when time first started feeling scarce"],
       steeringPressure: "gentle",
       steeringReasoning: "The current thread is still alive but narrowing.",
       summary: "This person builds walls when overwhelmed. Painting slows their breath. They fear needing to prove they're useful."
@@ -136,7 +136,7 @@ describe("reflection snapshots", () => {
 
     expect(note).not.toBeNull();
     expect(note?.currentThreads).toContain("painting");
-    expect(note?.steerToTopics[0]).toContain("origins");
+    expect(note?.steerToTopics[0]).toContain("values_and_worldview");
   });
 });
 
@@ -157,7 +157,7 @@ describe("visible/hidden soul files", () => {
       core_values: [],
       voice: {},
       depth_map: {
-        domainCoverage: [{ domain: "work_and_purpose", depth: "explored", evidence: "career tension" }]
+        domainCoverage: [{ domain: "daily_rhythm", depth: "explored", evidence: "career tension" }]
       },
       analyst_notes: [],
       honest_insights: ["You still treat need as weakness."]
@@ -165,23 +165,23 @@ describe("visible/hidden soul files", () => {
 
     const file = await getHiddenSoulFile(mockSQL, "user-1");
     expect(file?.lastUpdated).toBe(timestamp.toISOString());
-    expect(file?.depthMap.domainCoverage[0]?.domain).toBe("work_and_purpose");
+    expect(file?.depthMap.domainCoverage[0]?.domain).toBe("daily_rhythm");
     expect(file?.honestInsights[0]).toContain("weakness");
   });
 
-  it("normalizes visible soul file timestamps and your tensions", async () => {
+  it("normalizes visible soul file timestamps and your growing edges", async () => {
     const timestamp = new Date("2026-03-29T20:00:00.000Z");
     mockSQL.mockResolvedValueOnce([{
       version: 1,
       last_updated: timestamp,
       portrait: "Test",
-      how_you_move: "",
-      how_you_think: "",
-      how_you_connect: "",
-      what_you_carry: "",
-      what_lights_you_up: "",
-      your_contradictions: "You want closeness but brace against it.",
-      your_voice: "",
+      how_you_light_up: "",
+      how_you_show_up: "",
+      how_you_love: "",
+      how_you_weather_storms: "",
+      what_youre_looking_for: "",
+      your_growing_edges: "You want closeness but brace against it.",
+      your_warmth: "",
       crystallized_moments: [],
       open_threads: [],
       compass_scores: {},
@@ -189,12 +189,14 @@ describe("visible/hidden soul files", () => {
         openness: { position: 72, label: "Curious", evidence: "Explores many frames" }
       },
       top_values: [{ value: "Self-Direction", description: "Needs freedom" }],
-      relational_style: "Opens through shared perspective."
+      relational_style: "Opens through shared perspective.",
+      attachment_style: null,
+      love_signature: null
     }]);
 
     const file = await getVisibleSoulFile(mockSQL, "user-1");
     expect(file?.lastUpdated).toBe(timestamp.toISOString());
-    expect(file?.sections.yourTensions).toContain("closeness");
+    expect(file?.sections.yourGrowingEdges).toContain("closeness");
     expect(file?.personalitySpectrum.openness?.position).toBe(72);
   });
 });
@@ -248,13 +250,13 @@ describe("synthesis", () => {
       lastUpdated: "2026-03-27",
       portrait: "You build distance when the world feels too loud.",
       sections: {
-        howYouMove: "Deliberately",
-        howYouThink: "In systems",
-        howYouConnect: "Cautiously",
-        whatYouCarry: "Weight",
-        whatLightsYouUp: "Flow",
-        yourTensions: "You want closeness but expect a cost.",
-        yourVoice: "Measured"
+        howYouLightUp: "Flow states",
+        howYouShowUp: "Deliberately",
+        howYouLove: "Cautiously",
+        howYouWeatherStorms: "Weight",
+        whatYoureLookingFor: "Depth",
+        yourGrowingEdges: "You want closeness but expect a cost.",
+        yourWarmth: "Measured"
       },
       crystallizedMoments: [{ quote: "I build walls", reflection: "Protection" }],
       openThreads: ["Behind the walls"],
@@ -263,7 +265,9 @@ describe("synthesis", () => {
         openness: { position: 76, label: "Curious beneath the guard", evidence: "Keeps reaching for larger frames" }
       },
       topValues: [{ value: "Self-Direction", description: "You need room to choose your own path." }],
-      relationalStyle: "You open through shared perspective before deeper closeness."
+      relationalStyle: "You open through shared perspective before deeper closeness.",
+      attachmentStyle: null,
+      loveSignature: null
     });
 
     const result = await runVisibleSynthesis(mockSQL, {
@@ -274,7 +278,7 @@ describe("synthesis", () => {
     } as never, "user-1");
 
     expect(result?.portrait).toContain("distance");
-    expect(result?.sections.yourTensions).toContain("closeness");
+    expect(result?.sections.yourGrowingEdges).toContain("closeness");
     expect(result?.personalitySpectrum.openness?.position).toBe(76);
   });
 
@@ -295,9 +299,9 @@ describe("synthesis", () => {
       confidence: "medium",
       expertReflections: {
         psychologist: ["Avoidance is doing interpersonal work here."],
-        sociologist: ["Performance reads as a masculinity survival strategy."],
+        relationshipScientist: ["Performance reads as a masculinity survival strategy."],
         linguist: ["Uses joking cadence to soften admissions."],
-        narrativeAnalyst: ["The wall is both shield and identity story."]
+        attachmentAnalyst: ["The wall is both shield and identity story."]
       },
       coreDrivers: [{ driver: "Autonomy", strength: 0.9, inferred: true, evidence: "Walls metaphor" }],
       coreValues: ["independence"],
@@ -311,10 +315,12 @@ describe("synthesis", () => {
         voiceExamples: []
       },
       depthMap: {
-        domainCoverage: [{ domain: "work_and_purpose", depth: "explored", evidence: "Repeated job discussion" }]
+        domainCoverage: [{ domain: "daily_rhythm", depth: "explored", evidence: "Repeated job discussion" }]
       },
       analystNotes: ["Relationship avoidance is the sharper growth edge."],
-      honestInsights: ["You still treat being needed like a threat to autonomy."]
+      honestInsights: ["You still treat being needed like a threat to autonomy."],
+      attachmentAssessment: null,
+      conflictProfile: null
     });
 
     const result = await runHiddenSynthesis(mockSQL, {
@@ -325,7 +331,7 @@ describe("synthesis", () => {
     } as never, "user-1");
 
     expect(result?.expertReflections.psychologist[0]).toContain("Avoidance");
-    expect(result?.depthMap.domainCoverage[0]?.domain).toBe("work_and_purpose");
+    expect(result?.depthMap.domainCoverage[0]?.domain).toBe("daily_rhythm");
     expect(result?.honestInsights[0]).toContain("autonomy");
   });
 });

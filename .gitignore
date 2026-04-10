@@ -15,6 +15,7 @@ supabase/.branches
 supabase/.temp
 
 # Build artifacts
+build/
 generated-avatars/
 generate_avatars.py
 TestResults/
@@ -22,3 +23,8 @@ TestResults.xcresult/
 .gstack/
 .secrets/
 .claude/worktrees/
+
+# Dev/debug artifacts
+debug-dumps/
+dev-data/
+dry-run-output/

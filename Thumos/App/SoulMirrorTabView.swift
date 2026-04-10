@@ -9,21 +9,21 @@ struct SoulMirrorTabView: View {
             SoulConversationScreen()
                 .tabItem {
                     Image(systemName: "bubble.left.fill")
-                    Text("Conversation")
+                    Text("Talk")
                 }
                 .tag(0)
 
             SoulFileScreen()
                 .tabItem {
                     Image(systemName: "person.crop.circle")
-                    Text("Soul File")
+                    Text("You")
                 }
                 .tag(1)
 
             SoulmateMatchesView()
                 .tabItem {
                     Image(systemName: "heart.circle")
-                    Text("Soulmate")
+                    Text("Connect")
                 }
                 .tag(2)
         }

@@ -1,8 +1,10 @@
 import { toJSONSchema } from "zod";
-import type { DomainCoverageEntry, ReflectionNote } from "./schemas.ts";
+import type { ConversationPhase, DomainCoverageEntry, ReflectionNote } from "./schemas.ts";
 import {
+  CONVERSATION_PHASES,
   DOMAIN_LABELS,
   LIFE_DOMAINS,
+  getConversationPhase,
   reflectionNoteSchema
 } from "./schemas.ts";
 import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
@@ -12,6 +14,7 @@ type JsonObject = Record<string, unknown>;
 export function emptyReflectionNote(): ReflectionNote {
   return {
     updatedAt: new Date().toISOString(),
+    conversationPhase: "spark",
     domainCoverage: [],
     currentThreads: [],
     avoidPastObservations: [],
@@ -38,6 +41,14 @@ export function buildReflectionPrompt(
     .map((domain) => `  - ${domain}: ${domainLabels[domain]}`)
     .join("\n");
 
+  const phase = getConversationPhase(messageCount);
+  const phaseInstruction = `\n"conversationPhase": Assess which phase this conversation is in based on message count (${messageCount} messages).
+  - "spark" (1-15 messages): Light, fun — daily_rhythm and play_and_joy only
+  - "kindling" (15-35 messages): Warmer — adds values_and_worldview, love_language
+  - "flame" (35-60 messages): Real talk — adds conflict_and_repair, vulnerability_and_trust
+  - "hearth" (60+ messages): Deep — all domains including partnership_vision
+  Current phase based on count: "${phase}"`;
+
   const steeringWithDomains = ref.steeringSection.replace("{domainChecklist}", domainChecklist);
   const languageDirective = getLanguageDirective(language);
 
@@ -49,6 +60,8 @@ Transcript:
 ${transcript}
 
 Output ONE valid JSON object:
+
+${phaseInstruction}
 
 ${steeringWithDomains}
 
@@ -63,6 +76,10 @@ export function parseReflectionNote(raw: string): ReflectionNote | null {
 
   const note = emptyReflectionNote();
   note.updatedAt = safeString(parsed.updatedAt, 64) || new Date().toISOString();
+  note.conversationPhase = parseEnumValue(
+    parsed.conversationPhase,
+    CONVERSATION_PHASES
+  ) as ConversationPhase ?? "spark";
   note.domainCoverage = parseDomainCoverage(parsed.domainCoverage);
   note.currentThreads = safeStringArray(parsed.currentThreads, 4, 200);
   note.avoidPastObservations = safeStringArray(parsed.avoidPastObservations, 6, 240);

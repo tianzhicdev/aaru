@@ -51,6 +51,8 @@ struct SoulFileScreen: View {
             personalitySpectrumSection
             topValuesSection
             relationalStyleSection
+            attachmentStyleSection
+            loveSignatureSection
             soulSections
             crystallizedMomentsSection
             openThreadsSection
@@ -93,7 +95,7 @@ struct SoulFileScreen: View {
 
     private var titleSection: some View {
         VStack(spacing: 8) {
-            Text("Soul File")
+            Text("Portrait")
                 .font(Theme.sans(12, weight: .medium))
                 .foregroundStyle(Theme.accent)
                 .textCase(.uppercase)
@@ -112,7 +114,7 @@ struct SoulFileScreen: View {
                 .scaleEffect(0.75)
                 .tint(Theme.accentBright)
 
-            Text("Your soul file is updating.")
+            Text("Your portrait is updating.")
                 .font(Theme.sans(15, weight: .medium))
                 .foregroundStyle(Theme.textPrimary)
 
@@ -144,7 +146,7 @@ struct SoulFileScreen: View {
                     .font(Theme.serif(24, weight: .light))
                     .foregroundStyle(Theme.textPrimary)
 
-                Text("Only you can see your soul file. Nothing here is shared with anyone else, and you can delete everything anytime from Settings.")
+                Text("Only you can see your portrait. Nothing here is shared with anyone else, and you can delete everything anytime from Settings.")
                     .font(Theme.sans(15, weight: .light))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
@@ -180,7 +182,7 @@ struct SoulFileScreen: View {
                     .lineSpacing(6)
             } else {
                 VStack(spacing: 12) {
-                    Text("Your soul file will take shape as we talk")
+                    Text("Your portrait will take shape as we talk")
                         .font(Theme.serif(24, weight: .light))
                         .foregroundStyle(Theme.textSecondary)
                     Text("Each conversation reveals a little more")
@@ -241,16 +243,60 @@ struct SoulFileScreen: View {
         }
     }
 
+    private var attachmentStyleSection: some View {
+        Group {
+            if let attachmentStyle = model.visibleSoulFile.attachmentStyle,
+               !attachmentStyle.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Attachment Style")
+                        .font(Theme.sans(12, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .textCase(.uppercase)
+                        .tracking(1.5)
+
+                    Text(attachmentStyle)
+                        .font(Theme.serif(18))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private var loveSignatureSection: some View {
+        Group {
+            if let loveSignature = model.visibleSoulFile.loveSignature,
+               !loveSignature.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Love Signature")
+                        .font(Theme.sans(12, weight: .medium))
+                        .foregroundStyle(Theme.accent)
+                        .textCase(.uppercase)
+                        .tracking(1.5)
+
+                    Text(loveSignature)
+                        .font(Theme.serif(18))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.leading)
+                        .lineSpacing(4)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
     private var soulSectionItems: [(title: String, content: String)] {
         let sections = model.visibleSoulFile.sections
         return [
-            ("How You Move", sections.howYouMove),
-            ("How You Think", sections.howYouThink),
-            ("How You Connect", sections.howYouConnect),
-            ("What You Carry", sections.whatYouCarry),
-            ("What Lights You Up", sections.whatLightsYouUp),
-            ("Your Tensions", sections.yourTensions),
-            ("Your Voice", sections.yourVoice)
+            ("How You Light Up", sections.howYouLightUp),
+            ("How You Show Up", sections.howYouShowUp),
+            ("How You Love", sections.howYouLove),
+            ("How You Weather Storms", sections.howYouWeatherStorms),
+            ("What You're Looking For", sections.whatYoureLookingFor),
+            ("Your Growing Edges", sections.yourGrowingEdges),
+            ("Your Warmth", sections.yourWarmth)
         ].filter { !$0.content.isEmpty }
     }
 

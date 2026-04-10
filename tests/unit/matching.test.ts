@@ -14,24 +14,24 @@ describe("computeSoulFileCompleteness", () => {
     expect(computeSoulFileCompleteness(file)).toBe(1.0);
   });
 
-  test("portrait only gives 1/24", () => {
+  test("portrait only gives 1/26", () => {
     const file = emptyVisibleSoulFile();
     file.portrait = "A warm soul.";
-    expect(computeSoulFileCompleteness(file)).toBeCloseTo(1 / 24, 2);
+    expect(computeSoulFileCompleteness(file)).toBeCloseTo(1 / 26, 2);
   });
 
-  test("all sections filled gives 7/24", () => {
+  test("all sections filled gives 7/26", () => {
     const file = emptyVisibleSoulFile();
     file.sections = {
-      howYouMove: "x",
-      howYouThink: "x",
-      howYouConnect: "x",
-      whatYouCarry: "x",
-      whatLightsYouUp: "x",
-      yourTensions: "x",
-      yourVoice: "x"
+      howYouLightUp: "x",
+      howYouShowUp: "x",
+      howYouLove: "x",
+      howYouWeatherStorms: "x",
+      whatYoureLookingFor: "x",
+      yourGrowingEdges: "x",
+      yourWarmth: "x"
     };
-    expect(computeSoulFileCompleteness(file)).toBeCloseTo(7 / 24, 2);
+    expect(computeSoulFileCompleteness(file)).toBeCloseTo(7 / 26, 2);
   });
 
   test("completeness threshold is 0.7", () => {
@@ -47,29 +47,29 @@ describe("computeSoulFileCompleteness", () => {
       agreeableness: null,
       emotionalSensitivity: null
     };
-    expect(computeSoulFileCompleteness(file)).toBeCloseTo(2 / 24, 2);
+    expect(computeSoulFileCompleteness(file)).toBeCloseTo(2 / 26, 2);
   });
 
   test("compass axes count individually", () => {
     const file = emptyVisibleSoulFile();
     file.compassScores = {
       openness: 70,
-      vitality: 80,
+      playfulness: 80,
       warmth: null,
-      depth: null,
-      purpose: null,
+      emotional_depth: null,
+      devotion: null,
       resilience: null,
-      autonomy: null,
-      connection: null
+      independence: null,
+      passion: null
     };
-    expect(computeSoulFileCompleteness(file)).toBeCloseTo(2 / 24, 2);
+    expect(computeSoulFileCompleteness(file)).toBeCloseTo(2 / 26, 2);
   });
 
   test("typical mid-conversation soul file scores reasonably", () => {
     const file = emptyVisibleSoulFile();
     file.portrait = "A reflective thinker.";
-    file.sections.howYouThink = "Pattern-oriented.";
-    file.sections.howYouConnect = "Deeply.";
+    file.sections.howYouShowUp = "Pattern-oriented.";
+    file.sections.howYouLove = "Deeply.";
     file.crystallizedMoments = [{ quote: "test", reflection: "test" }];
     file.openThreads = ["creativity"];
     file.personalitySpectrum = {
@@ -79,14 +79,14 @@ describe("computeSoulFileCompleteness", () => {
       agreeableness: null,
       emotionalSensitivity: null
     };
-    // 1 (portrait) + 2 (sections) + 1 (moments) + 1 (threads) + 1 (spectrum) = 6/24 = 0.25
-    expect(computeSoulFileCompleteness(file)).toBeCloseTo(6 / 24, 2);
+    // 1 (portrait) + 2 (sections) + 1 (moments) + 1 (threads) + 1 (spectrum) = 6/26 = 0.23
+    expect(computeSoulFileCompleteness(file)).toBeCloseTo(6 / 26, 2);
   });
 
   test("whitespace-only strings don't count as filled", () => {
     const file = emptyVisibleSoulFile();
     file.portrait = "   ";
-    file.sections.howYouMove = "  \n  ";
+    file.sections.howYouLightUp = "  \n  ";
     file.relationalStyle = "   ";
     expect(computeSoulFileCompleteness(file)).toBe(0);
   });
@@ -98,25 +98,25 @@ function fullSoulFile(): VisibleSoulFile {
     lastUpdated: new Date().toISOString(),
     portrait: "A warm soul.",
     sections: {
-      howYouMove: "Deliberately.",
-      howYouThink: "In patterns.",
-      howYouConnect: "Deeply.",
-      whatYouCarry: "Responsibility.",
-      whatLightsYouUp: "Ideas.",
-      yourTensions: "Solitude vs connection.",
-      yourVoice: "Direct but warm."
+      howYouLightUp: "Deliberately.",
+      howYouShowUp: "In patterns.",
+      howYouLove: "Deeply.",
+      howYouWeatherStorms: "Responsibility.",
+      whatYoureLookingFor: "Ideas.",
+      yourGrowingEdges: "Solitude vs connection.",
+      yourWarmth: "Direct but warm."
     },
     crystallizedMoments: [{ quote: "test", reflection: "test" }],
     openThreads: ["creativity"],
     compassScores: {
       openness: 80,
-      vitality: 75,
+      playfulness: 75,
       warmth: 82,
-      depth: 90,
-      purpose: 88,
+      emotional_depth: 90,
+      devotion: 88,
       resilience: 70,
-      autonomy: 65,
-      connection: 77
+      independence: 65,
+      passion: 77
     },
     personalitySpectrum: {
       openness: { position: 82, label: "High", evidence: "..." },
@@ -127,6 +127,8 @@ function fullSoulFile(): VisibleSoulFile {
     },
     topValues: [{ value: "Authenticity", description: "Being genuine." }],
     relationalStyle: "Through consistency and depth.",
+    attachmentStyle: "Secure with anxious lean",
+    loveSignature: "Loves through presence",
     completeness: 0
   };
 }

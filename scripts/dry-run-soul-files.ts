@@ -757,13 +757,13 @@ function saveResults(character: Character, result: RunResult, outputDir: string)
     if (visible.sections && typeof visible.sections === "object") {
       const sections = visible.sections as Record<string, string | null>;
       const sectionNames: Record<string, string> = {
-        howYouMove: "How You Move",
-        howYouThink: "How You Think",
-        howYouConnect: "How You Connect",
-        whatYouCarry: "What You Carry",
-        whatLightsYouUp: "What Lights You Up",
-        yourTensions: "Your Tensions",
-        yourVoice: "Your Voice"
+        howYouLightUp: "How You Light Up",
+        howYouShowUp: "How You Show Up",
+        howYouLove: "How You Love",
+        howYouWeatherStorms: "How You Weather Storms",
+        whatYoureLookingFor: "What You're Looking For",
+        yourGrowingEdges: "Your Growing Edges",
+        yourWarmth: "Your Warmth"
       };
       for (const [key, label] of Object.entries(sectionNames)) {
         if (sections[key]) {

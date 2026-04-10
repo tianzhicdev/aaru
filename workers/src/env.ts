@@ -11,4 +11,5 @@ export interface Env {
   DEBUG_API_TOKEN?: string;
   ENABLE_DEBUG_TRACES?: string;
   ENABLE_SOULMATE?: string;
+  MIN_SUPPORTED_VERSION?: string;
 }

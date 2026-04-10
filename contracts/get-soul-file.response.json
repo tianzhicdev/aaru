@@ -4,11 +4,18 @@
     "lastUpdated": "2026-03-15T10:30:00Z",
     "portrait": "You carry a quiet intensity — someone who listens deeply before speaking, then says exactly what matters.",
     "sections": {
-      "howYouMove": "You move deliberately through the world, preferring depth over speed.",
-      "howYouThink": "Your mind works in patterns — connecting disparate ideas into unified frameworks.",
-      "howYouConnect": "You build trust slowly but completely, offering presence rather than performance.",
-      "whatYouCarry": "A deep sense of responsibility for the people you love, sometimes to your own detriment.",
-      "whatLightsYouUp": "Novel ideas, meaningful conversations, and the moment a complex problem suddenly makes sense.",
+      "howYouLightUp": "Your whole face changes when someone shares something real — you light up in conversations that go deeper than small talk.",
+      "howYouShowUp": "You move deliberately through the world, preferring depth over speed. People can count on you to be exactly who you say you are.",
+      "howYouLove": "You build trust slowly but completely, offering presence rather than performance. Your love language is attention.",
+      "howYouWeatherStorms": "You go quiet first, then come back with something honest. You'd rather work through it than pretend it didn't happen.",
+      "whatYoureLookingFor": "Someone who values depth over novelty. You want a partner who shows up consistently, not just in the exciting moments.",
+      "yourGrowingEdges": "The pull between wanting solitude to think and craving connection to feel alive.",
+      "yourWarmth": "Direct but warm — you say hard truths gently and gentle truths directly.",
+      "howYouMove": "Your whole face changes when someone shares something real — you light up in conversations that go deeper than small talk.",
+      "howYouThink": "You move deliberately through the world, preferring depth over speed. People can count on you to be exactly who you say you are.",
+      "howYouConnect": "You build trust slowly but completely, offering presence rather than performance. Your love language is attention.",
+      "whatYouCarry": "You go quiet first, then come back with something honest. You'd rather work through it than pretend it didn't happen.",
+      "whatLightsYouUp": "Someone who values depth over novelty. You want a partner who shows up consistently, not just in the exciting moments.",
       "yourTensions": "The pull between wanting solitude to think and craving connection to feel alive.",
       "yourVoice": "Direct but warm — you say hard truths gently and gentle truths directly."
     },
@@ -22,13 +29,14 @@
       "Exploring what creativity means outside of productivity"
     ],
     "compassScores": {
-      "origins": 72,
-      "relationships": 85,
-      "work_and_purpose": 90,
-      "values_and_beliefs": 65,
-      "emotional_life": 58,
-      "growth_and_change": 78,
-      "aspirations": 45
+      "openness": 72,
+      "playfulness": 65,
+      "warmth": 85,
+      "emotional_depth": 78,
+      "devotion": 70,
+      "resilience": 68,
+      "independence": 82,
+      "passion": 58
     },
     "personalitySpectrum": {
       "openness": {
@@ -68,7 +76,9 @@
       }
     ],
     "relationalStyle": "You build trust through consistency and depth rather than charm.",
-    "completeness": 0.67
+    "attachmentStyle": "You tend toward secure attachment with an anxious lean — you're steady in relationships but notice when connection fades.",
+    "loveSignature": "You love through presence and attention. When you care about someone, they feel it in how carefully you listen.",
+    "completeness": 0.65
   },
   "version": 3,
   "last_updated": "2026-03-15T10:30:00Z",

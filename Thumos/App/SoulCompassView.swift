@@ -7,14 +7,14 @@ struct SoulCompassView: View {
     @State private var selectedAxis: String?
 
     private static let axes: [(key: String, label: String, detail: String)] = [
-        ("openness", "Openness", "How willing you seem to explore complexity, novelty, and new frames of meaning."),
-        ("vitality", "Vitality", "How much life-force, momentum, and felt aliveness comes through in your words."),
+        ("openness", "Openness", "How willing you are to explore complexity, novelty, and new frames of meaning."),
+        ("playfulness", "Playfulness", "How much humor, spontaneity, and levity come through in how you connect."),
         ("warmth", "Warmth", "How much care, tenderness, and emotional generosity appears in the conversation."),
-        ("connection", "Connection", "How strongly you orient toward belonging, intimacy, and relational investment."),
+        ("emotional_depth", "Emotional Depth", "How readily you move into vulnerability, reflection, and layered inner life."),
+        ("devotion", "Devotion", "How much commitment energy and investment willingness shows up in your relationships."),
         ("resilience", "Resilience", "How much recovery, adaptability, and emotional sturdiness shows up under pressure."),
-        ("purpose", "Purpose", "How clearly your words point toward meaning, direction, or an organizing why."),
-        ("depth", "Depth", "How readily you move into nuance, reflection, paradox, and layered inner life."),
-        ("autonomy", "Autonomy", "How strongly self-direction, agency, and independent choice appear in your story.")
+        ("independence", "Independence", "How strongly self-sufficiency and autonomous choice appear in your story."),
+        ("passion", "Passion", "How much romantic intensity and desire expression come through in how you love.")
     ]
 
     private let radius: CGFloat = 90

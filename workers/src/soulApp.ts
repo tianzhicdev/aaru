@@ -32,19 +32,21 @@ interface VisibleSoulFileRow {
   version: number;
   last_updated: string | Date;
   portrait: string | null;
-  how_you_move: string;
-  how_you_think: string;
-  how_you_connect: string;
-  what_you_carry: string;
-  what_lights_you_up: string;
-  your_contradictions: string;
-  your_voice: string;
+  how_you_light_up: string;
+  how_you_show_up: string;
+  how_you_love: string;
+  how_you_weather_storms: string;
+  what_youre_looking_for: string;
+  your_growing_edges: string;
+  your_warmth: string;
   crystallized_moments: Json;
   open_threads: Json;
   compass_scores: Json;
   personality_spectrum: Json;
   top_values: Json;
   relational_style: string | null;
+  attachment_style: string | null;
+  love_signature: string | null;
   completeness?: number | null;
   status?: SynthesisStatus;
   synthesis_started_at?: string | Date | null;
@@ -59,6 +61,8 @@ interface HiddenSoulFileRow {
   core_values: Json;
   voice: Json;
   depth_map: Json;
+  attachment_assessment: string | null;
+  conflict_profile: string | null;
   analyst_notes: Json;
   honest_insights: Json;
   status?: SynthesisStatus;
@@ -110,13 +114,13 @@ function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
     lastUpdated: normalizeTimestamp(row.last_updated),
     portrait: row.portrait,
     sections: {
-      howYouMove: row.how_you_move ?? "",
-      howYouThink: row.how_you_think ?? "",
-      howYouConnect: row.how_you_connect ?? "",
-      whatYouCarry: row.what_you_carry ?? "",
-      whatLightsYouUp: row.what_lights_you_up ?? "",
-      yourTensions: row.your_contradictions ?? "",
-      yourVoice: row.your_voice ?? ""
+      howYouLightUp: row.how_you_light_up ?? "",
+      howYouShowUp: row.how_you_show_up ?? "",
+      howYouLove: row.how_you_love ?? "",
+      howYouWeatherStorms: row.how_you_weather_storms ?? "",
+      whatYoureLookingFor: row.what_youre_looking_for ?? "",
+      yourGrowingEdges: row.your_growing_edges ?? "",
+      yourWarmth: row.your_warmth ?? ""
     },
     crystallizedMoments: row.crystallized_moments ?? [],
     openThreads: row.open_threads ?? [],
@@ -124,6 +128,8 @@ function rowToVisibleSoulFile(row: VisibleSoulFileRow): VisibleSoulFile {
     personalitySpectrum: row.personality_spectrum ?? {},
     topValues: row.top_values ?? [],
     relationalStyle: row.relational_style,
+    attachmentStyle: row.attachment_style,
+    loveSignature: row.love_signature,
     completeness: row.completeness ?? 0
   });
 }
@@ -138,6 +144,8 @@ function rowToHiddenSoulFile(row: HiddenSoulFileRow): HiddenSoulFile {
     coreValues: row.core_values ?? [],
     voice: row.voice ?? {},
     depthMap: row.depth_map ?? {},
+    attachmentAssessment: row.attachment_assessment,
+    conflictProfile: row.conflict_profile,
     analystNotes: row.analyst_notes ?? [],
     honestInsights: row.honest_insights ?? []
   });
@@ -617,23 +625,26 @@ async function saveVisibleSoulFile(
   await sql`
     INSERT INTO visible_soul_files (
       user_id, version, last_updated, portrait,
-      how_you_move, how_you_think, how_you_connect, what_you_carry,
-      what_lights_you_up, your_contradictions, your_voice,
+      how_you_light_up, how_you_show_up, how_you_love, how_you_weather_storms,
+      what_youre_looking_for, your_growing_edges, your_warmth,
       crystallized_moments, open_threads, compass_scores,
       personality_spectrum, top_values, relational_style,
+      attachment_style, love_signature,
       completeness, status, synthesis_started_at
     ) VALUES (
       ${userId}, ${version}, ${timestamp}, ${file.portrait},
-      ${file.sections.howYouMove}, ${file.sections.howYouThink},
-      ${file.sections.howYouConnect}, ${file.sections.whatYouCarry},
-      ${file.sections.whatLightsYouUp}, ${file.sections.yourTensions},
-      ${file.sections.yourVoice},
+      ${file.sections.howYouLightUp}, ${file.sections.howYouShowUp},
+      ${file.sections.howYouLove}, ${file.sections.howYouWeatherStorms},
+      ${file.sections.whatYoureLookingFor}, ${file.sections.yourGrowingEdges},
+      ${file.sections.yourWarmth},
       ${JSON.stringify(file.crystallizedMoments)},
       ${JSON.stringify(file.openThreads)},
       ${JSON.stringify(file.compassScores ?? {})},
       ${JSON.stringify(file.personalitySpectrum ?? {})},
       ${JSON.stringify(file.topValues ?? [])},
       ${file.relationalStyle},
+      ${file.attachmentStyle},
+      ${file.loveSignature},
       ${completeness},
       'ready',
       NULL
@@ -641,19 +652,21 @@ async function saveVisibleSoulFile(
     ON CONFLICT (user_id, version) DO UPDATE SET
       last_updated = EXCLUDED.last_updated,
       portrait = EXCLUDED.portrait,
-      how_you_move = EXCLUDED.how_you_move,
-      how_you_think = EXCLUDED.how_you_think,
-      how_you_connect = EXCLUDED.how_you_connect,
-      what_you_carry = EXCLUDED.what_you_carry,
-      what_lights_you_up = EXCLUDED.what_lights_you_up,
-      your_contradictions = EXCLUDED.your_contradictions,
-      your_voice = EXCLUDED.your_voice,
+      how_you_light_up = EXCLUDED.how_you_light_up,
+      how_you_show_up = EXCLUDED.how_you_show_up,
+      how_you_love = EXCLUDED.how_you_love,
+      how_you_weather_storms = EXCLUDED.how_you_weather_storms,
+      what_youre_looking_for = EXCLUDED.what_youre_looking_for,
+      your_growing_edges = EXCLUDED.your_growing_edges,
+      your_warmth = EXCLUDED.your_warmth,
       crystallized_moments = EXCLUDED.crystallized_moments,
       open_threads = EXCLUDED.open_threads,
       compass_scores = EXCLUDED.compass_scores,
       personality_spectrum = EXCLUDED.personality_spectrum,
       top_values = EXCLUDED.top_values,
       relational_style = EXCLUDED.relational_style,
+      attachment_style = EXCLUDED.attachment_style,
+      love_signature = EXCLUDED.love_signature,
       completeness = EXCLUDED.completeness,
       status = 'ready',
       synthesis_started_at = NULL
@@ -675,7 +688,8 @@ async function saveHiddenSoulFile(
     INSERT INTO hidden_soul_files (
       user_id, version, last_updated, confidence,
       expert_reflections, core_drivers, core_values,
-      voice, depth_map, analyst_notes, honest_insights,
+      voice, depth_map, attachment_assessment, conflict_profile,
+      analyst_notes, honest_insights,
       status, synthesis_started_at
     ) VALUES (
       ${userId}, ${version}, ${timestamp}, ${file.confidence},
@@ -684,6 +698,8 @@ async function saveHiddenSoulFile(
       ${JSON.stringify(file.coreValues)},
       ${JSON.stringify(file.voice)},
       ${JSON.stringify(file.depthMap)},
+      ${file.attachmentAssessment},
+      ${file.conflictProfile},
       ${JSON.stringify(file.analystNotes)},
       ${JSON.stringify(file.honestInsights)},
       'ready',
@@ -697,6 +713,8 @@ async function saveHiddenSoulFile(
       core_values = EXCLUDED.core_values,
       voice = EXCLUDED.voice,
       depth_map = EXCLUDED.depth_map,
+      attachment_assessment = EXCLUDED.attachment_assessment,
+      conflict_profile = EXCLUDED.conflict_profile,
       analyst_notes = EXCLUDED.analyst_notes,
       honest_insights = EXCLUDED.honest_insights,
       status = 'ready',
@@ -964,6 +982,35 @@ export async function runHiddenSynthesis(
     await markHiddenSynthesisFailed(sql, userId);
     return existingHidden;
   }
+}
+
+// COMPAT: Dual format — old iOS reads old keys, new iOS reads new keys.
+// Remove after MIN_SUPPORTED_VERSION is bumped past 1.0.0.
+export function withCompatSections(file: VisibleSoulFile): VisibleSoulFile & {
+  sections: VisibleSoulFile["sections"] & {
+    howYouMove: string;
+    howYouThink: string;
+    howYouConnect: string;
+    whatYouCarry: string;
+    whatLightsYouUp: string;
+    yourTensions: string;
+    yourVoice: string;
+  };
+} {
+  return {
+    ...file,
+    sections: {
+      ...file.sections,
+      // COMPAT: old section key aliases
+      howYouMove: file.sections.howYouLightUp,
+      howYouThink: file.sections.howYouShowUp,
+      howYouConnect: file.sections.howYouLove,
+      whatYouCarry: file.sections.howYouWeatherStorms,
+      whatLightsYouUp: file.sections.whatYoureLookingFor,
+      yourTensions: file.sections.yourGrowingEdges,
+      yourVoice: file.sections.yourWarmth
+    }
+  };
 }
 
 export { emptyVisibleSoulFile };

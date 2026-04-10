@@ -32,8 +32,8 @@ describe("parseReflectionNote", () => {
     const note = parseReflectionNote(JSON.stringify({
       updatedAt: "2026-04-05T00:10:00Z",
       domainCoverage: [
-        { domain: "work_and_purpose", depth: "deep", evidence: "Repeated job discussion" },
-        { domain: "relationships", depth: "untouched", evidence: "" }
+        { domain: "daily_rhythm", depth: "deep", evidence: "Repeated job discussion" },
+        { domain: "play_and_joy", depth: "untouched", evidence: "" }
       ],
       currentThreads: ["job drift", "creative hunger"],
       avoidPastObservations: ["You use humor as armor"],
@@ -46,7 +46,7 @@ describe("parseReflectionNote", () => {
 
     expect(note).not.toBeNull();
     expect(note?.domainCoverage).toHaveLength(2);
-    expect(note?.domainCoverage[0]?.domain).toBe("work_and_purpose");
+    expect(note?.domainCoverage[0]?.domain).toBe("daily_rhythm");
     expect(note?.domainCoverage[0]?.depth).toBe("deep");
     expect(note?.currentThreads).toContain("job drift");
     expect(note?.avoidPastQuestions).toContain("What would freedom cost you?");
@@ -63,7 +63,7 @@ describe("parseReflectionNote", () => {
       avoidPastQuestions: [],
       steerToTopics: [
         {
-          domain: "values_and_beliefs",
+          domain: "values_and_worldview",
           angle: "what stability means when it is chosen instead of inherited"
         }
       ],
@@ -74,7 +74,7 @@ describe("parseReflectionNote", () => {
 
     expect(note).not.toBeNull();
     expect(note?.steerToTopics).toEqual([
-      "Values & Beliefs — what stability means when it is chosen instead of inherited"
+      "Values & Worldview — what stability means when it is chosen instead of inherited"
     ]);
   });
 

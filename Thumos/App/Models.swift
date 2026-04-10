@@ -48,70 +48,83 @@ struct TopValue: Codable, Equatable {
 }
 
 struct VisibleSoulFileSections: Codable, Equatable {
-    var howYouMove: String
-    var howYouThink: String
-    var howYouConnect: String
-    var whatYouCarry: String
-    var whatLightsYouUp: String
-    var yourTensions: String
-    var yourVoice: String
+    var howYouLightUp: String
+    var howYouShowUp: String
+    var howYouLove: String
+    var howYouWeatherStorms: String
+    var whatYoureLookingFor: String
+    var yourGrowingEdges: String
+    var yourWarmth: String
 
     enum CodingKeys: String, CodingKey {
-        case howYouMove = "howYouMove"
-        case howYouThink = "howYouThink"
-        case howYouConnect = "howYouConnect"
-        case whatYouCarry = "whatYouCarry"
-        case whatLightsYouUp = "whatLightsYouUp"
-        case yourTensions = "yourTensions"
-        case legacyYourContradictions = "yourContradictions"
-        case yourVoice = "yourVoice"
+        case howYouLightUp
+        case howYouShowUp
+        case howYouLove
+        case howYouWeatherStorms
+        case whatYoureLookingFor
+        case yourGrowingEdges
+        case yourWarmth
+        // COMPAT: old keys — server sends both during transition
+        case legacyHowYouMove = "howYouMove"
+        case legacyHowYouThink = "howYouThink"
+        case legacyHowYouConnect = "howYouConnect"
+        case legacyWhatYouCarry = "whatYouCarry"
+        case legacyWhatLightsYouUp = "whatLightsYouUp"
+        case legacyYourTensions = "yourTensions"
+        case legacyYourVoice = "yourVoice"
     }
 
     static let empty = VisibleSoulFileSections(
-        howYouMove: "", howYouThink: "", howYouConnect: "",
-        whatYouCarry: "", whatLightsYouUp: "", yourTensions: "", yourVoice: ""
+        howYouLightUp: "", howYouShowUp: "", howYouLove: "",
+        howYouWeatherStorms: "", whatYoureLookingFor: "", yourGrowingEdges: "", yourWarmth: ""
     )
 
     init(
-        howYouMove: String,
-        howYouThink: String,
-        howYouConnect: String,
-        whatYouCarry: String,
-        whatLightsYouUp: String,
-        yourTensions: String,
-        yourVoice: String
+        howYouLightUp: String,
+        howYouShowUp: String,
+        howYouLove: String,
+        howYouWeatherStorms: String,
+        whatYoureLookingFor: String,
+        yourGrowingEdges: String,
+        yourWarmth: String
     ) {
-        self.howYouMove = howYouMove
-        self.howYouThink = howYouThink
-        self.howYouConnect = howYouConnect
-        self.whatYouCarry = whatYouCarry
-        self.whatLightsYouUp = whatLightsYouUp
-        self.yourTensions = yourTensions
-        self.yourVoice = yourVoice
+        self.howYouLightUp = howYouLightUp
+        self.howYouShowUp = howYouShowUp
+        self.howYouLove = howYouLove
+        self.howYouWeatherStorms = howYouWeatherStorms
+        self.whatYoureLookingFor = whatYoureLookingFor
+        self.yourGrowingEdges = yourGrowingEdges
+        self.yourWarmth = yourWarmth
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        howYouMove = try container.decodeIfPresent(String.self, forKey: .howYouMove) ?? ""
-        howYouThink = try container.decodeIfPresent(String.self, forKey: .howYouThink) ?? ""
-        howYouConnect = try container.decodeIfPresent(String.self, forKey: .howYouConnect) ?? ""
-        whatYouCarry = try container.decodeIfPresent(String.self, forKey: .whatYouCarry) ?? ""
-        whatLightsYouUp = try container.decodeIfPresent(String.self, forKey: .whatLightsYouUp) ?? ""
-        yourTensions = try container.decodeIfPresent(String.self, forKey: .yourTensions)
-            ?? container.decodeIfPresent(String.self, forKey: .legacyYourContradictions)
-            ?? ""
-        yourVoice = try container.decodeIfPresent(String.self, forKey: .yourVoice) ?? ""
+        // Prefer new keys, fall back to old keys during transition
+        howYouLightUp = try container.decodeIfPresent(String.self, forKey: .howYouLightUp)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyHowYouMove) ?? ""
+        howYouShowUp = try container.decodeIfPresent(String.self, forKey: .howYouShowUp)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyHowYouThink) ?? ""
+        howYouLove = try container.decodeIfPresent(String.self, forKey: .howYouLove)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyHowYouConnect) ?? ""
+        howYouWeatherStorms = try container.decodeIfPresent(String.self, forKey: .howYouWeatherStorms)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyWhatYouCarry) ?? ""
+        whatYoureLookingFor = try container.decodeIfPresent(String.self, forKey: .whatYoureLookingFor)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyWhatLightsYouUp) ?? ""
+        yourGrowingEdges = try container.decodeIfPresent(String.self, forKey: .yourGrowingEdges)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyYourTensions) ?? ""
+        yourWarmth = try container.decodeIfPresent(String.self, forKey: .yourWarmth)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyYourVoice) ?? ""
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(howYouMove, forKey: .howYouMove)
-        try container.encode(howYouThink, forKey: .howYouThink)
-        try container.encode(howYouConnect, forKey: .howYouConnect)
-        try container.encode(whatYouCarry, forKey: .whatYouCarry)
-        try container.encode(whatLightsYouUp, forKey: .whatLightsYouUp)
-        try container.encode(yourTensions, forKey: .yourTensions)
-        try container.encode(yourVoice, forKey: .yourVoice)
+        try container.encode(howYouLightUp, forKey: .howYouLightUp)
+        try container.encode(howYouShowUp, forKey: .howYouShowUp)
+        try container.encode(howYouLove, forKey: .howYouLove)
+        try container.encode(howYouWeatherStorms, forKey: .howYouWeatherStorms)
+        try container.encode(whatYoureLookingFor, forKey: .whatYoureLookingFor)
+        try container.encode(yourGrowingEdges, forKey: .yourGrowingEdges)
+        try container.encode(yourWarmth, forKey: .yourWarmth)
     }
 }
 
@@ -126,6 +139,8 @@ struct VisibleSoulFile: Codable, Equatable {
     var personalitySpectrum: PersonalitySpectrum?
     var topValues: [TopValue]?
     var relationalStyle: String?
+    var attachmentStyle: String?
+    var loveSignature: String?
     var completeness: Double
 
     enum CodingKeys: String, CodingKey {
@@ -139,6 +154,8 @@ struct VisibleSoulFile: Codable, Equatable {
         case personalitySpectrum
         case topValues
         case relationalStyle
+        case attachmentStyle
+        case loveSignature
         case completeness
     }
 
@@ -153,6 +170,8 @@ struct VisibleSoulFile: Codable, Equatable {
         personalitySpectrum: .empty,
         topValues: [],
         relationalStyle: nil,
+        attachmentStyle: nil,
+        loveSignature: nil,
         completeness: 0
     )
 
@@ -167,6 +186,8 @@ struct VisibleSoulFile: Codable, Equatable {
         personalitySpectrum: PersonalitySpectrum?,
         topValues: [TopValue]?,
         relationalStyle: String?,
+        attachmentStyle: String? = nil,
+        loveSignature: String? = nil,
         completeness: Double = 0
     ) {
         self.version = version
@@ -179,6 +200,8 @@ struct VisibleSoulFile: Codable, Equatable {
         self.personalitySpectrum = personalitySpectrum
         self.topValues = topValues
         self.relationalStyle = relationalStyle
+        self.attachmentStyle = attachmentStyle
+        self.loveSignature = loveSignature
         self.completeness = completeness
     }
 
@@ -194,12 +217,14 @@ struct VisibleSoulFile: Codable, Equatable {
         personalitySpectrum = try container.decodeIfPresent(PersonalitySpectrum.self, forKey: .personalitySpectrum)
         topValues = try container.decodeIfPresent([TopValue].self, forKey: .topValues)
         relationalStyle = try container.decodeIfPresent(String.self, forKey: .relationalStyle)
+        attachmentStyle = try container.decodeIfPresent(String.self, forKey: .attachmentStyle)
+        loveSignature = try container.decodeIfPresent(String.self, forKey: .loveSignature)
         completeness = try container.decodeIfPresent(Double.self, forKey: .completeness) ?? 0
     }
 
     var isEmpty: Bool {
         portrait == nil && crystallizedMoments.isEmpty &&
-        sections.howYouMove.isEmpty && sections.howYouThink.isEmpty
+        sections.howYouLightUp.isEmpty && sections.howYouShowUp.isEmpty
         && !(personalitySpectrum?.hasAnyEntry ?? false)
         && (topValues?.isEmpty ?? true)
         && (relationalStyle?.isEmpty ?? true)
@@ -513,9 +538,9 @@ struct DepthMap: Codable {
 
 struct ExpertReflections: Codable {
     let psychologist: [String]
-    let sociologist: [String]
+    let relationshipScientist: [String]
     let linguist: [String]
-    let narrativeAnalyst: [String]
+    let attachmentAnalyst: [String]
 }
 
 struct HiddenSoulFile: Codable {

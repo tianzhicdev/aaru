@@ -13,17 +13,17 @@ function makeSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleSoulFile
     lastUpdated: "2026-04-06T00:00:00Z",
     portrait: "A thoughtful introvert who loves deep conversations",
     sections: {
-      howYouMove: "Deliberate and measured",
-      howYouThink: "Systems thinker with creative sparks",
-      howYouConnect: "One-on-one depth over crowds",
-      whatYouCarry: "A sense of responsibility for others",
-      whatLightsYouUp: "Learning something completely new",
-      yourTensions: "Freedom vs. commitment",
-      yourVoice: "Quiet but precise"
+      howYouLightUp: "Deliberate and measured",
+      howYouShowUp: "Systems thinker with creative sparks",
+      howYouLove: "One-on-one depth over crowds",
+      howYouWeatherStorms: "A sense of responsibility for others",
+      whatYoureLookingFor: "Learning something completely new",
+      yourGrowingEdges: "Freedom vs. commitment",
+      yourWarmth: "Quiet but precise"
     },
     crystallizedMoments: [{ quote: "test", reflection: "test" }],
     openThreads: ["creativity"],
-    compassScores: { openness: 80, warmth: 65, depth: 90 },
+    compassScores: { openness: 80, warmth: 65, emotional_depth: 90 },
     personalitySpectrum: {
       openness: { position: 85, label: "Very open", evidence: "curious" },
       conscientiousness: { position: 60, label: "Moderate", evidence: "organized" },
@@ -36,6 +36,8 @@ function makeSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleSoulFile
       { value: "Growth", description: "Constant learning" }
     ],
     relationalStyle: "Secure with anxious tendencies",
+    attachmentStyle: "Secure with anxious tendencies",
+    loveSignature: "Loves through deep attention",
     ...overrides,
     completeness: overrides.completeness ?? 0.75
   };
@@ -46,30 +48,30 @@ describe("summarizeSoulForMatching", () => {
     const file = makeSoulFile();
     const summary = summarizeSoulForMatching(file);
     expect(Object.keys(summary.sections)).toHaveLength(7);
-    expect(summary.sections.howYouMove).toBe("Deliberate and measured");
+    expect(summary.sections.howYouLightUp).toBe("Deliberate and measured");
   });
 
   it("skips empty sections", () => {
     const file = makeSoulFile({
       sections: {
-        howYouMove: "",
-        howYouThink: "Active",
-        howYouConnect: "",
-        whatYouCarry: "",
-        whatLightsYouUp: "",
-        yourTensions: "",
-        yourVoice: ""
+        howYouLightUp: "",
+        howYouShowUp: "Active",
+        howYouLove: "",
+        howYouWeatherStorms: "",
+        whatYoureLookingFor: "",
+        yourGrowingEdges: "",
+        yourWarmth: ""
       }
     });
     const summary = summarizeSoulForMatching(file);
     expect(Object.keys(summary.sections)).toHaveLength(1);
-    expect(summary.sections.howYouThink).toBe("Active");
+    expect(summary.sections.howYouShowUp).toBe("Active");
   });
 
   it("extracts compass scores", () => {
     const summary = summarizeSoulForMatching(makeSoulFile());
     expect(summary.compassScores.openness).toBe(80);
-    expect(summary.compassScores.depth).toBe(90);
+    expect(summary.compassScores.emotional_depth).toBe(90);
   });
 
   it("extracts personality highlights", () => {
@@ -92,8 +94,8 @@ describe("summarizeSoulForMatching", () => {
     const file = makeSoulFile({
       portrait: null,
       sections: {
-        howYouMove: "", howYouThink: "", howYouConnect: "",
-        whatYouCarry: "", whatLightsYouUp: "", yourTensions: "", yourVoice: ""
+        howYouLightUp: "", howYouShowUp: "", howYouLove: "",
+        howYouWeatherStorms: "", whatYoureLookingFor: "", yourGrowingEdges: "", yourWarmth: ""
       },
       compassScores: {},
       personalitySpectrum: {
@@ -101,7 +103,9 @@ describe("summarizeSoulForMatching", () => {
         agreeableness: null, emotionalSensitivity: null
       },
       topValues: [],
-      relationalStyle: null
+      relationalStyle: null,
+      attachmentStyle: null,
+      loveSignature: null
     });
     const summary = summarizeSoulForMatching(file);
     expect(Object.keys(summary.sections)).toHaveLength(0);
@@ -117,7 +121,7 @@ describe("formatSoulSummary", () => {
     const summary = summarizeSoulForMatching(makeSoulFile());
     const text = formatSoulSummary("Person A", summary);
     expect(text).toContain("## Person A");
-    expect(text).toContain("**howYouMove**: Deliberate and measured");
+    expect(text).toContain("**howYouLightUp**: Deliberate and measured");
     expect(text).toContain("**Compass**:");
     expect(text).toContain("**Personality**:");
     expect(text).toContain("**Top Values**: Authenticity, Growth");
@@ -130,13 +134,13 @@ describe("buildMatchEvaluationPrompt", () => {
     const summaryA = summarizeSoulForMatching(makeSoulFile());
     const summaryB = summarizeSoulForMatching(makeSoulFile({
       sections: {
-        howYouMove: "Fast and energetic",
-        howYouThink: "Intuitive",
-        howYouConnect: "Through action",
-        whatYouCarry: "Optimism",
-        whatLightsYouUp: "Adventure",
-        yourTensions: "Patience",
-        yourVoice: "Bold"
+        howYouLightUp: "Fast and energetic",
+        howYouShowUp: "Intuitive",
+        howYouLove: "Through action",
+        howYouWeatherStorms: "Optimism",
+        whatYoureLookingFor: "Adventure",
+        yourGrowingEdges: "Patience",
+        yourWarmth: "Bold"
       }
     }));
     const prompt = buildMatchEvaluationPrompt(summaryA, summaryB, "Luna", "Kai");

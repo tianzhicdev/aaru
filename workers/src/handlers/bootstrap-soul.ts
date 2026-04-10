@@ -11,7 +11,8 @@ import {
 import {
   checkReflectionSnapshotNeeded,
   getVisibleSoulFile,
-  markReflectionSnapshotPending
+  markReflectionSnapshotPending,
+  withCompatSections
 } from "../soulApp.ts";
 import { emptyVisibleSoulFile } from "../../../src/domain/soulFile.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
@@ -77,10 +78,11 @@ export async function handleBootstrapSoul(sql: NeonSQL, env: Env, payload: unkno
     }
   }
 
+  const file = visibleSoulFile ?? emptyVisibleSoulFile();
   return jsonResponse(200, {
     user_id: userId,
     ...(token ? { token } : {}),
-    visible_soul_file: visibleSoulFile ?? emptyVisibleSoulFile(),
+    visible_soul_file: withCompatSections(file), // COMPAT: remove after MIN_SUPPORTED_VERSION bump
     has_messages: hasMessages,
     model_profile_id: modelProfileId,
     language

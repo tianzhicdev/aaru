@@ -3,8 +3,8 @@ import type { VisibleSoulFile } from "./schemas.ts";
 export const COMPLETENESS_THRESHOLD = 0.7;
 
 const COMPASS_AXES = [
-  "openness", "vitality", "warmth", "depth",
-  "purpose", "resilience", "autonomy", "connection"
+  "openness", "playfulness", "warmth", "emotional_depth",
+  "devotion", "resilience", "independence", "passion"
 ] as const;
 
 const PERSONALITY_TRAITS = [
@@ -13,14 +13,14 @@ const PERSONALITY_TRAITS = [
 ] as const;
 
 const SECTION_KEYS = [
-  "howYouMove", "howYouThink", "howYouConnect",
-  "whatYouCarry", "whatLightsYouUp", "yourTensions", "yourVoice"
+  "howYouLightUp", "howYouShowUp", "howYouLove",
+  "howYouWeatherStorms", "whatYoureLookingFor", "yourGrowingEdges", "yourWarmth"
 ] as const;
 
 /**
  * Computes soul file completeness as a ratio of filled slots.
  *
- * 24 total slots:
+ * 26 total slots:
  *  - portrait (1)
  *  - 7 sections
  *  - crystallizedMoments has any (1)
@@ -28,9 +28,11 @@ const SECTION_KEYS = [
  *  - 8 compass axes
  *  - 5 personality traits
  *  - relationalStyle (1)
+ *  - attachmentStyle (1)
+ *  - loveSignature (1)
  */
 export function computeSoulFileCompleteness(file: VisibleSoulFile): number {
-  const TOTAL_SLOTS = 24;
+  const TOTAL_SLOTS = 26;
   let filled = 0;
 
   // portrait
@@ -62,6 +64,12 @@ export function computeSoulFileCompleteness(file: VisibleSoulFile): number {
 
   // relationalStyle
   if (file.relationalStyle && file.relationalStyle.trim().length > 0) filled++;
+
+  // attachmentStyle
+  if (file.attachmentStyle && file.attachmentStyle.trim().length > 0) filled++;
+
+  // loveSignature
+  if (file.loveSignature && file.loveSignature.trim().length > 0) filled++;
 
   return Math.round((filled / TOTAL_SLOTS) * 100) / 100;
 }

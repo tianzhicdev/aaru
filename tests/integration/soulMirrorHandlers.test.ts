@@ -20,13 +20,15 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
     version: 1,
     lastUpdated: "",
     portrait: null,
-    sections: { howYouMove: "", howYouThink: "", howYouConnect: "", whatYouCarry: "", whatLightsYouUp: "", yourTensions: "", yourVoice: "" },
+    sections: { howYouLightUp: "", howYouShowUp: "", howYouLove: "", howYouWeatherStorms: "", whatYoureLookingFor: "", yourGrowingEdges: "", yourWarmth: "" },
     crystallizedMoments: [],
     openThreads: [],
     compassScores: {},
     personalitySpectrum: {},
     topValues: [],
-    relationalStyle: null
+    relationalStyle: null,
+    attachmentStyle: null,
+    loveSignature: null
   })),
   getAllSoulMessages: vi.fn(),
   getHiddenSoulFile: vi.fn(),
@@ -44,7 +46,20 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
   markSynthesisPending: vi.fn(),
   runHiddenSynthesis: vi.fn(),
   runReflectionSnapshot: vi.fn(),
-  runVisibleSynthesis: vi.fn()
+  runVisibleSynthesis: vi.fn(),
+  withCompatSections: vi.fn((file: Record<string, unknown>) => ({
+    ...file,
+    sections: {
+      ...(file.sections as Record<string, unknown>),
+      howYouMove: (file.sections as Record<string, string>).howYouLightUp ?? "",
+      howYouThink: (file.sections as Record<string, string>).howYouShowUp ?? "",
+      howYouConnect: (file.sections as Record<string, string>).howYouLove ?? "",
+      whatYouCarry: (file.sections as Record<string, string>).howYouWeatherStorms ?? "",
+      whatLightsYouUp: (file.sections as Record<string, string>).whatYoureLookingFor ?? "",
+      yourTensions: (file.sections as Record<string, string>).yourGrowingEdges ?? "",
+      yourVoice: (file.sections as Record<string, string>).yourWarmth ?? ""
+    }
+  }))
 }));
 
 vi.mock("../../workers/src/backgroundJobsQueue.ts", () => ({
@@ -296,14 +311,14 @@ describe("handleSoulConverse", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.role).toBe("assistant");
-    expect(body.content).toContain("Hi, I'm Thumos. I'm here to listen and understand you");
+    expect(body.content).toContain("Hey, I'm Thumos.");
     expect(body.content).toContain("?"); // ends with a question from the opening pool
     expect(streamLlmText).not.toHaveBeenCalled();
     expect(insertSoulMessage).toHaveBeenCalledWith(
       mockSQL,
       "user-1",
       "assistant",
-      expect.stringContaining("Hi, I'm Thumos. I'm here to listen and understand you")
+      expect.stringContaining("Hey, I'm Thumos.")
     );
   });
 });
@@ -332,8 +347,9 @@ describe("debug routes", () => {
     vi.mocked(getUserModelProfileId).mockResolvedValue("value_default");
     vi.mocked(getLatestReflectionSnapshot).mockResolvedValue({
       updatedAt: "2026-03-31T00:00:00Z",
+      conversationPhase: "spark",
       domainCoverage: [
-        { domain: "work_and_purpose", depth: "deep", evidence: "Repeated discussion" }
+        { domain: "daily_rhythm", depth: "deep", evidence: "Repeated discussion" }
       ],
       currentThreads: ["job drift"],
       avoidPastObservations: ["You use humor as armor"],

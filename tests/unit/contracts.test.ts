@@ -31,8 +31,17 @@ describe("API contract fixtures", () => {
     expect(sf).toHaveProperty("lastUpdated");
     expect(sf).toHaveProperty("portrait");
 
-    // Sections (camelCase)
+    // Sections — NEW romance-pivot keys
     const sections = sf.sections;
+    expect(sections).toHaveProperty("howYouLightUp");
+    expect(sections).toHaveProperty("howYouShowUp");
+    expect(sections).toHaveProperty("howYouLove");
+    expect(sections).toHaveProperty("howYouWeatherStorms");
+    expect(sections).toHaveProperty("whatYoureLookingFor");
+    expect(sections).toHaveProperty("yourGrowingEdges");
+    expect(sections).toHaveProperty("yourWarmth");
+
+    // Sections — OLD keys (kept for backward compat)
     expect(sections).toHaveProperty("howYouMove");
     expect(sections).toHaveProperty("howYouThink");
     expect(sections).toHaveProperty("howYouConnect");
@@ -53,6 +62,8 @@ describe("API contract fixtures", () => {
     expect(sf.topValues[0]).toHaveProperty("value");
     expect(sf.topValues[0]).toHaveProperty("description");
     expect(sf.relationalStyle).toBeTypeOf("string");
+    expect(sf.attachmentStyle).toBeTypeOf("string");
+    expect(sf.loveSignature).toBeTypeOf("string");
     expect(sf.completeness).toBeTypeOf("number");
     expect(sf.completeness).toBeGreaterThanOrEqual(0);
     expect(sf.completeness).toBeLessThanOrEqual(1);
@@ -69,6 +80,10 @@ describe("API contract fixtures", () => {
 
   test("get-soul-file fixture has complete visible_soul_file", () => {
     const sf = getSoulFileFixture.visible_soul_file;
+    // New key
+    expect(sf.sections.howYouLightUp).toBeTypeOf("string");
+    expect(sf.sections.howYouLightUp.length).toBeGreaterThan(0);
+    // Old key (backward compat)
     expect(sf.sections.howYouMove).toBeTypeOf("string");
     expect(sf.sections.howYouMove.length).toBeGreaterThan(0);
     expect(sf.personalitySpectrum).toBeDefined();
@@ -141,11 +156,19 @@ describe("API contract fixtures", () => {
     expect(sf).toHaveProperty("topValues");
     expect(sf).toHaveProperty("relationalStyle");
 
+    // New section keys
+    expect(sf.sections).toHaveProperty("howYouLightUp");
+    expect(sf.sections).toHaveProperty("yourGrowingEdges");
+    expect(sf.sections).toHaveProperty("yourWarmth");
+
+    // Old section keys (backward compat)
     expect(sf.sections).toHaveProperty("howYouMove");
     expect(sf.sections).toHaveProperty("whatLightsYouUp");
     expect(sf.sections).toHaveProperty("yourTensions");
 
     expect(sf.personalitySpectrum).toHaveProperty("emotionalSensitivity");
+    expect(sf).toHaveProperty("attachmentStyle");
+    expect(sf).toHaveProperty("loveSignature");
     expect(sf).toHaveProperty("completeness");
   });
 });

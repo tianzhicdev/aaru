@@ -14,13 +14,13 @@ function makeVisibleSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleS
     lastUpdated: "2026-03-31T00:00:00Z",
     portrait: null,
     sections: {
-      howYouMove: "",
-      howYouThink: "",
-      howYouConnect: "",
-      whatYouCarry: "",
-      whatLightsYouUp: "",
-      yourTensions: "",
-      yourVoice: ""
+      howYouLightUp: "",
+      howYouShowUp: "",
+      howYouLove: "",
+      howYouWeatherStorms: "",
+      whatYoureLookingFor: "",
+      yourGrowingEdges: "",
+      yourWarmth: ""
     },
     crystallizedMoments: [],
     openThreads: [],
@@ -34,6 +34,8 @@ function makeVisibleSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleS
     },
     topValues: [],
     relationalStyle: null,
+    attachmentStyle: null,
+    loveSignature: null,
     ...overrides,
     completeness: overrides.completeness ?? 0
   };
@@ -42,6 +44,7 @@ function makeVisibleSoulFile(overrides: Partial<VisibleSoulFile> = {}): VisibleS
 function makeReflectionNote(overrides: Partial<ReflectionNote> = {}): ReflectionNote {
   return {
     updatedAt: "2026-03-31T00:00:00Z",
+    conversationPhase: "spark",
     domainCoverage: [],
     currentThreads: [],
     avoidPastObservations: [],
@@ -72,13 +75,13 @@ describe("buildSoulSystemPrompt", () => {
       visibleSoulFile: makeVisibleSoulFile({
         portrait: "A wanderer who builds bridges between worlds",
         sections: {
-          howYouMove: "With quiet deliberation",
-          howYouThink: "",
-          howYouConnect: "",
-          whatYouCarry: "",
-          whatLightsYouUp: "Late-night conversations",
-          yourTensions: "You want closeness but brace against it.",
-          yourVoice: ""
+          howYouLightUp: "With quiet deliberation",
+          howYouShowUp: "",
+          howYouLove: "",
+          howYouWeatherStorms: "",
+          whatYoureLookingFor: "Late-night conversations",
+          yourGrowingEdges: "You want closeness but brace against it.",
+          yourWarmth: ""
         },
         crystallizedMoments: [{ quote: "I built walls", reflection: "Protection as architecture" }],
         openThreads: ["The door metaphor"],
@@ -88,7 +91,7 @@ describe("buildSoulSystemPrompt", () => {
     }));
 
     expect(prompt).toContain("A wanderer who builds bridges");
-    expect(prompt).toContain("Their tensions");
+    expect(prompt).toContain("Their growing edges");
     expect(prompt).toContain("I built walls");
     expect(prompt).toContain("Self-Direction");
     expect(prompt).toContain("Relational style");
@@ -98,9 +101,9 @@ describe("buildSoulSystemPrompt", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({
         domainCoverage: [
-          { domain: "work_and_purpose", depth: "deep", evidence: "Repeated job discussion" },
-          { domain: "relationships", depth: "untouched", evidence: "" },
-          { domain: "emotional_life", depth: "mentioned", evidence: "Brief mentions" }
+          { domain: "daily_rhythm", depth: "deep", evidence: "Repeated job discussion" },
+          { domain: "play_and_joy", depth: "untouched", evidence: "" },
+          { domain: "values_and_worldview", depth: "mentioned", evidence: "Brief mentions" }
         ],
         currentThreads: ["job drift", "creative hunger"],
         avoidPastObservations: ["You turn humor into armor"],
@@ -115,7 +118,7 @@ describe("buildSoulSystemPrompt", () => {
     expect(prompt).toContain("CONVERSATION SUMMARY");
     expect(prompt).toContain("software engineer");
     expect(prompt).toContain("TERRITORY MAP");
-    expect(prompt).toContain("Relationships: untouched");
+    expect(prompt).toContain("Play & Joy: untouched");
     expect(prompt).toContain("EXPLORE");
     expect(prompt).toContain("NAVIGATION");
     expect(prompt).toContain("Relationships — who do they turn to");

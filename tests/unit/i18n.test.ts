@@ -20,27 +20,28 @@ describe("i18n", () => {
     for (const lang of SUPPORTED_LANGUAGES) {
       const p = getPrompts(lang);
       expect(p.soul.preamble).toBeTruthy();
-      expect(p.domains.labels.origins).toBeTruthy();
+      expect(p.domains.labels.daily_rhythm).toBeTruthy();
     }
   });
 
   it("getPrompts falls back to en for unknown language", () => {
     const p = getPrompts("sv");
     expect(p.soul.preamble).toContain("Thumos");
-    expect(p.soul.preamble).toContain("AI conversationalist");
+    expect(p.soul.preamble).toContain("helping people find love");
   });
 
   it("Japanese prompts contain Japanese text", () => {
     const p = getPrompts("ja");
     expect(p.soul.preamble).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/);
-    expect(p.domains.labels.origins).toBe("ルーツ");
+    expect(p.domains.labels.daily_rhythm).toMatch(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/);
     expect(p.navigation.header).toMatch(/ナビゲーション/);
   });
 
   it("French prompts contain French text", () => {
     const p = getPrompts("fr");
     expect(p.soul.preamble).toContain("Thumos");
-    expect(p.domains.labels.origins).toBe("Origines");
+    expect(typeof p.domains.labels.daily_rhythm).toBe("string");
+    expect(p.domains.labels.daily_rhythm).toBeTruthy();
     expect(p.navigation.header).toContain("NAVIGATION");
   });
 

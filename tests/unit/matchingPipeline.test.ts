@@ -11,8 +11,8 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
     lastUpdated: "",
     portrait: "A person",
     sections: {
-      howYouMove: "Move", howYouThink: "Think", howYouConnect: "Connect",
-      whatYouCarry: "Carry", whatLightsYouUp: "Light", yourTensions: "Tensions", yourVoice: "Voice"
+      howYouLightUp: "Light", howYouShowUp: "Show", howYouLove: "Love",
+      howYouWeatherStorms: "Weather", whatYoureLookingFor: "Looking", yourGrowingEdges: "Edges", yourWarmth: "Warmth"
     },
     crystallizedMoments: [],
     openThreads: [],
@@ -23,6 +23,8 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
     },
     topValues: [],
     relationalStyle: null,
+    attachmentStyle: null,
+    loveSignature: null,
     completeness: 0.8
   })
 }));

@@ -1,28 +1,74 @@
 import { z } from "zod";
 
-// ── Life Domains ──────────────────────────────────────────────
+// ── Life Domains (Romance-oriented) ─────────────────────────
 
 export const LIFE_DOMAINS = [
-  "origins",
-  "relationships",
-  "work_and_purpose",
-  "values_and_beliefs",
-  "emotional_life",
-  "growth_and_change",
-  "aspirations"
+  "daily_rhythm",
+  "play_and_joy",
+  "values_and_worldview",
+  "love_language",
+  "conflict_and_repair",
+  "vulnerability_and_trust",
+  "partnership_vision"
 ] as const;
 
 export type LifeDomain = typeof LIFE_DOMAINS[number];
 
 export const DOMAIN_LABELS: Record<LifeDomain, string> = {
-  origins: "Origins",
-  relationships: "Relationships",
-  work_and_purpose: "Work & Purpose",
-  values_and_beliefs: "Values & Beliefs",
-  emotional_life: "Emotional Life",
-  growth_and_change: "Growth & Change",
-  aspirations: "Aspirations"
+  daily_rhythm: "Daily Rhythm",
+  play_and_joy: "Play & Joy",
+  values_and_worldview: "Values & Worldview",
+  love_language: "How You Love",
+  conflict_and_repair: "Conflict & Repair",
+  vulnerability_and_trust: "Vulnerability & Trust",
+  partnership_vision: "Partnership Vision"
 };
+
+// ── Conversation Phases (Aron's escalation) ─────────────────
+
+export const CONVERSATION_PHASES = ["spark", "kindling", "flame", "hearth"] as const;
+export type ConversationPhase = typeof CONVERSATION_PHASES[number];
+
+export interface PhaseConfig {
+  name: string;
+  messageRange: [number, number | null];
+  allowedDomains: LifeDomain[];
+  tone: string;
+}
+
+export const PHASE_CONFIGS: Record<ConversationPhase, PhaseConfig> = {
+  spark: {
+    name: "Spark",
+    messageRange: [1, 15],
+    allowedDomains: ["daily_rhythm", "play_and_joy"],
+    tone: "Light, fun, \"what makes you you\""
+  },
+  kindling: {
+    name: "Kindling",
+    messageRange: [15, 35],
+    allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language"],
+    tone: "Warmer, \"how you connect\""
+  },
+  flame: {
+    name: "Flame",
+    messageRange: [35, 60],
+    allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language", "conflict_and_repair", "vulnerability_and_trust"],
+    tone: "Real, \"the hard stuff\""
+  },
+  hearth: {
+    name: "Hearth",
+    messageRange: [60, null],
+    allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language", "conflict_and_repair", "vulnerability_and_trust", "partnership_vision"],
+    tone: "Deep, \"what you dream of\""
+  }
+};
+
+export function getConversationPhase(messageCount: number): ConversationPhase {
+  if (messageCount < 15) return "spark";
+  if (messageCount < 35) return "kindling";
+  if (messageCount < 60) return "flame";
+  return "hearth";
+}
 
 // ── Shared Schemas ────────────────────────────────────────────
 
@@ -109,6 +155,9 @@ export type UserOpenness = z.infer<typeof userOpennessSchema>;
 export const reflectionNoteSchema = z.object({
   updatedAt: z.string().default(""),
 
+  // Conversation phase
+  conversationPhase: z.enum(CONVERSATION_PHASES).default("spark"),
+
   // Steering (structured, enforced)
   domainCoverage: z.array(domainCoverageEntrySchema).default([]),
   currentThreads: z.array(z.string()).default([]),
@@ -135,21 +184,21 @@ export const visibleSoulFileSchema = z.object({
   lastUpdated: z.string().default(""),
   portrait: z.string().nullable().default(null),
   sections: z.object({
-    howYouMove: z.string().default(""),
-    howYouThink: z.string().default(""),
-    howYouConnect: z.string().default(""),
-    whatYouCarry: z.string().default(""),
-    whatLightsYouUp: z.string().default(""),
-    yourTensions: z.string().default(""),
-    yourVoice: z.string().default("")
+    howYouLightUp: z.string().default(""),
+    howYouShowUp: z.string().default(""),
+    howYouLove: z.string().default(""),
+    howYouWeatherStorms: z.string().default(""),
+    whatYoureLookingFor: z.string().default(""),
+    yourGrowingEdges: z.string().default(""),
+    yourWarmth: z.string().default("")
   }).default({
-    howYouMove: "",
-    howYouThink: "",
-    howYouConnect: "",
-    whatYouCarry: "",
-    whatLightsYouUp: "",
-    yourTensions: "",
-    yourVoice: ""
+    howYouLightUp: "",
+    howYouShowUp: "",
+    howYouLove: "",
+    howYouWeatherStorms: "",
+    whatYoureLookingFor: "",
+    yourGrowingEdges: "",
+    yourWarmth: ""
   }),
   crystallizedMoments: z.array(crystallizedMomentSchema).default([]),
   openThreads: z.array(z.string()).default([]),
@@ -157,6 +206,8 @@ export const visibleSoulFileSchema = z.object({
   personalitySpectrum: personalitySpectrumSchema,
   topValues: z.array(topValueSchema).default([]),
   relationalStyle: z.string().nullable().default(null),
+  attachmentStyle: z.string().nullable().default(null),
+  loveSignature: z.string().nullable().default(null),
   completeness: z.number().min(0).max(1).default(0)
 });
 
@@ -176,14 +227,14 @@ export const hiddenSoulFileSchema = z.object({
   confidence: z.enum(["low", "medium", "high"]).default("low"),
   expertReflections: z.object({
     psychologist: z.array(z.string()).default([]),
-    sociologist: z.array(z.string()).default([]),
+    relationshipScientist: z.array(z.string()).default([]),
     linguist: z.array(z.string()).default([]),
-    narrativeAnalyst: z.array(z.string()).default([])
+    attachmentAnalyst: z.array(z.string()).default([])
   }).default({
     psychologist: [],
-    sociologist: [],
+    relationshipScientist: [],
     linguist: [],
-    narrativeAnalyst: []
+    attachmentAnalyst: []
   }),
   coreDrivers: z.array(coreDriverSchema).default([]),
   coreValues: z.array(z.string()).default([]),
@@ -197,6 +248,8 @@ export const hiddenSoulFileSchema = z.object({
     voiceExamples: []
   }),
   depthMap: depthMapSchema,
+  attachmentAssessment: z.string().nullable().default(null),
+  conflictProfile: z.string().nullable().default(null),
   analystNotes: z.array(z.string()).default([]),
   honestInsights: z.array(z.string()).default([])
 });

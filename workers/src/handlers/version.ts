@@ -1,6 +1,7 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
+import type { Env } from "../env.ts";
 
-const MIN_SUPPORTED_VERSION = "0.1.0";
+const DEFAULT_MIN_SUPPORTED_VERSION = "0.1.0";
 
 function compareSemver(a: string, b: string): number {
   const pa = a.split(".").map(Number);
@@ -12,7 +13,8 @@ function compareSemver(a: string, b: string): number {
   return 0;
 }
 
-export function handleVersion(payload: unknown) {
+export function handleVersion(payload: unknown, env?: Env) {
+  const minVersion = env?.MIN_SUPPORTED_VERSION || DEFAULT_MIN_SUPPORTED_VERSION;
   const body = payload as Record<string, unknown>;
   const buildVersion = typeof body?.build_version === "string" ? body.build_version.trim() : "";
 
@@ -28,16 +30,16 @@ export function handleVersion(payload: unknown) {
   while (parts.length < 3) parts.push("0");
   const normalizedVersion = parts.join(".");
 
-  if (compareSemver(normalizedVersion, MIN_SUPPORTED_VERSION) < 0) {
+  if (compareSemver(normalizedVersion, minVersion) < 0) {
     return jsonResponse(200, {
       status: "unsupported",
-      min_version: MIN_SUPPORTED_VERSION,
+      min_version: minVersion,
       message: "This version of Thumos is no longer supported. Please update to continue."
     });
   }
 
   return jsonResponse(200, {
     status: "ok",
-    min_version: MIN_SUPPORTED_VERSION
+    min_version: minVersion
   });
 }

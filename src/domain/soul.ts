@@ -1,5 +1,5 @@
 import type { LifeDomain, ReflectionNote, UserOpenness, VisibleSoulFile } from "./schemas.ts";
-import { LIFE_DOMAINS } from "./schemas.ts";
+import { LIFE_DOMAINS, PHASE_CONFIGS, getConversationPhase } from "./schemas.ts";
 import { getPrompts, getLanguageDirective } from "./i18n/index.ts";
 
 export type OpeningKind = "first_ever" | "returning";
@@ -20,13 +20,13 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
   }
 
   const sections = visible.sections;
-  if (sections.howYouMove) parts.push(`How they move: ${sections.howYouMove}`);
-  if (sections.howYouThink) parts.push(`How they think: ${sections.howYouThink}`);
-  if (sections.howYouConnect) parts.push(`How they connect: ${sections.howYouConnect}`);
-  if (sections.whatYouCarry) parts.push(`What they carry: ${sections.whatYouCarry}`);
-  if (sections.whatLightsYouUp) parts.push(`What lights them up: ${sections.whatLightsYouUp}`);
-  if (sections.yourTensions) parts.push(`Their tensions: ${sections.yourTensions}`);
-  if (sections.yourVoice) parts.push(`Their voice: ${sections.yourVoice}`);
+  if (sections.howYouLightUp) parts.push(`How they light up: ${sections.howYouLightUp}`);
+  if (sections.howYouShowUp) parts.push(`How they show up: ${sections.howYouShowUp}`);
+  if (sections.howYouLove) parts.push(`How they love: ${sections.howYouLove}`);
+  if (sections.howYouWeatherStorms) parts.push(`How they weather storms: ${sections.howYouWeatherStorms}`);
+  if (sections.whatYoureLookingFor) parts.push(`What they're looking for: ${sections.whatYoureLookingFor}`);
+  if (sections.yourGrowingEdges) parts.push(`Their growing edges: ${sections.yourGrowingEdges}`);
+  if (sections.yourWarmth) parts.push(`Their warmth: ${sections.yourWarmth}`);
 
   if (visible.crystallizedMoments.length > 0) {
     const moments = visible.crystallizedMoments
@@ -43,6 +43,14 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
     parts.push(`Relational style: ${visible.relationalStyle}`);
   }
 
+  if (visible.attachmentStyle) {
+    parts.push(`Attachment style: ${visible.attachmentStyle}`);
+  }
+
+  if (visible.loveSignature) {
+    parts.push(`Love signature: ${visible.loveSignature}`);
+  }
+
   if (visible.topValues.length > 0) {
     parts.push(`Top values: ${visible.topValues.map((value) => `${value.value} (${value.description})`).join("; ")}`);
   }
@@ -52,7 +60,7 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
     parts.push(`Personality spectrum: ${JSON.stringify(visible.personalitySpectrum)}`);
   }
 
-  return parts.length > 0 ? parts.join("\n") : "No soul file yet.";
+  return parts.length > 0 ? parts.join("\n") : "No portrait yet.";
 }
 
 function buildSummarySection(note: ReflectionNote): string {
@@ -73,16 +81,43 @@ export function buildDepthGuidance(note: ReflectionNote | null): string {
   return `\n${DEPTH_GUIDANCE[openness]}`;
 }
 
+function buildPhaseSection(
+  note: ReflectionNote,
+  messageCount: number
+): string {
+  const phase = note.conversationPhase ?? getConversationPhase(messageCount);
+  const config = PHASE_CONFIGS[phase];
+  const allowedDomainList = config.allowedDomains.join(", ");
+  const lockedDomains = LIFE_DOMAINS.filter(
+    (d) => !config.allowedDomains.includes(d)
+  );
+  const lockedList = lockedDomains.length > 0
+    ? lockedDomains.join(", ")
+    : "none";
+
+  return `\nCONVERSATION PHASE: ${config.name} (messages ${config.messageRange[0]}-${config.messageRange[1] ?? "∞"})
+Tone: ${config.tone}
+Allowed domains: ${allowedDomainList}
+Locked domains (DO NOT steer here yet): ${lockedList}`;
+}
+
 function buildNavigationSection(
   note: ReflectionNote,
   recentQuestions: string[],
+  messageCount: number,
   language?: string | null
 ): string {
   const prompts = getPrompts(language);
   const nav = prompts.navigation;
   const domainLabels = prompts.domains.labels;
 
+  const phase = note.conversationPhase ?? getConversationPhase(messageCount);
+  const config = PHASE_CONFIGS[phase];
+
   const lines: string[] = [nav.header];
+
+  // Phase info
+  lines.push(buildPhaseSection(note, messageCount));
 
   // Territory map
   if (note.domainCoverage.length > 0) {
@@ -93,9 +128,11 @@ function buildNavigationSection(
       const entry = coverageMap.get(domain);
       const depth = entry?.depth ?? "untouched";
       const label = domainLabels[domain];
-      const marker = depth === "untouched" || depth === "mentioned" ? nav.exploreMarker : "";
+      const isLocked = !config.allowedDomains.includes(domain);
+      const locked = isLocked ? " [LOCKED]" : "";
+      const marker = !isLocked && (depth === "untouched" || depth === "mentioned") ? nav.exploreMarker : "";
       const saturated = depth === "deep" ? nav.saturatedMarker : "";
-      lines.push(`- ${label}: ${depth}${saturated}${marker}`);
+      lines.push(`- ${label}: ${depth}${saturated}${marker}${locked}`);
     }
   }
 
@@ -195,16 +232,17 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
 
   const soulFileSection = context.visibleSoulFile
     ? buildVisibleSoulFileContext(context.visibleSoulFile)
-    : "No soul file yet.";
+    : "No portrait yet.";
 
   const summarySection = context.reflectionNote
     ? buildSummarySection(context.reflectionNote)
     : "";
 
   const recentQuestions = extractRecentAssistantQuestions(context.messages);
+  const messageCount = context.messages.length;
 
   const navigationSection = context.reflectionNote
-    ? buildNavigationSection(context.reflectionNote, recentQuestions, context.language)
+    ? buildNavigationSection(context.reflectionNote, recentQuestions, messageCount, context.language)
     : "";
 
   const depthGuidanceSection = buildDepthGuidance(context.reflectionNote);
@@ -217,7 +255,7 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
 
 ${soul.principles}
 
-THEIR SOUL FILE:
+THEIR PORTRAIT:
 ${soulFileSection}
 ${summarySection}
 ${navigationSection}

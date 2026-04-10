@@ -1,7 +1,7 @@
 # Thumos — Claude Operating Rules
 
 ## Project Overview
-Thumos is a soul-based social app. Phase 1: Soul Mirror — reflective AI conversations that build a living soul file. Phase 2 (current): Soulmate — LLM-based match evaluation, match reasoning, display names, and direct messaging between matched users.
+Thumos is a romance-focused soul discovery app. The AI has the persona of a warm, perceptive friend genuinely excited about helping people find love — playful when it's light, real when it matters. Phase 1: Soul Mirror — reflective AI conversations that build a living portrait. Phase 2 (current): Soulmate — LLM-based match evaluation, match reasoning, display names, and direct messaging between matched users.
 
 **Two codebases in one repo:**
 - **TypeScript backend** — domain logic + Cloudflare Workers API
@@ -52,14 +52,14 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `src/domain/` — Pure domain logic (soul mirror + matching)
 - `src/domain/soul.ts` — Soul Mirror system prompts, navigation block (from reflection note steering fields), opening flow, anti-repeat rules
 - `src/domain/soulFile.ts` — Clean-slate reflection note prompt, independent visible narrative + hidden clinical prompts (no assessment step, no merge), JSON schema generation via `toJSONSchema()`, structured-output parsing
-- `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote
-- `src/domain/matching.ts` — Completeness threshold for soulmate matching
-- `src/domain/matchEvaluation.ts` — Match prompt builder, Zod schema for evaluation results, soul summarizer for matching
+- `src/domain/schemas.ts` — Zod schemas for VisibleSoulFile, HiddenSoulFile, ReflectionNote. Romance domains (daily_rhythm, play_and_joy, values_and_worldview, love_language, conflict_and_repair, vulnerability_and_trust, partnership_vision), conversation phases (spark → kindling → flame → hearth), romance-oriented sections and compass axes
+- `src/domain/matching.ts` — Completeness threshold for soulmate matching, romance-oriented section/axis lists
+- `src/domain/matchEvaluation.ts` — Match prompt builder, Zod schema for evaluation results, soul summarizer with romance dimensions (attachment fit, conflict compatibility, love language resonance, etc.)
 - `db/` — Neon schema and migrations
 
 ### Cloudflare Workers (workers/src/)
 - `workers/src/index.ts` — Raw fetch() router
-- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET, optional FIREWORKS_API_KEY / DEFAULT_MODEL_PROFILE_ID / XAI_TOKEN)
+- `workers/src/env.ts` — Env interface (DATABASE_URL, ANTHROPIC_API_KEY, THUMOS_SESSION_SECRET, optional FIREWORKS_API_KEY / DEFAULT_MODEL_PROFILE_ID / XAI_TOKEN / MIN_SUPPORTED_VERSION)
 - `workers/src/xai.ts` — xAI Grok web search client for current events in opening mode
 - `workers/src/db.ts` — Neon serverless driver + user/session CRUD
 - `workers/src/auth.ts` — HMAC SHA-256 session tokens
@@ -93,10 +93,10 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `Thumos/App/Models.swift` — Codable data models (VisibleSoulFile, SoulMessage, etc.)
 - `Thumos/App/NotificationManager.swift` — Local notification scheduling (weekly Saturday 8pm)
 - `Thumos/App/RootView.swift` — Root view (→ SoulMirrorTabView)
-- `Thumos/App/SoulMirrorTabView.swift` — Tab container (Conversation + Soul File)
+- `Thumos/App/SoulMirrorTabView.swift` — Tab container (Talk + You + Connect)
 - `Thumos/App/SoulConversationScreen.swift` — Streaming chat UI
-- `Thumos/App/SoulFileScreen.swift` — Dashboard-v2 soul file display
-- `Thumos/App/SoulCompassView.swift` — Tappable compass with axis detail
+- `Thumos/App/SoulFileScreen.swift` — Portrait display (was "Soul File") with romance-oriented sections, attachmentStyle, loveSignature
+- `Thumos/App/SoulCompassView.swift` — Tappable compass with romance axes (playfulness, devotion, passion, emotional_depth, etc.)
 - `Thumos/App/PersonalitySpectrumView.swift` — Personality spectrum bars
 - `Thumos/App/TopValuesView.swift` — Top value pills
 - `Thumos/App/SecureStore.swift` — Keychain wrapper (device/session identity)
@@ -156,6 +156,9 @@ A task is complete when ALL of the following are true:
 - **Match evaluation** — LLM-based: loads both users' visible soul files, summarizes for token efficiency (strips raw moments/quotes), calls `callLlmJson()` with structured output schema. Returns decision (match/no_match), score (0-1), and reasoning paragraph. Falls back to error on any failure.
 - **Match messages** — Simple sender_id/receiver_id model (no match_id foreign key). Auth check verifies users are matched via `getMatchedUserIds()`. iOS polls every 5 seconds using `after_id` for incremental fetches.
 - **Display name privacy** — Match list shows `display_name` from `soulmate_profiles` + `reasoning` from `matches`. Soul file portrait/content is NEVER exposed to other users.
+- **Romance pivot dual format** — Server sends both old section keys (howYouMove, howYouThink, etc.) and new keys (howYouLightUp, howYouShowUp, etc.) via `withCompatSections()` in `soulApp.ts`. Old iOS reads old keys, new iOS reads new keys. See `docs/deprecation-old-soul-fields.md` for removal steps after MIN_SUPPORTED_VERSION bump.
+- **Conversation phases** — Spark (1-15 msgs), Kindling (15-35), Flame (35-60), Hearth (60+). Each phase unlocks new romance domains. Phase is tracked in `conversationPhase` field on reflection notes.
+- **MIN_SUPPORTED_VERSION** — Read from env (via `wrangler secret put`), defaults to "0.1.0". Bump to "1.0.0" after new iOS is approved to force-upgrade old clients, then remove compat aliases.
 
 ## API Contract Rules
 
@@ -178,7 +181,7 @@ The iOS ↔ server wire format is locked. Golden fixtures in `contracts/` are th
 ### When You Must Break Compatibility
 1. Ship the server change (backward compatible — send both old + new format)
 2. Ship iOS update + wait for App Store approval
-3. After adoption window: bump MIN_SUPPORTED_VERSION in version.ts
+3. After adoption window: `wrangler secret put MIN_SUPPORTED_VERSION` (e.g. "1.0.0")
 4. Only then remove the old format from server
 
 ## Verify (standard process — run after every change)

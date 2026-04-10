@@ -12,14 +12,18 @@ import {
 describe("empty constructors", () => {
   it("returns visible defaults with the renamed tensions section", () => {
     const empty = emptyVisibleSoulFile();
-    expect(empty.sections.yourTensions).toBe("");
+    expect(empty.sections.yourGrowingEdges).toBe("");
     expect(empty.topValues).toEqual([]);
     expect(empty.relationalStyle).toBeNull();
+    expect(empty.attachmentStyle).toBeNull();
+    expect(empty.loveSignature).toBeNull();
   });
 
   it("returns hidden defaults with honest insights", () => {
     const empty = emptyHiddenSoulFile();
     expect(empty.expertReflections.psychologist).toEqual([]);
+    expect(empty.expertReflections.relationshipScientist).toEqual([]);
+    expect(empty.expertReflections.attachmentAnalyst).toEqual([]);
     expect(empty.depthMap.domainCoverage).toEqual([]);
     expect(empty.honestInsights).toEqual([]);
   });
@@ -33,13 +37,15 @@ describe("prompt builders", () => {
 
   it("builds visible and hidden prompts without an assessment step", () => {
     const visiblePrompt = buildVisibleNarrativePrompt(messages);
-    expect(visiblePrompt).toContain("yourTensions");
+    expect(visiblePrompt).toContain("yourGrowingEdges");
     expect(visiblePrompt).toContain("personalitySpectrum");
     expect(visiblePrompt).not.toContain("Assessment JSON");
 
     const hiddenPrompt = buildHiddenClinicalPrompt(messages);
     expect(hiddenPrompt).toContain("honestInsights");
     expect(hiddenPrompt).toContain("domainCoverage");
+    expect(hiddenPrompt).toContain("attachmentAssessment");
+    expect(hiddenPrompt).toContain("conflictProfile");
     expect(hiddenPrompt).not.toContain("bigFiveScores");
   });
 
@@ -50,23 +56,23 @@ describe("prompt builders", () => {
 });
 
 describe("parsers", () => {
-  it("parses visible narrative output with your tensions", () => {
+  it("parses visible narrative output with your growing edges", () => {
     const visible = parseVisibleNarrative(JSON.stringify({
       version: 2,
       lastUpdated: "2026-03-31T00:00:00Z",
       portrait: "You move through the world like someone protecting a quiet interior room.",
       sections: {
-        howYouMove: "With deliberation.",
-        howYouThink: "In layered metaphors.",
-        howYouConnect: "Slowly.",
-        whatYouCarry: "A fear of being swallowed.",
-        whatLightsYouUp: "Creative freedom.",
-        yourTensions: "You want closeness but brace against it.",
-        yourVoice: "Measured, dry, and precise."
+        howYouLightUp: "With deliberation.",
+        howYouShowUp: "In layered metaphors.",
+        howYouLove: "Slowly.",
+        howYouWeatherStorms: "A fear of being swallowed.",
+        whatYoureLookingFor: "Creative freedom.",
+        yourGrowingEdges: "You want closeness but brace against it.",
+        yourWarmth: "Measured, dry, and precise."
       },
       crystallizedMoments: [{ quote: "I build walls.", reflection: "Protection is architecture for you." }],
       openThreads: ["What freedom would actually cost"],
-      compassScores: { depth: 82, warmth: 61 },
+      compassScores: { emotional_depth: 82, warmth: 61 },
       personalitySpectrum: {
         openness: { position: 78, label: "Curious beneath the guard", evidence: "You keep reaching for deeper frames." }
       },
@@ -75,7 +81,7 @@ describe("parsers", () => {
     }));
 
     expect(visible).not.toBeNull();
-    expect(visible?.sections.yourTensions).toContain("closeness");
+    expect(visible?.sections.yourGrowingEdges).toContain("closeness");
     expect(visible?.personalitySpectrum.openness?.position).toBe(78);
     expect(visible?.topValues[0]?.value).toBe("Self-Direction");
   });
@@ -87,9 +93,9 @@ describe("parsers", () => {
       confidence: "medium",
       expertReflections: {
         psychologist: ["Uses humor to regulate vulnerability."],
-        sociologist: ["Performs masculinity as social protection."],
+        relationshipScientist: ["Performs masculinity as social protection."],
         linguist: ["Relies on self-mocking emphasis to stay in control."],
-        narrativeAnalyst: ["Keeps returning to the mask versus self split."]
+        attachmentAnalyst: ["Keeps returning to the mask versus self split."]
       },
       coreDrivers: [{ driver: "Autonomy", strength: 0.9, inferred: true, evidence: "Walls metaphor" }],
       coreValues: ["independence"],
@@ -104,8 +110,8 @@ describe("parsers", () => {
       },
       depthMap: {
         domainCoverage: [
-          { domain: "work_and_purpose", depth: "explored", evidence: "Repeated job discussion" },
-          { domain: "relationships", depth: "mentioned", evidence: "Talks around closeness" }
+          { domain: "daily_rhythm", depth: "explored", evidence: "Repeated job discussion" },
+          { domain: "play_and_joy", depth: "mentioned", evidence: "Talks around closeness" }
         ]
       },
       analystNotes: ["Relationship avoidance is the sharper growth edge now."],
@@ -114,7 +120,7 @@ describe("parsers", () => {
 
     expect(hidden).not.toBeNull();
     expect(hidden?.expertReflections.psychologist).toHaveLength(1);
-    expect(hidden?.depthMap.domainCoverage[0]?.domain).toBe("work_and_purpose");
+    expect(hidden?.depthMap.domainCoverage[0]?.domain).toBe("daily_rhythm");
     expect(hidden?.honestInsights[0]).toContain("seen");
   });
 });

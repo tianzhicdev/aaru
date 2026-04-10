@@ -35,13 +35,13 @@ final class BackendClientTests: XCTestCase {
           "lastUpdated": "2026-03-30T00:00:00Z",
           "portrait": "You move through the world like someone protecting a quiet interior room.",
           "sections": {
-            "howYouMove": "With care.",
-            "howYouThink": "In patterns.",
-            "howYouConnect": "Slowly.",
-            "whatYouCarry": "Expectation.",
-            "whatLightsYouUp": "Creative flow.",
-            "yourContradictions": "You want closeness but brace against it.",
-            "yourVoice": "Measured."
+            "howYouLightUp": "With care.",
+            "howYouShowUp": "In patterns.",
+            "howYouLove": "Slowly.",
+            "howYouWeatherStorms": "Expectation.",
+            "whatYoureLookingFor": "Creative flow.",
+            "yourGrowingEdges": "You want closeness but brace against it.",
+            "yourWarmth": "Measured."
           },
           "crystallizedMoments": [],
           "openThreads": [],
@@ -69,13 +69,13 @@ final class BackendClientTests: XCTestCase {
           "lastUpdated": "2026-03-30T00:00:00Z",
           "portrait": null,
           "sections": {
-            "howYouMove": "",
-            "howYouThink": "",
-            "howYouConnect": "",
-            "whatYouCarry": "",
-            "whatLightsYouUp": "",
-            "yourContradictions": "",
-            "yourVoice": ""
+            "howYouLightUp": "",
+            "howYouShowUp": "",
+            "howYouLove": "",
+            "howYouWeatherStorms": "",
+            "whatYoureLookingFor": "",
+            "yourGrowingEdges": "",
+            "yourWarmth": ""
           },
           "crystallizedMoments": [],
           "openThreads": [],

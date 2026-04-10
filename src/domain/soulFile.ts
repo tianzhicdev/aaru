@@ -22,13 +22,13 @@ const SPECTRUM_KEYS = [
 
 const COMPASS_AXES = [
   "openness",
-  "vitality",
+  "playfulness",
   "warmth",
-  "depth",
-  "purpose",
+  "emotional_depth",
+  "devotion",
   "resilience",
-  "autonomy",
-  "connection"
+  "independence",
+  "passion"
 ] as const;
 
 type JsonObject = Record<string, unknown>;
@@ -39,13 +39,13 @@ export function emptyVisibleSoulFile(): VisibleSoulFile {
     lastUpdated: new Date().toISOString(),
     portrait: null,
     sections: {
-      howYouMove: "",
-      howYouThink: "",
-      howYouConnect: "",
-      whatYouCarry: "",
-      whatLightsYouUp: "",
-      yourTensions: "",
-      yourVoice: ""
+      howYouLightUp: "",
+      howYouShowUp: "",
+      howYouLove: "",
+      howYouWeatherStorms: "",
+      whatYoureLookingFor: "",
+      yourGrowingEdges: "",
+      yourWarmth: ""
     },
     crystallizedMoments: [],
     openThreads: [],
@@ -59,6 +59,8 @@ export function emptyVisibleSoulFile(): VisibleSoulFile {
     },
     topValues: [],
     relationalStyle: null,
+    attachmentStyle: null,
+    loveSignature: null,
     completeness: 0
   };
 }
@@ -70,9 +72,9 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
     confidence: "low",
     expertReflections: {
       psychologist: [],
-      sociologist: [],
+      relationshipScientist: [],
       linguist: [],
-      narrativeAnalyst: []
+      attachmentAnalyst: []
     },
     coreDrivers: [],
     coreValues: [],
@@ -88,6 +90,8 @@ export function emptyHiddenSoulFile(): HiddenSoulFile {
     depthMap: {
       domainCoverage: []
     },
+    attachmentAssessment: null,
+    conflictProfile: null,
     analystNotes: [],
     honestInsights: []
   };
@@ -112,25 +116,25 @@ Output ONE valid JSON object with these fields:
   "lastUpdated": "${new Date().toISOString()}",
   "portrait": "2-4 sentences in second person" | null,
   "sections": {
-    "howYouMove": "...",
-    "howYouThink": "...",
-    "howYouConnect": "...",
-    "whatYouCarry": "...",
-    "whatLightsYouUp": "...",
-    "yourTensions": "...",
-    "yourVoice": "..."
+    "howYouLightUp": "Joy, play style, what energizes them",
+    "howYouShowUp": "Daily presence, reliability, rhythms",
+    "howYouLove": "Care patterns, love language, closeness",
+    "howYouWeatherStorms": "Conflict style, repair bids, resilience",
+    "whatYoureLookingFor": "Partner vision, deal-breakers (warm)",
+    "yourGrowingEdges": "Honest tensions in how they love",
+    "yourWarmth": "How their care shows up, tenderness"
   },
   "crystallizedMoments": [{"quote": "exact quote", "reflection": "1-sentence observation"}],
   "openThreads": ["unresolved thread"],
   "compassScores": {
     "openness": 0-100 or null,
-    "vitality": 0-100 or null,
+    "playfulness": 0-100 or null,
     "warmth": 0-100 or null,
-    "depth": 0-100 or null,
-    "purpose": 0-100 or null,
+    "emotional_depth": 0-100 or null,
+    "devotion": 0-100 or null,
     "resilience": 0-100 or null,
-    "autonomy": 0-100 or null,
-    "connection": 0-100 or null
+    "independence": 0-100 or null,
+    "passion": 0-100 or null
   },
   "personalitySpectrum": {
     "openness": { "position": 0-100, "label": "...", "evidence": "..." } | null,
@@ -140,7 +144,9 @@ Output ONE valid JSON object with these fields:
     "emotionalSensitivity": { "position": 0-100, "label": "...", "evidence": "..." } | null
   },
   "topValues": [{"value": "value", "description": "warm 1-sentence description"}],
-  "relationalStyle": "2-3 sentence narrative" | null
+  "relationalStyle": "2-3 sentence narrative" | null,
+  "attachmentStyle": "Warm narrative of attachment tendency" | null,
+  "loveSignature": "Single paragraph distillation of how they love" | null
 }
 
 ${prompts.synthesis.visibleRules}${languageDirective}`;
@@ -171,9 +177,9 @@ Output ONE valid JSON object:
   "confidence": "${confidenceHint}",
   "expertReflections": {
     "psychologist": ["distinct insight"],
-    "sociologist": ["distinct insight"],
+    "relationshipScientist": ["distinct insight about relational patterns"],
     "linguist": ["distinct insight"],
-    "narrativeAnalyst": ["distinct insight"]
+    "attachmentAnalyst": ["distinct insight about attachment style and patterns"]
   },
   "coreDrivers": [{"driver": "name", "strength": 0.0-1.0, "inferred": true, "evidence": "..."}],
   "coreValues": ["value"],
@@ -191,6 +197,8 @@ Output ONE valid JSON object:
 ${domainCoverageSpec}
     ]
   },
+  "attachmentAssessment": "Clinical attachment style assessment" | null,
+  "conflictProfile": "How they handle conflict, repair bids, rupture patterns" | null,
   "analystNotes": ["meta observation"],
   "honestInsights": ["clear, blunt but grounded observation"]
 }
@@ -208,13 +216,13 @@ export function parseVisibleNarrative(raw: string): VisibleSoulFile | null {
     lastUpdated: safeString(parsed.lastUpdated, 64) || new Date().toISOString(),
     portrait: parseNullableString(parsed.portrait, 1000),
     sections: {
-      howYouMove: safeNestedString(parsed, ["sections", "howYouMove"], 800),
-      howYouThink: safeNestedString(parsed, ["sections", "howYouThink"], 800),
-      howYouConnect: safeNestedString(parsed, ["sections", "howYouConnect"], 800),
-      whatYouCarry: safeNestedString(parsed, ["sections", "whatYouCarry"], 800),
-      whatLightsYouUp: safeNestedString(parsed, ["sections", "whatLightsYouUp"], 800),
-      yourTensions: safeNestedString(parsed, ["sections", "yourTensions"], 800),
-      yourVoice: safeNestedString(parsed, ["sections", "yourVoice"], 800)
+      howYouLightUp: safeNestedString(parsed, ["sections", "howYouLightUp"], 800),
+      howYouShowUp: safeNestedString(parsed, ["sections", "howYouShowUp"], 800),
+      howYouLove: safeNestedString(parsed, ["sections", "howYouLove"], 800),
+      howYouWeatherStorms: safeNestedString(parsed, ["sections", "howYouWeatherStorms"], 800),
+      whatYoureLookingFor: safeNestedString(parsed, ["sections", "whatYoureLookingFor"], 800),
+      yourGrowingEdges: safeNestedString(parsed, ["sections", "yourGrowingEdges"], 800),
+      yourWarmth: safeNestedString(parsed, ["sections", "yourWarmth"], 800)
     },
     crystallizedMoments: parseCrystallizedMoments(parsed.crystallizedMoments),
     openThreads: safeStringArray(parsed.openThreads, 5, 240),
@@ -222,6 +230,8 @@ export function parseVisibleNarrative(raw: string): VisibleSoulFile | null {
     personalitySpectrum: parsePersonalitySpectrum(parsed.personalitySpectrum),
     topValues: parseTopValues(parsed.topValues),
     relationalStyle: parseNullableString(parsed.relationalStyle, 600),
+    attachmentStyle: parseNullableString(parsed.attachmentStyle, 600),
+    loveSignature: parseNullableString(parsed.loveSignature, 800),
     completeness: 0
   };
 
@@ -242,9 +252,9 @@ export function parseHiddenClinical(raw: string): HiddenSoulFile | null {
     confidence: parseEnumValue(parsed.confidence, ["low", "medium", "high"] as const) ?? "low",
     expertReflections: {
       psychologist: safeNestedStringArray(parsed, ["expertReflections", "psychologist"], 6, 400),
-      sociologist: safeNestedStringArray(parsed, ["expertReflections", "sociologist"], 6, 400),
+      relationshipScientist: safeNestedStringArray(parsed, ["expertReflections", "relationshipScientist"], 6, 400),
       linguist: safeNestedStringArray(parsed, ["expertReflections", "linguist"], 6, 400),
-      narrativeAnalyst: safeNestedStringArray(parsed, ["expertReflections", "narrativeAnalyst"], 6, 400)
+      attachmentAnalyst: safeNestedStringArray(parsed, ["expertReflections", "attachmentAnalyst"], 6, 400)
     },
     coreDrivers: parseCoreDrivers(parsed.coreDrivers, 6),
     coreValues: safeStringArray(parsed.coreValues, 6, 120),
@@ -260,6 +270,8 @@ export function parseHiddenClinical(raw: string): HiddenSoulFile | null {
     depthMap: {
       domainCoverage: parseDomainCoverage(getNested(parsed, "depthMap", "domainCoverage"))
     },
+    attachmentAssessment: parseNullableString(parsed.attachmentAssessment, 600),
+    conflictProfile: parseNullableString(parsed.conflictProfile, 600),
     analystNotes: safeStringArray(parsed.analystNotes, 6, 400),
     honestInsights: safeStringArray(parsed.honestInsights, 3, 400)
   };

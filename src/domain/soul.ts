@@ -63,6 +63,31 @@ function buildVisibleSoulFileContext(visible: VisibleSoulFile): string {
   return parts.length > 0 ? parts.join("\n") : "No portrait yet.";
 }
 
+export function buildDefaultReflectionNote(): ReflectionNote {
+  return {
+    updatedAt: "",
+    conversationPhase: "spark",
+    domainCoverage: LIFE_DOMAINS.map(domain => ({
+      domain,
+      depth: "untouched" as const,
+      evidence: ""
+    })),
+    currentThreads: [],
+    avoidPastObservations: [],
+    avoidPastQuestions: [],
+    steerToTopics: [
+      "Daily Rhythm — where do they live, what does their everyday life look like?",
+      "Play & Joy — are they seeing anyone right now, and what does fun look like for them?",
+      "Daily Rhythm — where did they grow up, and what's their story so far?"
+    ],
+    steeringPressure: "gentle",
+    steeringReasoning: "First conversation — learn the basics (where from, single/not, love history) through natural conversation before going deeper.",
+    userOpenness: "warming",
+    opennessEvidence: "First conversation — no data yet.",
+    summary: ""
+  };
+}
+
 function buildSummarySection(note: ReflectionNote): string {
   if (!note.summary) return "";
   return `\nCONVERSATION SUMMARY (from last reflection):\n${note.summary}`;
@@ -234,18 +259,16 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
     ? buildVisibleSoulFileContext(context.visibleSoulFile)
     : "No portrait yet.";
 
-  const summarySection = context.reflectionNote
-    ? buildSummarySection(context.reflectionNote)
-    : "";
+  const note = context.reflectionNote ?? buildDefaultReflectionNote();
+
+  const summarySection = buildSummarySection(note);
 
   const recentQuestions = extractRecentAssistantQuestions(context.messages);
   const messageCount = context.messages.length;
 
-  const navigationSection = context.reflectionNote
-    ? buildNavigationSection(context.reflectionNote, recentQuestions, messageCount, context.language)
-    : "";
+  const navigationSection = buildNavigationSection(note, recentQuestions, messageCount, context.language);
 
-  const depthGuidanceSection = buildDepthGuidance(context.reflectionNote);
+  const depthGuidanceSection = buildDepthGuidance(note);
 
   const openingSection = buildOpeningSection(context);
 

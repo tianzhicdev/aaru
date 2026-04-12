@@ -77,7 +77,8 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `workers/src/handlers/` — Route handlers:
   - `bootstrap-soul.ts` — User bootstrap + session creation
   - `sync-messages.ts` — Full canonical transcript sync
-  - `soul-converse.ts` — SSE streaming soul conversations for both `opening` and `reply`
+  - `soul-converse.ts` — SSE streaming soul conversations (deprecated, kept for old clients)
+  - `soul-send.ts` — Fire-and-poll: ack + background LLM processing for `opening` and `reply`
   - `get-soul-file.ts` — Fetch visible soul file + trigger async queue-backed synthesis
   - `soulmate-profile.ts` — GET/POST soulmate profile (with display_name)
   - `get-matches.ts` — GET matches list (returns display_name + reasoning, no portrait)
@@ -103,7 +104,8 @@ xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
 - `Thumos/App/SoulmateMatchesView.swift` — Match list with detail (reasoning) + chat icons per row
 - `Thumos/App/SoulmateProfileSetupView.swift` — Soulmate profile setup (display name, age, gender, preferences)
 - `Thumos/App/MatchReasoningSheet.swift` — Sheet showing match name + LLM-generated reasoning (no soul file content)
-- `Thumos/App/MatchChatView.swift` — Direct messaging UI between matched users (polling every 5s)
+- `Thumos/App/MatchChatView.swift` — Direct messaging UI between matched users (uses MessagePoller, 5s interval)
+- `Thumos/App/MessagePoller.swift` — Shared polling actor for soul and match conversations
 - `ThumosTests/` — XCTest unit tests
 
 ### Tests (tests/)
@@ -156,6 +158,7 @@ A task is complete when ALL of the following are true:
 - **Match evaluation** — LLM-based: loads both users' visible soul files, summarizes for token efficiency (strips raw moments/quotes), calls `callLlmJson()` with structured output schema. Returns decision (match/no_match), score (0-1), and reasoning paragraph. Falls back to error on any failure.
 - **Match messages** — Simple sender_id/receiver_id model (no match_id foreign key). Auth check verifies users are matched via `getMatchedUserIds()`. iOS polls every 5 seconds using `after_id` for incremental fetches.
 - **Display name privacy** — Match list shows `display_name` from `soulmate_profiles` + `reasoning` from `matches`. Soul file portrait/content is NEVER exposed to other users.
+- **Fire-and-poll architecture** — `POST /soul-send` returns `{ status: "accepted" }` immediately, processes LLM in background via `ctx.waitUntil`. iOS polls `POST /sync-messages { after_id }` every 2s for new messages. Last-write-wins concurrency: `processing_request_id` on users table ensures only the latest send's LLM response gets inserted. `soul-converse` is deprecated (see `docs/deprecation-soul-converse.md`).
 - **Romance pivot dual format** — Server sends both old section keys (howYouMove, howYouThink, etc.) and new keys (howYouLightUp, howYouShowUp, etc.) via `withCompatSections()` in `soulApp.ts`. Old iOS reads old keys, new iOS reads new keys. See `docs/deprecation-old-soul-fields.md` for removal steps after MIN_SUPPORTED_VERSION bump.
 - **Conversation phases** — Spark (1-15 msgs), Kindling (15-35), Flame (35-60), Hearth (60+). Each phase unlocks new romance domains. Phase is tracked in `conversationPhase` field on reflection notes.
 - **MIN_SUPPORTED_VERSION** — Read from env (via `wrangler secret put`), defaults to "0.1.0". Bump to "1.0.0" after new iOS is approved to force-upgrade old clients, then remove compat aliases.
@@ -203,7 +206,7 @@ sudo ./deploy.sh --prod --secrets /Users/biubiu/.secrets/prod.env
 - dev uses `workers.dev`
 - production secrets stay out of repo-local `.env`
 
-Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse, get-soul-file, soulmate-profile, get-matches, match-messages, delete-account, get-debug-info, debug-dump
+Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse (deprecated), soul-send, get-soul-file, soulmate-profile, get-matches, match-messages, delete-account, get-debug-info, debug-dump
 
 ## iOS QA (when macOS/Xcode available)
 - Scheme: Thumos

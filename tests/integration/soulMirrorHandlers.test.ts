@@ -31,6 +31,9 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
     loveSignature: null
   })),
   getAllSoulMessages: vi.fn(),
+  getSoulMessagesAfter: vi.fn(),
+  setProcessingRequestId: vi.fn(),
+  getProcessingRequestId: vi.fn(),
   getHiddenSoulFile: vi.fn(),
   getLatestReflectionSnapshot: vi.fn(),
   getReflectionSnapshotState: vi.fn(),
@@ -76,7 +79,12 @@ vi.mock("../../workers/src/auth.ts", () => ({
 }));
 
 vi.mock("../../workers/src/llm.ts", () => ({
-  streamLlmText: vi.fn()
+  streamLlmText: vi.fn(),
+  callLlmText: vi.fn()
+}));
+
+vi.mock("../../workers/src/debugTraces.ts", () => ({
+  recordClaudeDebugTrace: vi.fn().mockResolvedValue(undefined)
 }));
 
 import { handleBootstrapSoul } from "../../workers/src/handlers/bootstrap-soul.ts";
@@ -85,6 +93,7 @@ import { handleGetSoulFile } from "../../workers/src/handlers/get-soul-file.ts";
 import { handleGetDebugInfo } from "../../workers/src/handlers/get-debug-info.ts";
 import { handleSetModelProfile } from "../../workers/src/handlers/set-model-profile.ts";
 import { handleSoulConverse } from "../../workers/src/handlers/soul-converse.ts";
+import { handleSoulSend } from "../../workers/src/handlers/soul-send.ts";
 import { handleSyncMessages } from "../../workers/src/handlers/sync-messages.ts";
 import {
   enqueueReflectionSnapshot,
@@ -106,15 +115,18 @@ import {
   checkReflectionSnapshotNeeded,
   checkSynthesisNeeded,
   getAllSoulMessages,
+  getSoulMessagesAfter,
   getHiddenSoulFile,
   getLatestReflectionSnapshot,
   getVisibleSoulFile,
   insertSoulMessage,
   markHiddenSynthesisPending,
   markReflectionSnapshotPending,
-  markSynthesisPending
+  markSynthesisPending,
+  setProcessingRequestId,
+  getProcessingRequestId
 } from "../../workers/src/soulApp.ts";
-import { streamLlmText } from "../../workers/src/llm.ts";
+import { streamLlmText, callLlmText } from "../../workers/src/llm.ts";
 
 const mockSQL = vi.fn();
 const mockEnv = {
@@ -312,7 +324,7 @@ describe("handleSoulConverse", () => {
     const body = await response.json();
     expect(body.role).toBe("assistant");
     expect(body.content).toContain("Hey, I'm Thumos.");
-    expect(body.content).toContain("?"); // ends with a question from the opening pool
+    expect(body.content).toContain("what you're looking for"); // intro ends with open prompt
     expect(streamLlmText).not.toHaveBeenCalled();
     expect(insertSoulMessage).toHaveBeenCalledWith(
       mockSQL,
@@ -320,6 +332,188 @@ describe("handleSoulConverse", () => {
       "assistant",
       expect.stringContaining("Hey, I'm Thumos.")
     );
+  });
+});
+
+describe("handleSoulSend", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns accepted for a first-ever opening and inserts the intro message in background", async () => {
+    vi.useFakeTimers();
+
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier");
+    vi.mocked(getUserLanguage).mockResolvedValue("en");
+    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([]);
+    vi.mocked(insertSoulMessage).mockResolvedValue(undefined);
+    vi.mocked(setProcessingRequestId).mockResolvedValue(undefined);
+    vi.mocked(getProcessingRequestId).mockImplementation(async () => {
+      // Return the same requestId that was set (simulates no concurrent write)
+      const calls = vi.mocked(setProcessingRequestId).mock.calls;
+      return calls.length > 0 ? calls[calls.length - 1][2] : null;
+    });
+    mockSQL.mockResolvedValue([]);
+
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const mockCtx = { waitUntil: (p: Promise<unknown>) => waitUntilPromises.push(p) };
+
+    const response = await handleSoulSend(
+      mockSQL,
+      mockEnv,
+      { mode: "opening" },
+      makeRequest({ "x-thumos-session": "valid-token" }),
+      mockCtx
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("status", "accepted");
+
+    // Advance timers to flush all 2s delays between intro sentences
+    await vi.runAllTimersAsync();
+    await Promise.allSettled(waitUntilPromises);
+
+    // First-ever intro is split into separate messages (one per sentence)
+    const insertCalls = vi.mocked(insertSoulMessage).mock.calls;
+    expect(insertCalls.length).toBeGreaterThanOrEqual(2);
+    expect(insertCalls[0]).toEqual([mockSQL, "user-1", "assistant", expect.stringContaining("Hey, I'm Thumos.")]);
+    // All calls should be assistant messages for user-1
+    for (const call of insertCalls) {
+      expect(call[1]).toBe("user-1");
+      expect(call[2]).toBe("assistant");
+    }
+    expect(callLlmText).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it("returns accepted for a reply and calls LLM in background", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getUserModelProfileId).mockResolvedValue("frontier");
+    vi.mocked(getUserLanguage).mockResolvedValue("en");
+    vi.mocked(getLatestReflectionSnapshot).mockResolvedValue(null);
+    vi.mocked(getVisibleSoulFile).mockResolvedValue(null);
+    vi.mocked(getAllSoulMessages).mockResolvedValue([
+      { id: "m1", user_id: "user-1", role: "assistant", content: "Welcome.", created_at: "2026-03-29T20:00:00Z" },
+      { id: "m2", user_id: "user-1", role: "user", content: "Hi there.", created_at: "2026-03-29T20:01:00Z" }
+    ]);
+    vi.mocked(insertSoulMessage).mockResolvedValue(undefined);
+    vi.mocked(setProcessingRequestId).mockResolvedValue(undefined);
+    vi.mocked(getProcessingRequestId).mockImplementation(async () => {
+      const calls = vi.mocked(setProcessingRequestId).mock.calls;
+      return calls.length > 0 ? calls[calls.length - 1][2] : null;
+    });
+    vi.mocked(callLlmText).mockResolvedValue("That's a great question!");
+    vi.mocked(checkReflectionSnapshotNeeded).mockResolvedValue({
+      needed: false,
+      pending: false,
+      totalMessageCount: 2,
+      lastMessageCreatedAt: "2026-03-29T20:01:00Z"
+    });
+    mockSQL.mockResolvedValue([]);
+
+    const waitUntilPromises: Promise<unknown>[] = [];
+    const mockCtx = { waitUntil: (p: Promise<unknown>) => waitUntilPromises.push(p) };
+
+    const response = await handleSoulSend(
+      mockSQL,
+      mockEnv,
+      { mode: "reply", message: "Hi there." },
+      makeRequest({ "x-thumos-session": "valid-token" }),
+      mockCtx
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty("status", "accepted");
+
+    // User message inserted immediately
+    expect(insertSoulMessage).toHaveBeenCalledWith(mockSQL, "user-1", "user", "Hi there.");
+
+    // Wait for background processing
+    await Promise.allSettled(waitUntilPromises);
+
+    // LLM called and assistant message inserted
+    expect(callLlmText).toHaveBeenCalled();
+    expect(insertSoulMessage).toHaveBeenCalledWith(
+      mockSQL,
+      "user-1",
+      "assistant",
+      "That's a great question!"
+    );
+  });
+
+  it("rejects invalid request body", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+
+    const response = await handleSoulSend(
+      mockSQL,
+      mockEnv,
+      { mode: "invalid" },
+      makeRequest({ "x-thumos-session": "valid-token" })
+    );
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("sync-messages with after_id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns incremental messages when after_id is provided", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getSoulMessagesAfter).mockResolvedValue([
+      { id: "m3", user_id: "user-1", role: "assistant", content: "New message.", created_at: "2026-03-29T20:02:00Z" }
+    ]);
+
+    const response = await handleSyncMessages(
+      mockSQL,
+      mockEnv,
+      { after_id: "m2" },
+      makeRequest({ "x-thumos-session": "valid-token" })
+    );
+
+    expect(response.status).toBe(200);
+    const body = response.body as { messages: Array<{ id: string }> };
+    expect(body.messages).toHaveLength(1);
+    expect(body.messages[0]).toHaveProperty("id", "m3");
+    // Should NOT check reflection when doing incremental poll
+    expect(checkReflectionSnapshotNeeded).not.toHaveBeenCalled();
+  });
+
+  it("returns empty array when no new messages after after_id", async () => {
+    vi.mocked(readSessionToken).mockReturnValue("valid-token");
+    vi.mocked(hashSessionToken).mockResolvedValue("hash-1");
+    vi.mocked(getActiveSessionByTokenHash).mockResolvedValue(mockDeviceSession);
+    vi.mocked(touchDeviceSession).mockResolvedValue(undefined);
+    vi.mocked(getSoulMessagesAfter).mockResolvedValue([]);
+
+    const response = await handleSyncMessages(
+      mockSQL,
+      mockEnv,
+      { after_id: "m2" },
+      makeRequest({ "x-thumos-session": "valid-token" })
+    );
+
+    expect(response.status).toBe(200);
+    const body = response.body as { messages: unknown[] };
+    expect(body.messages).toHaveLength(0);
   });
 });
 

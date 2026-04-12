@@ -26,6 +26,7 @@ import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { handleUpdateLanguage } from "./handlers/update-language.ts";
 import { handleMonitoring } from "./handlers/monitoring.ts";
+import { handleSoulSend } from "./handlers/soul-send.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
@@ -67,6 +68,11 @@ export default {
 
       case "soul-converse":
         return handleSoulConverse(sql, env, request, _ctx);
+
+      case "soul-send":
+        return withErrorHandling(request, (payload, req) =>
+          handleSoulSend(sql, env, payload, req, _ctx)
+        );
 
       case "get-soul-file":
         return withErrorHandling(request, (payload, req) =>

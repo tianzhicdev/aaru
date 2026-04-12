@@ -33,19 +33,19 @@ describe("model profiles", () => {
     expect(defaultModelProfileIdFromEnv({ DEFAULT_MODEL_PROFILE_ID: "value_v1" })).toBe("value_cjk");
   });
 
-  it("returns fireworks deepseek task configs for value_cjk", () => {
+  it("returns fireworks glm-5 task configs for value_cjk", () => {
     const conversation = getTaskConfig("value_cjk", "conversation");
     expect(conversation.provider).toBe("fireworks_openai");
-    expect(conversation.model).toContain("deepseek-v3p2");
-    expect(conversation.reasoningMode).toBe("disabled");
+    expect(conversation.model).toContain("glm-5");
+    expect(conversation.reasoningMode).toBeUndefined();
   });
 
-  it("returns fireworks kimi-k2-thinking task configs for value_default", () => {
+  it("returns fireworks glm-5 task configs for value_default", () => {
     const conversation = getTaskConfig("value_default", "conversation");
     expect(conversation.provider).toBe("fireworks_openai");
-    expect(conversation.model).toContain("kimi-k2-thinking");
-    expect(conversation.reasoningMode).toBe("thinking");
-    expect(conversation.thinkingBudget).toBe(512);
+    expect(conversation.model).toContain("glm-5");
+    expect(conversation.reasoningMode).toBeUndefined();
+    expect(conversation.thinkingBudget).toBeUndefined();
   });
 
   it("isModelProfileId recognizes all profiles", () => {

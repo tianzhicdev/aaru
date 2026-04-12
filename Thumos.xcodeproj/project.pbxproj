@@ -18,11 +18,13 @@
 		1BCDD5B1C16B35801CA32527 /* SoulmateProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */; };
 		2BA76081C14794E2B90B5B9B /* SpaceGrotesk-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B425334B8B0F944E7D1708FB /* SpaceGrotesk-Light.ttf */; };
 		332D281FE9CAE173D283F8F1 /* f08_mechanic_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = C771F9706370B2E807B44FE0 /* f08_mechanic_walk.png */; };
+		338CA45A97E82966ED3258E2 /* MessagePoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58FCDD68908F904ACFE332CE /* MessagePoller.swift */; };
 		34C69319E0F6C30E45BDC976 /* f06_dancer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F0FE681AABB486C1B47D2D8 /* f06_dancer_walk.png */; };
 		383EF7AA7B094F43F0A22111 /* ContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8AF347F96AF6F8C43C3E273 /* ContractTests.swift */; };
 		3947B8F2AD411BC62687B475 /* SoulConversationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87822998F4CD1541C3F2EA1A /* SoulConversationScreen.swift */; };
 		3E004DFD11FADD8FA3BED750 /* BackendEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC465A3D7E111EDF94753404 /* BackendEnvironment.swift */; };
 		3F39518087B030309472108B /* CormorantGaramond-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B0D8F3BEC27918956884E30C /* CormorantGaramond-LightItalic.ttf */; };
+		406194037581FAA00F3AB39A /* MatchVisualizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098EE04C9BB8C0998B00BB7C /* MatchVisualizationView.swift */; };
 		40DF4454C84DB08855B6B54E /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 557A75DDC74B75962FFCDAE9 /* NotificationManager.swift */; };
 		4295129C5B53E91C71BA3600 /* f09_artist_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = EF9FD5D9AE86FAAE5989719F /* f09_artist_walk.png */; };
 		4392AEA5BE25BA2E5A63A4B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C512C8DCA175C367F9EBC9 /* Theme.swift */; };
@@ -88,6 +90,7 @@
 /* Begin PBXFileReference section */
 		03353E9AD37FA9DA221FAD83 /* CormorantGaramond-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Light.ttf"; sourceTree = "<group>"; };
 		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		098EE04C9BB8C0998B00BB7C /* MatchVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchVisualizationView.swift; sourceTree = "<group>"; };
 		0E0C051A3655BF0C1A3C2C5B /* m04_rebel_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m04_rebel_walk.png; sourceTree = "<group>"; };
 		10394D66BFD5E8E083AB1711 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		14D226C28CCC9536C6DCE559 /* f02_mystic_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f02_mystic_walk.png; sourceTree = "<group>"; };
@@ -114,6 +117,7 @@
 		51E613C373AB75F417D77807 /* SoulCompassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulCompassView.swift; sourceTree = "<group>"; };
 		557A75DDC74B75962FFCDAE9 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		575DFF4C1EF96DD7C64919A6 /* f05_botanist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f05_botanist_walk.png; sourceTree = "<group>"; };
+		58FCDD68908F904ACFE332CE /* MessagePoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePoller.swift; sourceTree = "<group>"; };
 		594FC516B410231D9CCB794C /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
 		5C6722F25C9D83408E960D09 /* f12_natural_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f12_natural_walk.png; sourceTree = "<group>"; };
 		61CB2540924FC677CCCDFAAA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -270,6 +274,8 @@
 				44FAE79B4B5A28D497C6CA81 /* ForceUpdateView.swift */,
 				7B73963BD607BA969DBCB3A6 /* MatchChatView.swift */,
 				A6986602F354D39C1CD78D48 /* MatchReasoningSheet.swift */,
+				098EE04C9BB8C0998B00BB7C /* MatchVisualizationView.swift */,
+				58FCDD68908F904ACFE332CE /* MessagePoller.swift */,
 				2515DAFDA782E1E49D886250 /* Models.swift */,
 				557A75DDC74B75962FFCDAE9 /* NotificationManager.swift */,
 				318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */,
@@ -428,6 +434,8 @@
 				4AEC7256422D90472218626E /* ForceUpdateView.swift in Sources */,
 				8DEA953A6339828CE5B281DE /* MatchChatView.swift in Sources */,
 				0EE16D8865E72A282410EFC0 /* MatchReasoningSheet.swift in Sources */,
+				406194037581FAA00F3AB39A /* MatchVisualizationView.swift in Sources */,
+				338CA45A97E82966ED3258E2 /* MessagePoller.swift in Sources */,
 				16FAF3C4E8A0B516B1309861 /* Models.swift in Sources */,
 				40DF4454C84DB08855B6B54E /* NotificationManager.swift in Sources */,
 				079CE20535102EFCBB67FD3A /* PersonalitySpectrumView.swift in Sources */,
@@ -479,11 +487,7 @@
 					"@executable_path/Frameworks",
 				);
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -640,11 +644,7 @@
 					"@executable_path/Frameworks",
 				);
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};

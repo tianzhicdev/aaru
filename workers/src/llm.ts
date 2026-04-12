@@ -164,46 +164,24 @@ function getProviderClient(provider: ModelTaskConfig["provider"]): LlmProviderCl
   throw new Error(`Unsupported LLM provider: ${unreachableProvider}`);
 }
 
-// --- Fallback chain: profile config → DeepSeek V3 → Claude Opus ---
-
-const DEEPSEEK_FALLBACK = {
-  provider: "fireworks_openai" as const,
-  model: "accounts/fireworks/models/deepseek-v3p2",
-};
+// --- Fallback chain: profile config → Claude Haiku ---
 
 const CLAUDE_FALLBACK = {
   provider: "anthropic" as const,
-  model: "claude-opus-4-20250514",
+  model: "claude-haiku-4-5-20251001",
 };
 
-function buildFallbackConfigs(primary: ModelTaskConfig, env: Env): ModelTaskConfig[] {
-  const fallbacks: ModelTaskConfig[] = [];
-
-  if (
-    !(primary.provider === DEEPSEEK_FALLBACK.provider && primary.model === DEEPSEEK_FALLBACK.model) &&
-    env.FIREWORKS_API_KEY
-  ) {
-    fallbacks.push({
-      provider: DEEPSEEK_FALLBACK.provider,
-      model: DEEPSEEK_FALLBACK.model,
-      maxTokens: primary.maxTokens,
-      temperature: primary.temperature,
-      reasoningMode: "disabled",
-    });
+function buildFallbackConfigs(primary: ModelTaskConfig, _env: Env): ModelTaskConfig[] {
+  if (primary.provider === CLAUDE_FALLBACK.provider && primary.model === CLAUDE_FALLBACK.model) {
+    return [];
   }
 
-  if (
-    !(primary.provider === CLAUDE_FALLBACK.provider && primary.model === CLAUDE_FALLBACK.model)
-  ) {
-    fallbacks.push({
-      provider: CLAUDE_FALLBACK.provider,
-      model: CLAUDE_FALLBACK.model,
-      maxTokens: primary.maxTokens,
-      temperature: primary.temperature,
-    });
-  }
-
-  return fallbacks;
+  return [{
+    provider: CLAUDE_FALLBACK.provider,
+    model: CLAUDE_FALLBACK.model,
+    maxTokens: primary.maxTokens,
+    temperature: primary.temperature,
+  }];
 }
 
 function logFallback(

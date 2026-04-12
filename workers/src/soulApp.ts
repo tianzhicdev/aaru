@@ -380,6 +380,42 @@ export async function getAllSoulMessages(sql: NeonSQL, userId: string): Promise<
   return rows as unknown as SoulMessageRow[];
 }
 
+export async function getSoulMessagesAfter(
+  sql: NeonSQL,
+  userId: string,
+  afterId: string
+): Promise<SoulMessageRow[]> {
+  const rows = await sql`
+    SELECT id, user_id, role, content, created_at
+    FROM soul_messages
+    WHERE user_id = ${userId}
+      AND created_at > (SELECT created_at FROM soul_messages WHERE id = ${afterId})
+    ORDER BY created_at ASC, id ASC
+  `;
+
+  return rows as unknown as SoulMessageRow[];
+}
+
+export async function setProcessingRequestId(
+  sql: NeonSQL,
+  userId: string,
+  requestId: string
+): Promise<void> {
+  await sql`
+    UPDATE users SET processing_request_id = ${requestId} WHERE id = ${userId}
+  `;
+}
+
+export async function getProcessingRequestId(
+  sql: NeonSQL,
+  userId: string
+): Promise<string | null> {
+  const rows = await sql`
+    SELECT processing_request_id FROM users WHERE id = ${userId} LIMIT 1
+  `;
+  return (rows[0]?.processing_request_id as string) ?? null;
+}
+
 export async function insertSoulMessage(
   sql: NeonSQL,
   userId: string,

@@ -4,6 +4,7 @@ import type { NeonSQL } from "../db.ts";
 import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
+  getSoulMessagesAfter,
   markReflectionSnapshotPending
 } from "../soulApp.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
@@ -12,7 +13,7 @@ import { requireDeviceSession } from "../requestAuth.ts";
 export async function handleSyncMessages(
   sql: NeonSQL,
   env: Env,
-  _payload: unknown,
+  payload: unknown,
   request: Request
 ) {
   const auth = await requireDeviceSession(sql, request);
@@ -21,6 +22,23 @@ export async function handleSyncMessages(
   }
 
   const userId = auth.session.user_id;
+  const body = payload as { after_id?: string } | null;
+  const afterId = body?.after_id;
+
+  // Incremental poll: lightweight path, skip reflection check
+  if (afterId && typeof afterId === "string") {
+    const messages = await getSoulMessagesAfter(sql, userId, afterId);
+    return jsonResponse(200, {
+      messages: messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        created_at: message.created_at
+      }))
+    });
+  }
+
+  // Full sync: canonical transcript + reflection check
   const messages = await getAllSoulMessages(sql, userId);
   const reflectionState = await checkReflectionSnapshotNeeded(sql, userId);
 

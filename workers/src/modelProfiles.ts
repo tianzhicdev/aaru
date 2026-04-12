@@ -84,103 +84,85 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
   },
   value_cjk: {
     id: "value_cjk",
-    label: "DeepSeek V3.2 (CJK)",
+    label: "GLM-5 (CJK)",
     tasks: {
       conversation: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.8,
-        reasoningMode: "disabled"
+        temperature: 0.8
       },
       reflection_snapshot: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 2000,
-        temperature: 0.2,
-        reasoningMode: "disabled"
+        temperature: 0.2
       },
       synthesis_assessment: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2,
-        reasoningMode: "disabled"
+        temperature: 0.2
       },
       synthesis_visible: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.5,
-        reasoningMode: "disabled"
+        temperature: 0.5
       },
       synthesis_hidden: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2,
-        reasoningMode: "disabled"
+        temperature: 0.2
       },
       match_evaluation: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/deepseek-v3p2",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.3,
-        reasoningMode: "disabled"
+        temperature: 0.3
       }
     }
   },
   value_default: {
     id: "value_default",
-    label: "Kimi K2 Thinking",
+    label: "GLM-5",
     tasks: {
       conversation: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.8,
-        reasoningMode: "thinking",
-        thinkingBudget: 512
+        temperature: 0.8
       },
       reflection_snapshot: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 2000,
-        temperature: 0.2,
-        reasoningMode: "thinking",
-        thinkingBudget: 4096
+        temperature: 0.2
       },
       synthesis_assessment: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2,
-        reasoningMode: "thinking",
-        thinkingBudget: 4096
+        temperature: 0.2
       },
       synthesis_visible: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.5,
-        reasoningMode: "thinking",
-        thinkingBudget: 4096
+        temperature: 0.5
       },
       synthesis_hidden: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2,
-        reasoningMode: "thinking",
-        thinkingBudget: 4096
+        temperature: 0.2
       },
       match_evaluation: {
         provider: "fireworks_openai",
-        model: "accounts/fireworks/models/kimi-k2-thinking",
+        model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.3,
-        reasoningMode: "thinking",
-        thinkingBudget: 1024
+        temperature: 0.3
       }
     }
   }

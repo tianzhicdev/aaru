@@ -89,15 +89,33 @@ final class BackendClient {
         )
     }
 
-    func syncMessages() async throws -> SyncMessagesResponse {
+    func syncMessages(afterId: String? = nil) async throws -> SyncMessagesResponse {
         guard endpoint(named: "sync-messages") != nil else {
             return SyncMessagesResponse(messages: [])
+        }
+        if let afterId {
+            return try await postRaw(
+                "sync-messages",
+                body: ["after_id": afterId],
+                retryOnServerError: true
+            )
         }
         return try await post(
             "sync-messages",
             body: EmptyBody(),
             retryOnServerError: true
         )
+    }
+
+    func soulSend(mode: SoulConverseMode, message: String? = nil) async throws {
+        guard endpoint(named: "soul-send") != nil else { return }
+        let body: [String: Any]
+        if let message {
+            body = ["mode": mode.rawValue, "message": message]
+        } else {
+            body = ["mode": mode.rawValue]
+        }
+        let _: SoulSendResponse = try await postRaw("soul-send", body: body)
     }
 
     func soulConverse(
@@ -408,6 +426,10 @@ private struct EmptyBody: Encodable {}
 private struct SoulConverseRequest: Encodable {
     let mode: String
     let message: String?
+}
+
+struct SoulSendResponse: Decodable {
+    let status: String
 }
 
 // MARK: - Soul Converse Response

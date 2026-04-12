@@ -10,6 +10,7 @@ struct DebugView: View {
     @State private var customBaseURLInput = ""
     @State private var debugTokenInput = ""
     @State private var backendStatusMessage: String?
+    @State private var showMatchViz = false
 
     var body: some View {
         ZStack {
@@ -21,6 +22,7 @@ struct DebugView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
+                        matchVizButton
                         backendSection
                         identitySection
                         if let errorText = model.debugError {
@@ -42,6 +44,49 @@ struct DebugView: View {
             syncBackendFormFromModel()
             if canFetchDebugInfo {
                 await model.fetchDebugInfo()
+            }
+        }
+    }
+
+    // MARK: - Match Visualization
+
+    private var matchVizButton: some View {
+        let mockMatch = SoulmateMatch(
+            matchId: "debug-mock",
+            matchedUserId: "debug-user",
+            displayName: "Alex",
+            matchedAt: "2026-04-12",
+            reasoning: "Your agents found an unexpected overlap in how they think about loyalty under pressure. When ambition came up, they disagreed — but neither retreated. That mix of shared depth and productive friction is rare."
+        )
+        return Button { showMatchViz = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "network")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 24)
+                Text("Match Visualization")
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .padding(14)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .sheet(isPresented: $showMatchViz) {
+            NavigationStack {
+                MatchVisualizationView(match: mockMatch)
+                    .navigationTitle("")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showMatchViz = false }
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
             }
         }
     }
@@ -255,6 +300,8 @@ struct DebugView: View {
             sectionHeader("Impersonate Device")
             HStack(spacing: 8) {
                 TextField("Device ID to impersonate", text: $deviceIDInput)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 12)

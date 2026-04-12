@@ -4,6 +4,9 @@ struct SoulConversationScreen: View {
     @EnvironmentObject private var model: AppModel
     @State private var inputText = ""
     @State private var showSettings = false
+    @State private var shouldAutoScroll = true
+    @State private var unreadCount = 0
+    @State private var scrollToBottomTrigger = 0
     @FocusState private var isInputFocused: Bool
 
     private struct SupportedLanguage {
@@ -22,8 +25,32 @@ struct SoulConversationScreen: View {
         SupportedLanguage(code: "de", label: "Deutsch")
     ]
 
+    private struct DisplayMessage: Identifiable {
+        let id: String
+        let role: String
+        let content: String
+        let isError: Bool
+        let sourceMessage: SoulMessage?
+    }
+
+    private var displayMessages: [DisplayMessage] {
+        model.soulMessages.flatMap { message in
+            if message.role == "assistant" && !message.isError {
+                return message.content
+                    .components(separatedBy: "\n")
+                    .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                    .enumerated()
+                    .map { (i, part) in
+                        DisplayMessage(id: "\(message.id)-\(i)", role: message.role, content: part, isError: false, sourceMessage: message)
+                    }
+            } else {
+                return [DisplayMessage(id: message.id, role: message.role, content: message.content, isError: message.isError, sourceMessage: message)]
+            }
+        }
+    }
+
     private var isWelcomeState: Bool {
-        model.soulMessages.isEmpty && !model.isSoulStreaming && !model.isLoading
+        model.soulMessages.isEmpty && !model.isAwaitingResponse && !model.isLoading
     }
 
     var body: some View {
@@ -41,6 +68,9 @@ struct SoulConversationScreen: View {
                     inputBar
                 }
             }
+        }
+        .task {
+            await model.pollSoulMessagesWhileVisible()
         }
     }
 
@@ -103,21 +133,26 @@ struct SoulConversationScreen: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 20) {
-                    ForEach(model.soulMessages) { message in
-                        if message.isError {
-                            errorBubble(message)
-                                .id(message.id)
-                        } else {
-                            messageBubble(message)
-                                .id(message.id)
-                        }
+                    ForEach(displayMessages) { item in
+                        displayMessageBubble(item)
+                            .id(item.id)
                     }
 
                     // Thinking indicator
-                    if model.isSoulStreaming {
+                    if model.isAwaitingResponse {
                         thinkingIndicator
                             .id("thinking")
                     }
+
+                    // Bottom anchor — visibility drives shouldAutoScroll
+                    Color.clear.frame(height: 1).id("bottom")
+                        .onAppear {
+                            shouldAutoScroll = true
+                            unreadCount = 0
+                        }
+                        .onDisappear {
+                            shouldAutoScroll = false
+                        }
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
@@ -127,20 +162,65 @@ struct SoulConversationScreen: View {
             .onTapGesture {
                 isInputFocused = false
             }
-            .onChange(of: model.soulMessages.count) {
-                withAnimation {
-                    if let last = model.soulMessages.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
+            .onChange(of: displayMessages.count) {
+                if shouldAutoScroll {
+                    withAnimation {
+                        proxy.scrollTo("bottom", anchor: .bottom)
                     }
+                } else if let last = displayMessages.last, last.role == "assistant" {
+                    unreadCount += 1
                 }
             }
             .onChange(of: isInputFocused) {
-                if isInputFocused, let last = model.soulMessages.last {
+                if isInputFocused && shouldAutoScroll {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         withAnimation {
-                            proxy.scrollTo(last.id, anchor: .bottom)
+                            proxy.scrollTo("bottom", anchor: .bottom)
                         }
                     }
+                }
+            }
+            .onChange(of: scrollToBottomTrigger) {
+                withAnimation {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if !shouldAutoScroll {
+                    scrollToBottomFAB
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 8)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+        }
+    }
+
+    private var scrollToBottomFAB: some View {
+        Button {
+            unreadCount = 0
+            scrollToBottomTrigger += 1
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Circle()
+                    .fill(Theme.surface)
+                    .overlay(Circle().stroke(Theme.divider, lineWidth: 1))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                    )
+
+                if unreadCount > 0 {
+                    Text("\(unreadCount)")
+                        .font(Theme.sans(11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Theme.accentBright)
+                        .clipShape(Capsule())
+                        .offset(x: 6, y: -6)
                 }
             }
         }
@@ -250,6 +330,43 @@ struct SoulConversationScreen: View {
                 }
             }
             .padding(.horizontal, 16)
+        }
+    }
+
+    @ViewBuilder
+    private func displayMessageBubble(_ item: DisplayMessage) -> some View {
+        if item.isError, let source = item.sourceMessage {
+            errorBubble(source)
+        } else {
+            HStack {
+                if item.role == "user" { Spacer(minLength: 60) }
+
+                let bubble = Text(item.content)
+                    .font(Theme.serif(19))
+                    .foregroundStyle(item.role == "user" ? .white : Theme.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        item.role == "user"
+                            ? AnyShapeStyle(Theme.userBubble)
+                            : AnyShapeStyle(Theme.assistantBubble)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                if item.role == "assistant", let source = item.sourceMessage {
+                    bubble.contextMenu {
+                        Button {
+                            reportMessage(source)
+                        } label: {
+                            Label("Report", systemImage: "exclamationmark.bubble")
+                        }
+                    }
+                } else {
+                    bubble
+                }
+
+                if item.role == "assistant" { Spacer(minLength: 60) }
+            }
         }
     }
 
@@ -367,6 +484,7 @@ struct SoulConversationScreen: View {
             Button {
                 let text = inputText
                 inputText = ""
+                scrollToBottomTrigger += 1
                 Task {
                     await model.sendSoulMessage(text)
                 }
@@ -374,12 +492,12 @@ struct SoulConversationScreen: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 32))
                     .foregroundStyle(
-                        inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isSoulStreaming
+                        inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             ? Theme.accent
                             : Theme.accentBright
                     )
             }
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isSoulStreaming)
+            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

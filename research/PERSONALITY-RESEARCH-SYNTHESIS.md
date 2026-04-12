@@ -1,7 +1,7 @@
 # Personality Research Synthesis — Actionable Findings for Thumos
 
-**Date:** 2026-03-28
-**Papers analyzed:** 5
+**Date:** 2026-03-28 (updated 2026-04-12)
+**Papers analyzed:** 6
 **Focus:** What can we learn from recent personality-assessment research to improve Thumos's soul mirror conversations, extraction pipeline, and soul file quality?
 
 ---
@@ -15,6 +15,7 @@
 | 3 | Park et al. 2024 — "Generative Agent Simulations of 1,000 People" | Can a 2-hour interview create a faithful digital twin? |
 | 4 | PSI 2025 — "Personality Simulation via Theory-Informed Structured Interview" | Can 32 targeted questions match a 2-hour interview? |
 | 5 | Liu et al. 2025 — "Proactive Conversational Agents with Inner Thoughts" | How should an AI decide when to steer conversation? |
+| 6 | Heine et al. 2024 — "The Quest for Genuine Self-Knowledge (Self-Insight Motive)" | What drives people to seek self-understanding? |
 
 ---
 
@@ -371,3 +372,100 @@ Null values = not enough evidence. The iOS spider chart renders only non-null ax
 - Active Contributor preferred by 6/12 (imThreshold = 3.59)
 - Selective Participant worst: 7/12 rated it last
 - 82% preferred Inner Thoughts over baseline in simulation
+
+### Heine 2024 — Key Numbers
+- Introduces Self-Insight Motive (SIM) scale — distinct from self-esteem, narcissism, or curiosity
+- SIM driven by: curiosity about self, desire for self-improvement, openness to uncomfortable truths
+- SIM is **situationally activated**: stronger after life instability (breakups, moves, career changes)
+- SIM predicts feedback-seeking behavior — high-SIM people actively want to be assessed
+- SIM is distinct from self-reflection (rumination); it's forward-looking and action-oriented
+- Implication: dating app users in transition are primed for self-discovery framing
+
+---
+
+## Part 5: Opener Architecture — Applied Research (2026-04-12)
+
+This section synthesizes all 6 papers into a specific prescription for Thumos's opening conversation design. It identifies what the current system gets wrong and what research says to do instead.
+
+### 5.1 The Core Insight (Peters 2024)
+
+The "assessment" condition — where the chatbot was explicitly prompted to elicit personality-relevant information — produced the **best personality inferences (mean r=.443) AND users rated the experience equally positively** as the naturalistic acquaintance condition. There was no tradeoff between assessment accuracy and user experience.
+
+The "acquaintance" condition (naturalistic chat, no personality targeting) still worked (mean r=.218) but significantly worse. The "assistant" condition (ChatGPT-style helpful bot) was worst on both inference accuracy and user experience.
+
+**First-principles answer: don't hide the assessment behind small talk. Embed it inside a conversational frame.**
+
+### 5.2 Six Principles for Opener Design
+
+**Principle 1: Start concrete and biographical, not abstract and introspective.**
+
+The PSI opens with "Where are you from? Where did you grow up and what was the place like?" then moves to "What kind of student were you in school?" Park et al. follows the same pattern — life story first, then childhood, then work, then relationships, then values. McAdams' narrative identity theory shows that prompting for pivotal moments and meaningful relationships yields far richer personality data than asking about routine events. But you have to earn the right to ask about pivotal moments by starting with factual, low-threat recall questions.
+
+**Principle 2: Question design matters more than opener framing.**
+
+The PSI makes a critical distinction: simply rephrasing a personality scale item as a question ("Do you value artistic experiences?") yields a dead-end yes/no. But asking "Describe a moment when you felt inspired by an artistic or aesthetic experience" opens a narrative. For Thumos, this means conversation design is about behavioral prompts that invite storytelling, not clever icebreakers.
+
+**Principle 3: Reciprocity is real but underexplored.**
+
+Peters et al. reference Harmsen et al. (2023) on reciprocity in human-voicebot conversations — users self-disclose more when the system self-discloses first. Liu et al. confirms that conversations felt more natural when agents responded to what others said and then shared something about themselves, rather than just extracting. The AI should offer something before asking — a brief observation, a self-disclosure, a reaction — not just drill questions.
+
+**Principle 4: The self-insight motive is a framing weapon (Heine 2024).**
+
+People with a strong self-insight motive are driven by curiosity, self-improvement desire, and openness. The SIM gets stronger after life instability (breakups, moves, career changes) — exactly Thumos's target audience. The SIM drives feedback-seeking behavior. So the opener framing should activate this motive: position the conversation as an opportunity for genuine self-discovery, not as a personality test.
+
+**Principle 5: Defensiveness comes from purpose mismatch, not hard questions.**
+
+Park et al. opened with "Tell me the story of your life — start from the beginning" and it worked in 2-hour sessions with 1,000 people. The difference: the interviewer was described as "friendly and curious," used voice, had a visible progress bar, and participants knew the purpose. Defensiveness comes from a mismatch between the perceived purpose (I'm here to date) and the actual experience (I'm being psychoanalyzed). The fix isn't softer questions — it's better framing of why the questions matter.
+
+**Principle 6: Don't pretend it's not assessment — transparency builds trust.**
+
+Don't try to make it feel like a casual chat that happens to be assessment. The Peters data shows that explicit assessment framing doesn't hurt UX. The Park data shows that 1,000 people completed 2-hour AI interviews that opened with "Tell me the story of your life." What hurts is when the purpose feels hidden or the questions feel disconnected from what the user signed up for. Be direct about what you're doing and why.
+
+### 5.3 Recommended Conversation Arc
+
+**Layer 1: Framing (first message)**
+Activate the self-insight motive and set expectations in one brief statement:
+> "This isn't a quiz. Think of it more like a conversation that helps you see yourself clearly — then we use that to find someone who actually fits."
+
+**Layer 2: Biographical (exchanges 1-3)**
+Open with concrete, low-threat questions that already reveal personality:
+- "Where did you grow up, and what was it like?" (PSI Q1 — tone of answer reveals nostalgia vs. criticism, detail vs. terseness)
+- "What does your everyday life look like right now?"
+- "What's the most spontaneous thing you've done recently?"
+
+**Layer 3: Relational (exchanges 4-6)**
+Transition to how they relate to others:
+- "How would you describe the people in your family?" (PSI Q11)
+- "What makes you a good friend?" (PSI Q24)
+
+**Layer 4: Reciprocity checkpoints**
+After every 2-3 user responses, the AI offers something back — a brief reflection, a pattern noticed, an honest observation. Not flattery. The Liu et al. paper shows that agents who "responded first and then shared something about themselves" were rated as more coherent and engaging.
+
+**Layer 5: Introspective (exchanges 7+)**
+Only after establishing conversational trust:
+- Values, fears, dreams, turning points
+- "What frightens you now?" (PSI Q28)
+- "Tell me about a time you didn't know if you'd make it" (PSI Q32)
+
+### 5.4 The Trap to Avoid
+
+Don't try to make it feel like a casual chat that happens to be assessment. The Peters data shows that explicit assessment framing doesn't hurt UX. The Park data shows 1,000 people completed 2-hour AI interviews opening with "Tell me the story of your life." What hurts is when the purpose feels hidden or the questions feel disconnected from what the user signed up for.
+
+### 5.5 Current System Gaps → Proposed Changes
+
+| Gap | Current State | Research Says | Proposed Fix |
+|-----|--------------|---------------|--------------|
+| **First-ever intro** | "Tell me about yourself and what you're looking for" — vague, creates decision paralysis | Start with concrete biographical question (PSI Q1) | Rewrite intro to end with "where did you grow up, and what was it like?" |
+| **Assessment transparency** | Hidden behind "warm friend" persona | Explicit framing doesn't hurt UX (Peters) | Add self-insight framing: "helps you see yourself clearly, then I find someone who fits" |
+| **Reciprocity** | No mechanism — AI only asks questions | Users disclose more when AI gives first (Harmsen, Liu) | New principle: "Give something back every 2-3 exchanges" |
+| **Question design** | Some pool questions are self-labels ("Are you more of a...") | Story prompts >> self-labels (PSI) | Rewrite 7 weak questions to behavioral/story format |
+| **Default steering** | "are they seeing anyone" as early target | Start biographical, not relationship-status | Reorder steerToTopics: origin → present life → play |
+| **Opening prompt** | "Think late-night gathering energy — light, fun" | Don't hide assessment; be transparent about purpose | Rewrite to acknowledge biographical-first arc + transparency |
+
+### 5.6 Implementation Files
+
+All changes are prompt-only — no schema, handler, or API contract changes:
+
+- `src/domain/i18n/{en,de,es,fr,ja,ko,pt-BR,zh-CN}.ts` — Intro rewrite, 2 principle changes, opening prompt, 7 pool questions
+- `src/domain/soul.ts` — Default steerToTopics + steeringReasoning
+- `tests/integration/soulMirrorHandlers.test.ts` — Update intro assertion

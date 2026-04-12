@@ -19,8 +19,11 @@ final class AppModel: ObservableObject {
     @Published var visibleSoulFile: VisibleSoulFile = .empty
     @Published var hasMessages = false
     @Published var soulMessages: [SoulMessage] = []
-    @Published var soulStreamingText = ""
-    @Published var isSoulStreaming = false
+    var isAwaitingResponse: Bool {
+        guard let last = soulMessages.last else { return false }
+        return last.role == "user"
+    }
+    private var isSendingMessage = false
     @Published var isSoulFileUpdating = false
     @Published var isDeletingAccount = false
     @Published var language: String = "en"
@@ -142,8 +145,6 @@ final class AppModel: ObservableObject {
         visibleSoulFile = .empty
         hasMessages = false
         soulMessages = []
-        soulStreamingText = ""
-        isSoulStreaming = false
         isSoulFileUpdating = false
         appUpdateRequired = false
         appUpdateMessage = nil
@@ -260,21 +261,17 @@ final class AppModel: ObservableObject {
     }
 
     func beginSoulConversation() async {
-        guard !isSoulStreaming else { return }
+        guard !isSendingMessage else { return }
+        isSendingMessage = true
+        defer { isSendingMessage = false }
         logger.info("Beginning soul conversation")
 
-        // Send a first message to get the AI's opening question
-        isSoulStreaming = true
-        soulStreamingText = ""
-
         do {
-            try await performSoulConverse(mode: .opening)
-            await syncSoulMessages()
+            try await backend.soulSend(mode: .opening)
         } catch let error as BackendError where error.isAuthFailure {
             await bootstrapSoul()
             do {
-                try await performSoulConverse(mode: .opening)
-                await syncSoulMessages()
+                try await backend.soulSend(mode: .opening)
             } catch {
                 appendErrorMessage(for: error)
             }
@@ -283,14 +280,13 @@ final class AppModel: ObservableObject {
         } catch {
             appendErrorMessage(for: error)
         }
-
-        isSoulStreaming = false
-        soulStreamingText = ""
     }
 
     func sendSoulMessage(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !isSoulStreaming else { return }
+        guard !trimmed.isEmpty, !isSendingMessage else { return }
+        isSendingMessage = true
+        defer { isSendingMessage = false }
 
         let userMessage = SoulMessage(
             id: "local-\(UUID().uuidString)",
@@ -300,18 +296,14 @@ final class AppModel: ObservableObject {
         )
         soulMessages.append(userMessage)
         cacheSoulMessages(soulMessages)
-        isSoulStreaming = true
-        soulStreamingText = ""
 
         do {
-            try await performSoulConverse(message: trimmed, mode: .reply)
-            await syncSoulMessages()
+            try await backend.soulSend(mode: .reply, message: trimmed)
         } catch let error as BackendError where error.isAuthFailure {
-            logger.info("Auth failure during soul converse, refreshing session and retrying")
+            logger.info("Auth failure during soul send, refreshing session and retrying")
             await bootstrapSoul()
             do {
-                try await performSoulConverse(message: trimmed, mode: .reply)
-                await syncSoulMessages()
+                try await backend.soulSend(mode: .reply, message: trimmed)
             } catch {
                 appendErrorMessage(for: error)
             }
@@ -322,9 +314,6 @@ final class AppModel: ObservableObject {
         } catch {
             appendErrorMessage(for: error)
         }
-
-        isSoulStreaming = false
-        soulStreamingText = ""
     }
 
     func retrySoulMessage() async {
@@ -338,31 +327,23 @@ final class AppModel: ObservableObject {
         await sendSoulMessage(lastUserMessage.content)
     }
 
-    private static let minimumResponseTime: TimeInterval = 6.0
-
-    private func performSoulConverse(message: String? = nil, mode: SoulConverseMode) async throws {
-        let startTime = Date()
-
-        let response = try await backend.soulConverse(
-            mode: mode,
-            message: message
-        )
-
-        // Enforce minimum response time so replies feel human, not instant
-        let elapsed = Date().timeIntervalSince(startTime)
-        if elapsed < Self.minimumResponseTime {
-            try? await Task.sleep(for: .seconds(Self.minimumResponseTime - elapsed))
-        }
-
-        if !response.content.isEmpty {
-            let assistantMessage = SoulMessage(
-                id: "local-\(UUID().uuidString)",
-                role: "assistant",
-                content: response.content,
-                createdAt: iso8601Formatter.string(from: Date())
-            )
-            soulMessages.append(assistantMessage)
-            cacheSoulMessages(soulMessages)
+    /// Polls every 2s for new soul messages. Runs until the Task is cancelled
+    /// (i.e. the view disappears). Call from a .task modifier on the chat view.
+    func pollSoulMessagesWhileVisible() async {
+        let poller = MessagePoller(interval: 2, maxSilentPolls: nil, maxDuration: .infinity)
+        await poller.poll {
+            let afterId = await MainActor.run { self.soulMessages.last(where: { !$0.isError })?.id }
+            let response = try await self.backend.syncMessages(afterId: afterId)
+            if response.messages.isEmpty { return false }
+            await MainActor.run {
+                let newMessages = response.messages.map {
+                    SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
+                }
+                self.soulMessages.append(contentsOf: newMessages)
+                self.hasMessages = true
+                self.cacheSoulMessages(self.soulMessages)
+            }
+            return true
         }
     }
 
@@ -430,7 +411,7 @@ final class AppModel: ObservableObject {
     }
 
     private func shouldAutoRequestOpening(now: Date = Date()) -> Bool {
-        guard !isSoulStreaming else { return false }
+        guard !isSendingMessage else { return false }
         guard let lastMessage = soulMessages.last(where: { $0.role == "user" || $0.role == "assistant" }) else {
             return false
         }
@@ -500,8 +481,6 @@ final class AppModel: ObservableObject {
         visibleSoulFile = .empty
         hasMessages = false
         soulMessages = []
-        soulStreamingText = ""
-        isSoulStreaming = false
         isSoulFileUpdating = false
         lastSoulFileSynthesisRequest = nil
         errorMessage = nil

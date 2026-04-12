@@ -15,7 +15,6 @@ import {
   type OpeningKind,
   type SoulConversationContext
 } from "../../../src/domain/soul.ts";
-import { PHASE_CONFIGS } from "../../../src/domain/schemas.ts";
 import { getPrompts } from "../../../src/domain/i18n/index.ts";
 import { recordClaudeDebugTrace } from "../debugTraces.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
@@ -44,21 +43,17 @@ function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
+export function deriveOpeningKind(messages: SoulMessageRow[]): OpeningKind {
   return messages.length === 0 ? "first_ever" : "returning";
 }
 
-function buildFirstEverMessage(language?: string | null): string {
+export function buildFirstEverMessage(language?: string | null): string {
   const prompts = getPrompts(language);
-  const sparkDomains = PHASE_CONFIGS.spark.allowedDomains;
-  const randomDomain = sparkDomains[Math.floor(Math.random() * sparkDomains.length)];
-  const pool = prompts.domains.openingPool[randomDomain];
-  const question = pool[Math.floor(Math.random() * pool.length)];
-  return `${prompts.handler.firstEverIntro}\n\n${question}`;
+  return prompts.handler.firstEverIntro;
 }
 
-function buildClaudeInputMessages(
-  mode: z.infer<typeof soulConverseRequestSchema>["mode"],
+export function buildClaudeInputMessages(
+  mode: "opening" | "reply",
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   preferredDomain: string | null,
   language?: string | null
@@ -81,7 +76,7 @@ function buildClaudeInputMessages(
   ];
 }
 
-async function maybeQueueReflectionSnapshot(sql: NeonSQL, env: Env, userId: string): Promise<void> {
+export async function maybeQueueReflectionSnapshot(sql: NeonSQL, env: Env, userId: string): Promise<void> {
   const state = await checkReflectionSnapshotNeeded(sql, userId);
   if (!state.needed || state.pending) {
     return;
@@ -371,7 +366,7 @@ function schedulePostResponseTasks(
   void task;
 }
 
-async function runPostResponseTasks(
+export async function runPostResponseTasks(
   sql: NeonSQL,
   env: Env,
   userId: string,

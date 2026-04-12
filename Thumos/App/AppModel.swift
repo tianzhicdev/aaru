@@ -332,16 +332,24 @@ final class AppModel: ObservableObject {
     func pollSoulMessagesWhileVisible() async {
         let poller = MessagePoller(interval: 2, maxSilentPolls: nil, maxDuration: .infinity)
         await poller.poll {
-            let afterId = await MainActor.run { self.soulMessages.last(where: { !$0.isError })?.id }
+            // Use last server-confirmed ID (skip local-* optimistic IDs that don't exist in DB)
+            let afterId = await MainActor.run {
+                self.soulMessages.last(where: { !$0.isError && !$0.id.hasPrefix("local-") })?.id
+            }
             let response = try await self.backend.syncMessages(afterId: afterId)
             if response.messages.isEmpty { return false }
             await MainActor.run {
-                let newMessages = response.messages.map {
-                    SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
+                let existingIds = Set(self.soulMessages.map(\.id))
+                let newMessages = response.messages
+                    .filter { !existingIds.contains($0.id) }
+                    .map { SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt) }
+                if !newMessages.isEmpty {
+                    // Replace any local-* messages whose server version arrived
+                    self.soulMessages.removeAll { $0.id.hasPrefix("local-") }
+                    self.soulMessages.append(contentsOf: newMessages)
+                    self.hasMessages = true
+                    self.cacheSoulMessages(self.soulMessages)
                 }
-                self.soulMessages.append(contentsOf: newMessages)
-                self.hasMessages = true
-                self.cacheSoulMessages(self.soulMessages)
             }
             return true
         }

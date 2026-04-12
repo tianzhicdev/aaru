@@ -5,6 +5,7 @@ import {
   checkReflectionSnapshotNeeded,
   getAllSoulMessages,
   getSoulMessagesAfter,
+  getSoulMessagesSince,
   markReflectionSnapshotPending
 } from "../soulApp.ts";
 import { enqueueReflectionSnapshot } from "../backgroundJobsQueue.ts";
@@ -22,10 +23,24 @@ export async function handleSyncMessages(
   }
 
   const userId = auth.session.user_id;
-  const body = payload as { after_id?: string } | null;
+  const body = payload as { after_id?: string; since?: string } | null;
+  const since = body?.since;
   const afterId = body?.after_id;
 
   // Incremental poll: lightweight path, skip reflection check
+  if (since && typeof since === "string") {
+    const messages = await getSoulMessagesSince(sql, userId, since);
+    return jsonResponse(200, {
+      messages: messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        created_at: message.created_at
+      }))
+    });
+  }
+
+  // Legacy: after_id based polling (old clients)
   if (afterId && typeof afterId === "string") {
     const messages = await getSoulMessagesAfter(sql, userId, afterId);
     return jsonResponse(200, {

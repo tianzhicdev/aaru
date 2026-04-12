@@ -89,14 +89,14 @@ final class BackendClient {
         )
     }
 
-    func syncMessages(afterId: String? = nil) async throws -> SyncMessagesResponse {
+    func syncMessages(since: String? = nil) async throws -> SyncMessagesResponse {
         guard endpoint(named: "sync-messages") != nil else {
             return SyncMessagesResponse(messages: [])
         }
-        if let afterId {
+        if let since {
             return try await postRaw(
                 "sync-messages",
-                body: ["after_id": afterId],
+                body: ["since": since],
                 retryOnServerError: true
             )
         }

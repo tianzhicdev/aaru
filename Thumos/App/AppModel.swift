@@ -288,6 +288,15 @@ final class AppModel: ObservableObject {
         isSendingMessage = true
         defer { isSendingMessage = false }
 
+        // Optimistic insert — shown instantly, replaced when server version arrives
+        let localMessage = SoulMessage(
+            id: "local-\(UUID().uuidString)",
+            role: "user",
+            content: trimmed,
+            createdAt: nil
+        )
+        soulMessages.append(localMessage)
+
         do {
             try await backend.soulSend(mode: .reply, message: trimmed)
         } catch let error as BackendError where error.isAuthFailure {
@@ -323,16 +332,24 @@ final class AppModel: ObservableObject {
     func pollSoulMessagesWhileVisible() async {
         let poller = MessagePoller(interval: 2, maxSilentPolls: nil, maxDuration: .infinity)
         await poller.poll {
-            let afterId = await MainActor.run { self.soulMessages.last(where: { !$0.isError })?.id }
-            let response = try await self.backend.syncMessages(afterId: afterId)
+            // Highest server timestamp seen (skip local-* messages which have nil createdAt)
+            let since = await MainActor.run {
+                self.soulMessages.last(where: { !$0.id.hasPrefix("local-") })?.createdAt
+            }
+            let response = try await self.backend.syncMessages(since: since)
             if response.messages.isEmpty { return false }
             await MainActor.run {
-                let newMessages = response.messages.map {
-                    SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt)
+                let existingIds = Set(self.soulMessages.map(\.id))
+                let newMessages = response.messages
+                    .filter { !existingIds.contains($0.id) }
+                    .map { SoulMessage(id: $0.id, role: $0.role, content: $0.content, createdAt: $0.createdAt) }
+                if !newMessages.isEmpty {
+                    // Remove local-* optimistic messages replaced by server versions
+                    self.soulMessages.removeAll { $0.id.hasPrefix("local-") }
+                    self.soulMessages.append(contentsOf: newMessages)
+                    self.hasMessages = true
+                    self.cacheSoulMessages(self.soulMessages)
                 }
-                self.soulMessages.append(contentsOf: newMessages)
-                self.hasMessages = true
-                self.cacheSoulMessages(self.soulMessages)
             }
             return true
         }

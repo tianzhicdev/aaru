@@ -14,6 +14,12 @@ Usage:
     python scripts/produce_reddit_story.py \
         --voice-ref marketing/stories/tts-auditions/full/csm_1b/audio/scene_01.wav \
         --out marketing/stories/output/reddit-horror/
+
+    # Or with a story JSON file:
+    python scripts/produce_reddit_story.py \
+        --story-json marketing/stories/output/my-story/story.json \
+        --voice-ref marketing/stories/tts-auditions/full/csm_1b/audio/scene_01.wav \
+        --out marketing/stories/output/my-story/
 """
 
 import argparse
@@ -36,7 +42,7 @@ FONT_PATH = "/System/Library/Fonts/Helvetica.ttc"
 
 # ── Reddit Story ──
 
-STORY = {
+DEFAULT_STORY = {
     "subreddit": "r/tifu",
     "author": "u/burgers_and_grief",
     "title": "TIFU By inviting a Tinder date over to my house and accidentally meeting his mother",
@@ -59,7 +65,7 @@ STORY = {
 }
 
 # Narration script — the story rewritten for spoken delivery
-NARRATION = """So I matched with this guy on Tinder. We'd been chatting for a few days, everything seemed great. We had a lot in common, his pictures were cute, he lived close by. I invited him over to grill some burgers.
+DEFAULT_NARRATION = """So I matched with this guy on Tinder. We'd been chatting for a few days, everything seemed great. We had a lot in common, his pictures were cute, he lived close by. I invited him over to grill some burgers.
 
 He asked if he could bring anything. I said sure, bring some bacon for the burgers. He agreed and said he'd be over soon.
 
@@ -86,6 +92,22 @@ He finished his burger. I made some excuse about having to clock in for work... 
 He texted me before he even got to his car: "My mother really liked you, I can't wait to see you again."
 
 I told him I didn't feel the connection. To him, or his mother."""
+
+
+def load_story_json(path):
+    """Load story + narration from a JSON file."""
+    with open(path) as f:
+        data = json.load(f)
+    story = {
+        "subreddit": data.get("subreddit", "r/unknown"),
+        "author": data.get("author", "u/unknown"),
+        "title": data["title"],
+        "upvotes": data.get("upvotes", ""),
+        "awards": data.get("awards", ""),
+        "body": data["body"],
+    }
+    narration = data["narration"]
+    return story, narration
 
 
 # ── Helpers ──
@@ -123,7 +145,7 @@ def ffmpeg_run(cmd, label=""):
 
 # ── Step 1: Reddit Post Background ──
 
-def render_post_image(out_path):
+def render_post_image(out_path, story):
     """Render the Reddit post as a tall image using HTML → wkhtmltoimage or similar."""
     if out_path.exists() and out_path.stat().st_size > 0:
         print("  skip  Post image exists")
@@ -131,7 +153,7 @@ def render_post_image(out_path):
 
     # Build HTML that looks like a Reddit post
     paragraphs = "\n".join(
-        f'<p class="body">{p}</p>' for p in STORY["body"]
+        f'<p class="body">{p}</p>' for p in story["body"]
     )
 
     html = f"""<!DOCTYPE html>
@@ -207,18 +229,18 @@ def render_post_image(out_path):
 <body>
 <div class="post-container">
   <div class="meta">
-    <span class="subreddit">{STORY['subreddit']}</span>
+    <span class="subreddit">{story['subreddit']}</span>
     <span class="dot">·</span>
-    <span class="author">{STORY['author']}</span>
+    <span class="author">{story['author']}</span>
   </div>
-  <div class="title">{STORY['title']}</div>
+  <div class="title">{story['title']}</div>
   {paragraphs}
   <div class="votes">
     <span class="arrow up">▲</span>
-    <span class="score">{STORY['upvotes']}</span>
+    <span class="score">{story['upvotes']}</span>
     <span class="arrow">▼</span>
   </div>
-  <div class="awards">{STORY['awards']}</div>
+  <div class="awards">{story['awards']}</div>
 </div>
 </body>
 </html>"""
@@ -446,6 +468,7 @@ def main():
     parser.add_argument("--voice-ref", required=True, help="Path to voice reference WAV")
     parser.add_argument("--out", required=True, help="Output directory")
     parser.add_argument("--skip-tts", action="store_true", help="Skip TTS, use existing audio")
+    parser.add_argument("--story-json", help="Path to story JSON file (overrides hardcoded story)")
     args = parser.parse_args()
 
     global fal_client, requests
@@ -453,6 +476,18 @@ def main():
     import requests as _rq
     fal_client = _fc
     requests = _rq
+
+    # Load story + narration
+    if args.story_json:
+        story_path = Path(args.story_json)
+        if not story_path.exists():
+            print(f"Error: story JSON not found: {story_path}")
+            sys.exit(1)
+        story, narration = load_story_json(story_path)
+        print(f"  Loaded story from {story_path}")
+    else:
+        story = DEFAULT_STORY
+        narration = DEFAULT_NARRATION
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -465,14 +500,14 @@ def main():
     # Step 1: Render post image
     print("\n── Step 1: Reddit Post Image ──")
     post_img = out_dir / "post.png"
-    render_post_image(post_img)
+    render_post_image(post_img, story)
 
     # Step 2: Voice clone + TTS
     print("\n── Step 2: Voice Clone TTS ──")
     audio_path = out_dir / "narration.wav"
     if not args.skip_tts:
         voice_id = clone_voice(voice_ref)
-        duration = generate_tts(voice_id, NARRATION.strip(), audio_path)
+        duration = generate_tts(voice_id, narration.strip(), audio_path)
     else:
         duration = get_duration(audio_path)
         print(f"  skip  Using existing audio ({duration:.1f}s)")
@@ -496,7 +531,7 @@ def main():
     # Step 4: ASS subtitles
     print("\n── Step 4: Subtitles ──")
     ass_path = out_dir / "subtitles.ass"
-    write_ass_subtitles(phrases, STORY["title"], ass_path)
+    write_ass_subtitles(phrases, story["title"], ass_path)
     print(f"  done  {ass_path}")
 
     # Step 5: Assemble
@@ -506,7 +541,7 @@ def main():
     final_path.unlink(missing_ok=True)
     assemble_video(post_img, audio_path, ass_path, duration, final_path)
 
-    print(f"\n✓ Done! {final_path}")
+    print(f"\n Done! {final_path}")
 
 
 if __name__ == "__main__":

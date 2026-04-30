@@ -11,6 +11,8 @@ export interface SoulmateProfileRow {
   preferred_age_max: number;
   preferred_genders: string[];
   active: boolean;
+  selfie_url: string | null;
+  bio: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +26,10 @@ export interface MatchRow {
   result: "match" | "no_match" | "error";
   score: number | null;
   reasoning: string | null;
+  connection_zones: string[] | null;
+  raw_evaluation: Record<string, unknown> | null;
+  reasoning_a: string | null;
+  reasoning_b: string | null;
   evaluated_at: string;
 }
 
@@ -36,6 +42,8 @@ export interface SoulmateProfileInput {
   preferred_age_min: number;
   preferred_age_max: number;
   preferred_genders: string[];
+  selfie_url?: string;
+  bio?: string;
 }
 
 export interface MatchMessageRow {
@@ -63,15 +71,19 @@ export async function upsertSoulmateProfile(
   userId: string,
   input: SoulmateProfileInput
 ): Promise<SoulmateProfileRow> {
+  const selfieUrl = input.selfie_url ?? null;
+  const bio = input.bio ?? null;
   const rows = await sql`
     INSERT INTO soulmate_profiles (
       user_id, display_name, age, gender, latitude, longitude,
-      preferred_age_min, preferred_age_max, preferred_genders
+      preferred_age_min, preferred_age_max, preferred_genders,
+      selfie_url, bio
     ) VALUES (
       ${userId}, ${input.display_name}, ${input.age}, ${input.gender},
       ${input.latitude}, ${input.longitude},
       ${input.preferred_age_min}, ${input.preferred_age_max},
-      ${input.preferred_genders}
+      ${input.preferred_genders},
+      ${selfieUrl}, ${bio}
     )
     ON CONFLICT (user_id) DO UPDATE SET
       display_name = EXCLUDED.display_name,
@@ -82,6 +94,8 @@ export async function upsertSoulmateProfile(
       preferred_age_min = EXCLUDED.preferred_age_min,
       preferred_age_max = EXCLUDED.preferred_age_max,
       preferred_genders = EXCLUDED.preferred_genders,
+      selfie_url = EXCLUDED.selfie_url,
+      bio = EXCLUDED.bio,
       updated_at = now()
     RETURNING *
   `;
@@ -112,6 +126,13 @@ export async function getMatchedUserIds(
   );
 }
 
+export interface InsertMatchOptions {
+  connectionZones?: string[] | null;
+  rawEvaluation?: Record<string, unknown> | null;
+  reasoningA?: string | null;
+  reasoningB?: string | null;
+}
+
 export async function insertMatchAttempt(
   sql: NeonSQL,
   userAId: string,
@@ -120,16 +141,46 @@ export async function insertMatchAttempt(
   bSoulVersion: number,
   result: "match" | "no_match" | "error",
   score: number | null,
-  reasoning: string | null = null
-): Promise<void> {
-  await sql`
+  reasoning: string | null = null,
+  options: InsertMatchOptions = {}
+): Promise<string | null> {
+  const connectionZones = options.connectionZones ? JSON.stringify(options.connectionZones) : null;
+  const rawEvaluation = options.rawEvaluation ? JSON.stringify(options.rawEvaluation) : null;
+  const reasoningA = options.reasoningA ?? null;
+  const reasoningB = options.reasoningB ?? null;
+  const rows = await sql`
     INSERT INTO matches (
-      user_a_id, user_b_id, a_soul_version, b_soul_version, result, score, reasoning
+      user_a_id, user_b_id, a_soul_version, b_soul_version, result, score, reasoning,
+      connection_zones, raw_evaluation, reasoning_a, reasoning_b
     ) VALUES (
-      ${userAId}, ${userBId}, ${aSoulVersion}, ${bSoulVersion}, ${result}, ${score}, ${reasoning}
+      ${userAId}, ${userBId}, ${aSoulVersion}, ${bSoulVersion}, ${result}, ${score}, ${reasoning},
+      ${connectionZones}::jsonb, ${rawEvaluation}::jsonb, ${reasoningA}, ${reasoningB}
     )
     ON CONFLICT (user_a_id, user_b_id, a_soul_version, b_soul_version) DO NOTHING
+    RETURNING id
   `;
+  return (rows[0] as unknown as { id: string })?.id ?? null;
+}
+
+export async function updateMatchReasoning(
+  sql: NeonSQL,
+  matchId: string,
+  side: "a" | "b",
+  reasoning: string
+): Promise<void> {
+  if (side === "a") {
+    await sql`UPDATE matches SET reasoning_a = ${reasoning} WHERE id = ${matchId}`;
+  } else {
+    await sql`UPDATE matches SET reasoning_b = ${reasoning} WHERE id = ${matchId}`;
+  }
+}
+
+export async function getMatchById(
+  sql: NeonSQL,
+  matchId: string
+): Promise<MatchRow | null> {
+  const rows = await sql`SELECT * FROM matches WHERE id = ${matchId}`;
+  return (rows[0] as unknown as MatchRow) ?? null;
 }
 
 // ── Match Messages ───────────────────────────────────────────

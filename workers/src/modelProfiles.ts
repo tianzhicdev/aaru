@@ -6,7 +6,10 @@ export type ModelTask =
   | "synthesis_assessment"
   | "synthesis_visible"
   | "synthesis_hidden"
-  | "match_evaluation";
+  | "match_evaluation"
+  | "match_simulation"
+  | "match_observer"
+  | "match_reasoning";
 
 export type ReasoningMode = "default" | "disabled" | "thinking";
 
@@ -79,6 +82,24 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         model: "claude-haiku-4-5-20251001",
         maxTokens: 1024,
         temperature: 0.3
+      },
+      match_simulation: {
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20251001",
+        maxTokens: 512,
+        temperature: 0.7
+      },
+      match_observer: {
+        provider: "anthropic",
+        model: "claude-opus-4-20250514",
+        maxTokens: 4096,
+        temperature: 0.2
+      },
+      match_reasoning: {
+        provider: "anthropic",
+        model: "claude-haiku-4-5-20251001",
+        maxTokens: 1024,
+        temperature: 0.6
       }
     }
   },
@@ -90,37 +111,64 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.8
+        temperature: 0.8,
+        reasoningMode: "disabled"
       },
       reflection_snapshot: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 2000,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       synthesis_assessment: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       synthesis_visible: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.5
+        temperature: 0.5,
+        reasoningMode: "disabled"
       },
       synthesis_hidden: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       match_evaluation: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.3
+        temperature: 0.3,
+        reasoningMode: "disabled"
+      },
+      match_simulation: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 512,
+        temperature: 0.7,
+        reasoningMode: "disabled"
+      },
+      match_observer: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 4096,
+        temperature: 0.2,
+        reasoningMode: "disabled"
+      },
+      match_reasoning: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 1024,
+        temperature: 0.6,
+        reasoningMode: "disabled"
       }
     }
   },
@@ -132,37 +180,64 @@ const PROFILES: Record<ModelProfileId, ModelProfile> = {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.8
+        temperature: 0.8,
+        reasoningMode: "disabled"
       },
       reflection_snapshot: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 2000,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       synthesis_assessment: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       synthesis_visible: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.5
+        temperature: 0.5,
+        reasoningMode: "disabled"
       },
       synthesis_hidden: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 4096,
-        temperature: 0.2
+        temperature: 0.2,
+        reasoningMode: "disabled"
       },
       match_evaluation: {
         provider: "fireworks_openai",
         model: "accounts/fireworks/models/glm-5",
         maxTokens: 1024,
-        temperature: 0.3
+        temperature: 0.3,
+        reasoningMode: "disabled"
+      },
+      match_simulation: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 512,
+        temperature: 0.7,
+        reasoningMode: "disabled"
+      },
+      match_observer: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 4096,
+        temperature: 0.2,
+        reasoningMode: "disabled"
+      },
+      match_reasoning: {
+        provider: "fireworks_openai",
+        model: "accounts/fireworks/models/glm-5",
+        maxTokens: 1024,
+        temperature: 0.6,
+        reasoningMode: "disabled"
       }
     }
   }

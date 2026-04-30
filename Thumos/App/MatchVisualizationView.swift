@@ -40,7 +40,7 @@ private struct MatchConnectionLines: View {
 
                 // Measure label for gap
                 let resolvedText = context.resolve(Text(zone.theme)
-                    .font(Theme.sans(9, weight: .medium))
+                    .font(Theme.sans(11, weight: .medium))
                     .foregroundColor(gold.opacity(0.6)))
                 let textSize = resolvedText.measure(in: CGSize(width: size.width, height: 100))
                 let gapPadding: CGFloat = 12
@@ -113,14 +113,14 @@ struct MatchVisualizationView: View {
                 // YOU / Name labels
                 HStack {
                     Text("YOU")
-                        .font(Theme.sans(10, weight: .medium))
+                        .font(Theme.sans(12, weight: .medium))
                         .foregroundStyle(gold.opacity(0.4))
-                        .tracking(1.4)
+                        .tracking(1.5)
                     Spacer()
                     Text(match.displayName.uppercased())
-                        .font(Theme.sans(10, weight: .medium))
+                        .font(Theme.sans(12, weight: .medium))
                         .foregroundStyle(gold.opacity(0.4))
-                        .tracking(1.4)
+                        .tracking(1.5)
                 }
                 .padding(.horizontal, 28)
                 .padding(.top, 40)
@@ -130,12 +130,12 @@ struct MatchVisualizationView: View {
                 MatchConnectionLines(zones: vizData.zones)
                     .frame(height: CGFloat(vizData.zones.count + 2) * 44)
                     .padding(.horizontal, 28)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 16)
 
                 // Reasoning text with highlights
                 if let reasoning = match.reasoning, !reasoning.isEmpty {
                     buildHighlightedText(reasoning)
-                        .lineSpacing(5)
+                        .lineSpacing(6)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 28)
@@ -166,17 +166,17 @@ struct MatchVisualizationView: View {
                 let before = remaining[remaining.startIndex..<match.range.lowerBound]
                 if !before.isEmpty {
                     result = result + Text(String(before))
-                        .font(Theme.serifItalic(15))
-                        .foregroundColor(noteColor)
+                        .font(Theme.serif(28, weight: .light))
+                        .foregroundColor(Theme.textPrimary)
                 }
                 result = result + Text(String(remaining[match.range]))
-                    .font(Theme.serif(15, weight: .medium))
+                    .font(Theme.serif(28, weight: .medium))
                     .foregroundColor(gold)
                 remaining = remaining[match.range.upperBound...]
             } else {
                 result = result + Text(String(remaining))
-                    .font(Theme.serifItalic(15))
-                    .foregroundColor(noteColor)
+                    .font(Theme.serif(28, weight: .light))
+                    .foregroundColor(Theme.textPrimary)
                 break
             }
         }

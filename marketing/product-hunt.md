@@ -1,54 +1,51 @@
 # Product Hunt Launch
 
 ## Tagline (60 chars)
-An AI soul mirror that builds a living portrait of who you are
+AI conversations build your portrait, then find your person
 
 ## Description
 
-**Thumos** is a soul mirror — an AI that helps you understand who you really are through reflective conversation.
-
-No personality quizzes. No MBTI labels. No therapy. Just a mirror.
+**Thumos** replaces swiping with understanding. Instead of photos and bios, you have reflective AI conversations that build a living portrait of who you actually are in relationships — then Thumos matches you with someone genuinely compatible.
 
 **How it works:**
 
-You talk. Thumos listens — really listens. It asks one question at a time. It uses your own words, notices your contradictions, and reflects what you didn't say.
-
-Over multiple conversations, it builds a "soul file" — a living portrait of who you are. Seven sections: How You Move, How You Think, How You Connect, What You Carry, What Lights You Up, Your Contradictions, Your Voice. Written in second person, in your own language.
+You talk to the Soul Mirror — an AI that asks one question at a time, uses your own words, notices your contradictions, and reflects what you didn't say. Over multiple conversations, it builds a portrait covering how you love, how you handle conflict, your attachment style, your values, and your partnership vision.
 
 Not "you're an INTJ." More like:
-> *"You move through the world like someone who built walls to protect their creative space, then forgot where you put the door."*
+> *"You learned early to be composed, useful, and easy to love. Underneath that calm surface lives a fiercer self that wants intimacy without performance."*
 
-**What makes it different from other AI apps:**
-- It's not a companion or friend (like Replika) — it's a mirror
-- It's not a chatbot with personality (like Pi) — it builds a persistent portrait that evolves
-- It's not a quiz (like Dimensional) — it discovers who you are through conversation, not checkboxes
-- It doesn't label you — it reflects you in your own words
+When your portrait has enough depth, Thumos evaluates compatibility with other users across romance dimensions — attachment fit, conflict compatibility, love language resonance, values alignment. Each match comes with a personalized compatibility story explaining why you connect.
+
+**What makes it different:**
+- Not a companion or friend (like Replika) — it's a mirror that builds a persistent portrait
+- Not a quiz (like eHarmony) — it discovers who you are through conversation, not checkboxes
+- Not adding AI to swiping (like Bumble Bee) — AI is the foundation, not a feature
+- Your portrait is never shared — matches only see your display name + compatibility story
 
 **Built with:**
-- Claude Opus 4 (Anthropic) for conversation + synthesis
+- Claude by Anthropic for conversation, synthesis, and match evaluation
 - SwiftUI native iOS app
 - Cloudflare Workers + Neon Postgres backend
-- 4-expert synthesis pipeline (psychologist, sociologist, linguist, narrative analyst)
 
-Free. No account needed. Your conversations are private.
+Free. No account needed. Private by default.
 
-## First Comment (post this right after launch)
+## First Comment (post right after launch)
 
-Hey PH! I'm the maker of Thumos.
+Hey PH! I'm Nikos, maker of Thumos.
 
-The idea started from a simple question: what if AI could show you who you are, instead of telling you?
+The idea started from a question: what if a dating app understood you the way a close friend does — not from a quiz, but from actually talking to you?
 
-Most personality tools give you a label. MBTI. Enneagram. A score. But labels flatten you. The most interesting thing about any person is the contradiction — the part that doesn't fit neatly into a box.
+A conversation reveals things a questionnaire can't: your real attachment patterns (not the ones you'd self-report), how you actually handle conflict (not how you think you do), and the gap between who you present and who you are. That's what the Soul Mirror captures.
 
-Thumos doesn't label. It listens. It quotes your own words back to you. It notices what you contradicted, what you avoided, what lit you up. Then it writes a portrait — not in psychology jargon, but in your own language.
+Once the portrait is deep enough, Thumos matches you with people who are genuinely compatible — across romance dimensions like attachment fit, love language resonance, and conflict compatibility. Each match comes with a story, not a percentage.
 
-The soul file has 7 sections, and it evolves with every conversation. The AI doesn't give advice. Its only job is to reflect. "I'm not a therapist — I'm a mirror."
+Your portrait is never shared with other users. Matches only see your display name and a compatibility story. The whole idea is that real connection starts with understanding, not appearance.
 
-I'd love to hear what you think. Try having one conversation and check your soul file tab. That first portrait is always surprising.
+It's early — small user base, iOS only, still growing. But I'd love for you to try one conversation and check your portrait tab. That first portrait is always surprising.
 
 ## Topics
 - Artificial Intelligence
-- Self Care
+- Dating
 - iOS
 
 ## Thumbnail

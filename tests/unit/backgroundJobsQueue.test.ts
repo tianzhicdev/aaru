@@ -1,8 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/matchingPipeline.ts", () => ({
-  runMatchingPipeline: vi.fn().mockResolvedValue(undefined)
+  runMatchingPipeline: vi.fn().mockResolvedValue(undefined),
+  runMatchingPipelineForUser: vi.fn().mockResolvedValue(undefined)
 }));
+
+vi.mock("../../workers/src/matchApp.ts", () => ({
+  getMatchById: vi.fn().mockResolvedValue(null),
+  updateMatchReasoning: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock("../../workers/src/llm.ts", () => ({
+  callLlmText: vi.fn().mockResolvedValue("A beautiful match reasoning")
+}));
+
+vi.mock("../../workers/src/modelProfiles.ts", async () => {
+  const actual = await vi.importActual("../../workers/src/modelProfiles.ts");
+  return actual;
+});
 
 vi.mock("../../workers/src/soulApp.ts", () => ({
   checkHiddenSynthesisNeeded: vi.fn(),
@@ -21,13 +36,16 @@ vi.mock("../../workers/src/soulApp.ts", () => ({
 
 import {
   enqueueMatchingRun,
+  enqueueMatchReasoning,
+  enqueueMatchingScanUser,
   enqueueReflectionSnapshot,
   enqueueSynthesisHidden,
   enqueueSynthesisVisible,
   processBackgroundJobsBatch,
   type BackgroundQueueBinding
 } from "../../workers/src/backgroundJobsQueue.ts";
-import { runMatchingPipeline } from "../../workers/src/matchingPipeline.ts";
+import { runMatchingPipeline, runMatchingPipelineForUser } from "../../workers/src/matchingPipeline.ts";
+import { getMatchById, updateMatchReasoning } from "../../workers/src/matchApp.ts";
 import {
   checkHiddenSynthesisNeeded,
   checkReflectionSnapshotNeeded,
@@ -87,6 +105,34 @@ describe("queue publishers", () => {
       queuedAt: expect.any(String)
     });
     expect(job.kind).toBe("matching_run");
+  });
+
+  it("publishes a match reasoning job", async () => {
+    const queue: BackgroundQueueBinding = { send: vi.fn().mockResolvedValue(undefined) };
+    const job = await enqueueMatchReasoning(queue, "match-1", "user-1", "Jordan", "a", "English");
+    expect(queue.send).toHaveBeenCalledWith({
+      kind: "match_reasoning",
+      jobId: expect.any(String),
+      matchId: "match-1",
+      userId: "user-1",
+      otherDisplayName: "Jordan",
+      side: "a",
+      language: "English",
+      queuedAt: expect.any(String)
+    });
+    expect(job.kind).toBe("match_reasoning");
+  });
+
+  it("publishes a matching scan user job", async () => {
+    const queue: BackgroundQueueBinding = { send: vi.fn().mockResolvedValue(undefined) };
+    const job = await enqueueMatchingScanUser(queue, "user-1");
+    expect(queue.send).toHaveBeenCalledWith({
+      kind: "matching_scan_user",
+      jobId: expect.any(String),
+      userId: "user-1",
+      queuedAt: expect.any(String)
+    });
+    expect(job.kind).toBe("matching_scan_user");
   });
 
   it("publishes a reflection snapshot job", async () => {
@@ -213,5 +259,102 @@ describe("processBackgroundJobsBatch", () => {
     });
 
     expect(markReflectionSnapshotFailed).toHaveBeenCalledWith(mockSQL, "user-1", "boom");
+  });
+
+  it("processes match_reasoning jobs when raw_evaluation exists", async () => {
+    vi.mocked(getMatchById).mockResolvedValue({
+      id: "match-1",
+      user_a_id: "u1",
+      user_b_id: "u2",
+      a_soul_version: 1,
+      b_soul_version: 1,
+      result: "match",
+      score: 0.8,
+      reasoning: null,
+      connection_zones: ["Deep Divers"],
+      raw_evaluation: {
+        dimensions: [{ name: "test", score: 0.8, evidence: "good" }],
+        connectionZones: ["Deep Divers"],
+        keyMoments: ["moment1"],
+        overallScore: 0.8,
+        decision: "match"
+      },
+      reasoning_a: null,
+      reasoning_b: null,
+      evaluated_at: "2026-04-13T00:00:00Z"
+    });
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{
+        body: {
+          kind: "match_reasoning",
+          jobId: "job-r1",
+          matchId: "match-1",
+          userId: "u1",
+          otherDisplayName: "Jordan",
+          side: "a" as const,
+          language: "English",
+          queuedAt: "2026-04-13T00:00:00Z"
+        }
+      }]
+    });
+
+    expect(updateMatchReasoning).toHaveBeenCalledWith(
+      mockSQL, "match-1", "a", expect.any(String)
+    );
+  });
+
+  it("skips match_reasoning when no raw_evaluation exists", async () => {
+    vi.mocked(getMatchById).mockResolvedValue({
+      id: "match-1",
+      user_a_id: "u1",
+      user_b_id: "u2",
+      a_soul_version: 1,
+      b_soul_version: 1,
+      result: "match",
+      score: 0.8,
+      reasoning: null,
+      connection_zones: null,
+      raw_evaluation: null,
+      reasoning_a: null,
+      reasoning_b: null,
+      evaluated_at: "2026-04-13T00:00:00Z"
+    });
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{
+        body: {
+          kind: "match_reasoning",
+          jobId: "job-r2",
+          matchId: "match-1",
+          userId: "u1",
+          otherDisplayName: "Jordan",
+          side: "a" as const,
+          language: "English",
+          queuedAt: "2026-04-13T00:00:00Z"
+        }
+      }]
+    });
+
+    expect(updateMatchReasoning).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("processes matching_scan_user jobs", async () => {
+    vi.mocked(runMatchingPipelineForUser).mockResolvedValue(undefined);
+
+    await processBackgroundJobsBatch(mockSQL, mockEnv, {
+      messages: [{
+        body: {
+          kind: "matching_scan_user",
+          jobId: "job-s1",
+          userId: "user-1",
+          queuedAt: "2026-04-13T00:00:00Z"
+        }
+      }]
+    });
+
+    expect(runMatchingPipelineForUser).toHaveBeenCalledWith(mockSQL, mockEnv, "user-1");
   });
 });

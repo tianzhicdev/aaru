@@ -1,45 +1,50 @@
 # Show HN Post
 
 ## Title
-Show HN: Thumos – An AI soul mirror that builds a living portrait of who you are
+Show HN: Thumos – AI conversations replace swiping to match on who you actually are
+
+## URL
+https://trythumos.com
 
 ## Post
 
-I built an iOS app where an AI doesn't give advice, doesn't roleplay, and doesn't try to be your friend. It just mirrors who you are.
+I built an iOS app that replaces swiping with AI conversations. Instead of photos, Thumos builds a living psychological portrait of who you are in relationships, then matches you with compatible people based on that portrait. Your portrait is never shared — matches only see your display name and a compatibility story.
 
-The idea: what if instead of personality quizzes (MBTI, Enneagram, Big Five), you could discover yourself through conversation? Not checkboxes — actual reflective dialogue.
+**The problem I'm solving:**
+
+Dating apps match on photos. Questionnaire-based apps (eHarmony, OkCupid) match on self-reported answers. Both miss the same thing: how you actually show up in relationships. A conversation reveals attachment patterns, conflict styles, and values that people can't accurately self-report on a form.
 
 **How it works:**
 
-You talk to Thumos. It asks one question at a time. Short responses — 2-4 sentences. It uses your own words and metaphors. It notices contradictions. ("You love being alone, but your best memory is about a crowd. Tell me about that tension.")
+1. You talk to the Soul Mirror — a reflective AI that asks one question at a time, uses your own words and metaphors, and notices contradictions. It's not a chatbot that gives advice. It's a mirror.
 
-As you talk, it quietly extracts patterns from the conversation. When you're ready, a deeper synthesis passes everything through a 4-expert pipeline:
+2. As you talk, it builds a living portrait covering: How You Light Up, How You Show Up, How You Love, How You Weather Storms, What You're Looking For, and Your Growing Edges. Plus a Soul Compass (8-axis radar: openness, vitality, warmth, connection, resilience, purpose, depth, autonomy) and Personality Spectrum (5 continuums like consistency↔curiosity, calm↔sensitive).
 
-- Psychologist — emotional patterns, defense mechanisms, core fears
-- Sociologist — identity construction, group positioning
-- Linguist — metaphor usage, vocabulary density, humor style, signature phrases
-- Narrative analyst — story arc, protagonist role, turning points
+3. Once the portrait reaches sufficient depth, Thumos evaluates compatibility with other users across romance dimensions — attachment fit, conflict compatibility, love language resonance, values alignment, partnership vision. Each match comes with a personalized compatibility story, not a percentage.
 
-The output is a "soul file" — a living portrait in 7 sections (How You Move, How You Think, How You Connect, What You Carry, What Lights You Up, Your Contradictions, Your Voice). Written in second person, in the user's own language. Not "Openness: 82%" — more like: "You reach for metaphors before logic, and the metaphors are usually about water."
+**Architecture:**
 
-There's a dual architecture: the visible soul file (user-facing, written "accurately and lovingly") and a hidden soul file (agent-facing, clinical detail with numeric confidence scores). The user only sees the visible one.
+There's a dual portrait system: a visible portrait (user-facing, written "accurately and lovingly") and a hidden portrait (agent-facing, clinical detail with confidence scores). The user only sees the visible one. The matching engine reads both.
 
 **Technical stack:**
-- Claude Opus 4 for conversation + full synthesis
-- Claude Haiku 4.5 for periodic light extraction
+- Claude by Anthropic for conversation + synthesis + match evaluation
 - SwiftUI native iOS (no React Native, no web views)
 - Cloudflare Workers + Neon Postgres
-- SSE streaming for real-time responses
+- Structured output (Zod schemas → JSON schema for LLM responses)
 - Device-keyed identity (Keychain, no accounts)
+- Fire-and-poll architecture: POST returns immediately, LLM processes async, client polls for new messages
 
-The system prompt philosophy (from the actual code):
+From the system prompt:
 > "Reflect, don't diagnose. Use the user's own words and metaphors. Quote them back."
-> "No labels. Never say 'you are an INTJ.'"
 > "One question at a time. Never ask multiple questions. Let silence happen."
 
-Free, no account needed. Privacy: conversations processed by Anthropic (Claude), no human reads them, device-based anonymous ID.
+**Privacy model:**
 
-Would love technical feedback, especially on the synthesis pipeline. The 4-expert approach was inspired by how multiple therapists might see the same person differently — integrating those views creates a richer portrait than any single lens.
+Your portrait is never shared with other users. Matches see only your display name + a compatibility story. No photos, no profiles, no public presence. Conversations processed by Anthropic's Claude API — no human reads them, no training on your data.
 
-App Store link: [link]
-Website: trythumos.com
+Free, no account needed, iPhone only. Early stage — small user base, still growing.
+
+Would love technical feedback, especially on the matching approach. Using LLMs for compatibility evaluation (reading two full portraits and evaluating across dimensions) is a different bet than collaborative filtering or embedding similarity.
+
+App Store: https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301
+Website: https://trythumos.com

@@ -19,21 +19,15 @@ struct AIConsentView: View {
                             .foregroundStyle(Theme.textPrimary)
 
                         infoCard(
-                            icon: "eye",
-                            title: "A Mirror, Not a Manual",
-                            body: "This is a space for honest self-reflection. There are no right answers, no diagnoses, no self-improvement plans. Just you, looking at yourself clearly."
-                        )
-
-                        infoCard(
                             icon: "bubble.left.and.bubble.right",
-                            title: "Conversations with AI",
-                            body: "You'll talk to an AI that listens, asks questions, and reflects back what it notices. Over time, it builds a living portrait of who you are — your soul file."
+                            title: "How It Works",
+                            body: "You talk to Thumos — an AI that listens, asks real questions, and builds a living portrait of who you are. Then Thumos finds you someone you can actually connect with."
                         )
 
                         infoCard(
-                            icon: "sparkles",
-                            title: "It Gets Better Over Time",
-                            body: "The more you share, the richer the picture becomes. Be relaxed. Be honest. Say whatever comes to mind. There's no wrong way to do this."
+                            icon: "lock.shield",
+                            title: "Your Words Stay Yours",
+                            body: "Everything you share is private and never shared directly with anyone without your consent. Your data is safe with Thumos."
                         )
 
                         // Privacy consent checkbox

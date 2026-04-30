@@ -82,7 +82,7 @@ function validateProfileInput(
     return { error: "display_name must be 1-50 characters" };
   }
 
-  return {
+  const result: SoulmateProfileInput = {
     display_name: displayName,
     age: Math.floor(age),
     gender,
@@ -92,4 +92,22 @@ function validateProfileInput(
     preferred_age_max: Math.floor(preferredAgeMax),
     preferred_genders: preferredGenders.map(String)
   };
+
+  if (body.selfie_url !== undefined) {
+    const selfieUrl = String(body.selfie_url ?? "").trim();
+    if (selfieUrl.length > 500) {
+      return { error: "selfie_url must be at most 500 characters" };
+    }
+    result.selfie_url = selfieUrl || undefined;
+  }
+
+  if (body.bio !== undefined) {
+    const bio = String(body.bio ?? "").trim();
+    if (bio.length > 280) {
+      return { error: "bio must be at most 280 characters" };
+    }
+    result.bio = bio || undefined;
+  }
+
+  return result;
 }

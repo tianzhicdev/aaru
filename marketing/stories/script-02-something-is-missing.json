@@ -1,0 +1,120 @@
+{
+  "episode": {
+    "title": "Something Is Missing",
+    "context": "A woman in her 30s who craves deep, weird, real conversation — but every date is stuck in small talk. She had it once with her ex and can't find it again. Based on a real Reddit post from r/AskWomenOver30 with 719 upvotes.",
+    "art_style": "Photorealistic cinematic footage, warm golden hour tones for memory scenes, cooler muted tones for present-day dates. Shallow depth of field, soft natural lighting, intimate framing",
+    "narrator_style": "Female voice, early 30s, warm but slightly frustrated. Articulate and self-aware. Not whiny — wistful. Like someone journaling out loud.",
+    "consistent_objects": {
+      "restaurant_table": {
+        "name": "Restaurant table",
+        "description": "A small two-person table at a casual restaurant. White plates, wine glasses, a candle between them. Hands visible but no faces. Present-day scenes — cool, slightly sterile lighting."
+      },
+      "golden_memory": {
+        "name": "Memory scene",
+        "description": "A cozy living room or rooftop at golden hour. Two silhouettes close together, animated in conversation. Warm amber light, lens flare, soft focus. Everything glows. This is the past — the one that worked."
+      },
+      "wine_glass": {
+        "name": "Wine glass",
+        "description": "A glass of red wine on a table, half-full. Light refracts through it. A hand nearby but not holding it."
+      }
+    }
+  },
+  "scenes": [
+    {
+      "scene_id": 1,
+      "sentences": ["I really value having stimulating, deeper conversations.", "I love being able to have some humorous, slightly weird banter."],
+      "pause_after": 0.6,
+      "video_description": "Golden hour light streaming through a window onto a cozy couch. Two silhouettes sitting close, leaning toward each other, mid-laugh. Warm amber tones, lens flare, soft focus. Shot through a doorframe as if peering into a private moment. This is a memory.",
+      "camera_style": "Static shot through doorframe, warm intimate framing, shallow depth of field",
+      "consistent_objects": ["golden_memory"]
+    },
+    {
+      "scene_id": 2,
+      "sentences": ["My ex and I — the first time we talked, we talked for five hours straight.", "Just clicked."],
+      "pause_after": 0.8,
+      "video_description": "A rooftop at sunset. Two people sitting on the edge, silhouetted against a pink-orange sky. Their body language is close, animated — gesturing, laughing. No faces visible. The city sprawls below, soft and out of focus. Golden warm light everywhere.",
+      "camera_style": "Wide shot of two silhouettes on rooftop, slow push-in, golden backlight",
+      "consistent_objects": ["golden_memory"]
+    },
+    {
+      "scene_id": 3,
+      "sentences": ["He appreciated my weird awkwardness.", "I could be myself around him."],
+      "pause_after": 1.0,
+      "video_description": "Close-up of two hands on a table, fingers intertwined loosely over scattered papers or a book. Warm candlelight. The hands are relaxed, comfortable — this is easy. Soft focus background of a dimly lit room.",
+      "camera_style": "Close-up on hands, static, warm intimate lighting, gentle flicker from candle",
+      "consistent_objects": ["golden_memory"]
+    },
+    {
+      "scene_id": 4,
+      "sentences": ["Dating now as a single person has made me really miss that."],
+      "pause_after": 1.2,
+      "video_description": "Hard cut to cooler tones. A restaurant table with two place settings. The lighting is harsher — overhead fluorescent mixed with a small candle. A woman's hands are in her lap under the table, fidgeting. The man across is just a shoulder and sleeve. Everything feels stiffer.",
+      "camera_style": "Medium shot of table from the side, abrupt tonal shift from warm to cool, static",
+      "consistent_objects": ["restaurant_table"]
+    },
+    {
+      "scene_id": 5,
+      "sentences": ["Most conversations are on the small talk side.", "Discussing normal life things without much banter or deeper conversations or weirdness."],
+      "pause_after": 0.8,
+      "video_description": "A wine glass sitting on a white tablecloth. A hand reaches for it, takes a polite sip, sets it back down. Across the table, another hand mirrors the gesture. Mechanical, polite. The candle between them flickers but the scene feels cold. Slightly desaturated.",
+      "camera_style": "Close-up tracking from one glass to the other, slow lateral movement, clinical mood",
+      "consistent_objects": ["restaurant_table", "wine_glass"]
+    },
+    {
+      "scene_id": 6,
+      "sentences": ["I feel that pressure again to be a normal boring adult."],
+      "pause_after": 1.0,
+      "video_description": "A woman's hand resting on a restaurant table, fingers tapping once. Across from her, a man's hand gestures vaguely while talking — we can't hear him. Her fingers stop tapping. She picks up her glass. The moment is endured, not enjoyed.",
+      "camera_style": "Close-up on her hand, rack focus to his gesturing hand across the table, back to hers",
+      "consistent_objects": ["restaurant_table", "wine_glass"]
+    },
+    {
+      "scene_id": 7,
+      "sentences": ["I've tried to be more playful and initiate banter.", "But they just laugh or don't get it — and then nothing."],
+      "pause_after": 0.8,
+      "video_description": "A moment in a different restaurant — warmer but still muted. A woman's hands make an animated gesture over the table. Across from her, a man's posture is still, polite. A brief pause. Then he reaches for the menu. The energy dies. Shot from the side, catching the mismatch in body language.",
+      "camera_style": "Medium side shot of two people at table, focus on contrasting body language, static",
+      "consistent_objects": ["restaurant_table"]
+    },
+    {
+      "scene_id": 8,
+      "sentences": ["It just seems to fall flat."],
+      "pause_after": 1.5,
+      "video_description": "An empty wine glass on a table. The bill folder sits between the place settings. Two chairs are still occupied but the energy is gone. Overhead shot looking straight down at the table — the geometry is symmetrical, orderly, lifeless.",
+      "camera_style": "Overhead bird's-eye shot of table, static, symmetrical composition",
+      "consistent_objects": ["restaurant_table", "wine_glass"]
+    },
+    {
+      "scene_id": 9,
+      "sentences": ["With ninety percent of the people I meet", "it just feels like something is missing."],
+      "pause_after": 1.0,
+      "video_description": "A montage of quick cuts: different restaurant tables, different hands, different wine glasses — all slightly different settings but the same emotional tone. Each lasts 1-2 seconds. Cool, muted, repetitive. The sameness is the point.",
+      "camera_style": "Quick cuts between 4-5 similar table compositions, each slightly different but emotionally identical",
+      "consistent_objects": ["restaurant_table", "wine_glass"]
+    },
+    {
+      "scene_id": 10,
+      "sentences": ["Unfortunately my ex was incredibly emotionally immature.", "So that's why he didn't work out."],
+      "pause_after": 0.6,
+      "video_description": "Brief flash back to golden hour tones — the rooftop silhouettes from scene 2. But now the shot is slightly further away, and one of the silhouettes is standing up, moving away. The golden light is fading. Bittersweet.",
+      "camera_style": "Wide shot callback to scene 2, one figure separating, warm light dimming",
+      "consistent_objects": ["golden_memory"]
+    },
+    {
+      "scene_id": 11,
+      "sentences": ["But it's been a struggle not to romanticize what we had."],
+      "pause_after": 1.0,
+      "video_description": "Back to present. A woman walking alone on a city street at evening, seen from behind. She passes a restaurant window where a couple is laughing inside. She glances at them briefly, keeps walking. Cool evening light, warm window glow.",
+      "camera_style": "Tracking shot from behind, she passes the lit window, camera holds on the window as she walks out of frame",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 12,
+      "sentences": ["Help me feel less alone."],
+      "pause_after": 2.5,
+      "video_description": "Fade to black. Silence. Then white text appears: 'What if your match already knew what makes you light up?' Below: 'Thumos — discover your soul, find your someone.'",
+      "camera_style": "Fade to black, text fade-in, hold for 3 seconds",
+      "consistent_objects": []
+    }
+  ]
+}

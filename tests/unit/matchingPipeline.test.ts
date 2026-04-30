@@ -1,49 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../workers/src/matchApp.ts", () => ({
-  insertMatchAttempt: vi.fn().mockResolvedValue(undefined),
-  getMatchedUserIds: vi.fn().mockResolvedValue([])
+  insertMatchAttempt: vi.fn().mockResolvedValue("match-id-1"),
+  getMatchedUserIds: vi.fn().mockResolvedValue([]),
+  getSoulmateProfile: vi.fn().mockResolvedValue({ display_name: "Test" })
 }));
 
-vi.mock("../../workers/src/soulApp.ts", () => ({
-  getVisibleSoulFile: vi.fn().mockResolvedValue({
-    version: 1,
-    lastUpdated: "",
-    portrait: "A person",
-    sections: {
-      howYouLightUp: "Light", howYouShowUp: "Show", howYouLove: "Love",
-      howYouWeatherStorms: "Weather", whatYoureLookingFor: "Looking", yourGrowingEdges: "Edges", yourWarmth: "Warmth"
-    },
-    crystallizedMoments: [],
-    openThreads: [],
-    compassScores: {},
-    personalitySpectrum: {
-      openness: null, conscientiousness: null, extraversion: null,
-      agreeableness: null, emotionalSensitivity: null
-    },
-    topValues: [],
-    relationalStyle: null,
-    attachmentStyle: null,
-    loveSignature: null,
-    completeness: 0.8
-  })
-}));
-
-vi.mock("../../workers/src/llm.ts", () => ({
-  callLlmJson: vi.fn().mockResolvedValue({
-    decision: "match",
+vi.mock("../../workers/src/matchSimulation.ts", () => ({
+  runSimulatedMatch: vi.fn().mockResolvedValue({
+    outcome: "match",
     score: 0.85,
-    reasoning: "Great compatibility"
+    observerResult: {
+      dimensions: [],
+      connectionZones: ["Deep Divers"],
+      keyMoments: [],
+      overallScore: 0.85,
+      decision: "match"
+    },
+    transcripts: { first_date: [], vulnerability: [], friction: [] }
   })
 }));
 
-vi.mock("../../workers/src/modelProfiles.ts", async () => {
-  const actual = await vi.importActual("../../workers/src/modelProfiles.ts");
-  return actual;
-});
+vi.mock("../../workers/src/backgroundJobsQueue.ts", () => ({
+  enqueueMatchReasoning: vi.fn().mockResolvedValue({ jobId: "j1" })
+}));
 
 import { runMatchingPipeline } from "../../workers/src/matchingPipeline.ts";
 import { insertMatchAttempt } from "../../workers/src/matchApp.ts";
+import { enqueueMatchReasoning } from "../../workers/src/backgroundJobsQueue.ts";
 
 type SqlMock = ReturnType<typeof vi.fn>;
 
@@ -83,11 +67,19 @@ describe("runMatchingPipeline", () => {
         return candidatesByUser.get(userId ?? "") ?? [];
       }
 
+      // getUserLanguage
+      if (query.includes("SELECT language")) {
+        return [{ language: "English" }];
+      }
+
       throw new Error(`Unexpected query: ${query}`);
     });
 
+    const mockQueue = { send: vi.fn().mockResolvedValue(undefined) };
+
     await runMatchingPipeline(sql as never, {
-      ENABLE_SOULMATE: "true"
+      ENABLE_SOULMATE: "true",
+      BACKGROUND_QUEUE: mockQueue
     } as never);
 
     const counts = new Map<string, number>();
@@ -104,11 +96,53 @@ describe("runMatchingPipeline", () => {
     expect(counts.get("u4") ?? 0).toBe(0);
     expect(counts.get("u5") ?? 0).toBe(0);
   });
+
+  it("enqueues per-user reasoning for each match", async () => {
+    const users = [makeUser("u1", "male"), makeUser("u2", "female")];
+    const candidatesByUser = new Map([
+      ["u1", [makeCandidate("u2")]],
+      ["u2", [makeCandidate("u1")]]
+    ]);
+
+    const sql: SqlMock = vi.fn(async (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const query = strings.join("?");
+      if (query.includes("SELECT sp.user_id")) return users;
+      if (query.includes("SELECT sp2.user_id")) {
+        const userId = values.find((v): v is string => typeof v === "string" && v.startsWith("u"));
+        return candidatesByUser.get(userId ?? "") ?? [];
+      }
+      if (query.includes("SELECT language")) return [{ language: "English" }];
+      throw new Error(`Unexpected query: ${query}`);
+    });
+
+    const mockQueue = { send: vi.fn().mockResolvedValue(undefined) };
+
+    await runMatchingPipeline(sql as never, {
+      ENABLE_SOULMATE: "true",
+      BACKGROUND_QUEUE: mockQueue
+    } as never);
+
+    // Both u1→u2 and u2→u1 loops find each other as candidates, producing 2 match attempts
+    // Each match attempt enqueues 2 reasoning jobs (one per user), so 4 total
+    // In production, ON CONFLICT DO NOTHING prevents the duplicate; in tests mocks always succeed
+    expect(vi.mocked(enqueueMatchReasoning)).toHaveBeenCalledTimes(4);
+  });
+
+  it("skips when ENABLE_SOULMATE is not true", async () => {
+    const sql: SqlMock = vi.fn();
+    await runMatchingPipeline(sql as never, {
+      ENABLE_SOULMATE: "false"
+    } as never);
+
+    expect(sql).not.toHaveBeenCalled();
+    expect(vi.mocked(insertMatchAttempt)).not.toHaveBeenCalled();
+  });
 });
 
 function makeUser(userId: string, gender: string) {
   return {
     user_id: userId,
+    display_name: userId,
     age: 30,
     gender,
     latitude: 40.7128,
@@ -123,6 +157,7 @@ function makeUser(userId: string, gender: string) {
 function makeCandidate(userId: string) {
   return {
     user_id: userId,
+    display_name: userId,
     soul_version: 1,
     distance_m: 100
   };

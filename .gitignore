@@ -28,3 +28,7 @@ TestResults.xcresult/
 debug-dumps/
 dev-data/
 dry-run-output/
+
+# Marketing media (large binaries)
+marketing/stories/output/
+marketing/stories/tts-auditions/

@@ -1,0 +1,148 @@
+{
+  "episode": {
+    "title": "It Didn't Click",
+    "context": "A recently divorced man goes on what seems like a perfect date — museum, bar, kissing on her doorstep — only to receive a text two days later: 'It didn't click for me.' Based on a real Reddit post from r/GuyCry with 52 upvotes.",
+    "art_style": "Photorealistic cinematic footage, warm interior museum and bar lighting for the date, cold morning light for the rejection. Shallow depth of field, anamorphic lens feel, slight film grain",
+    "narrator_style": "Male voice, mid 30s, European slight accent optional. Warm and open during the date scenes, bewildered at the end. Storytelling pace — not rushed. Like recounting it to a friend at a bar.",
+    "consistent_objects": {
+      "museum": {
+        "name": "Museum interior",
+        "description": "A modern art museum with white walls, high ceilings, warm spot-lit paintings and sculptures. Polished concrete floors. Quiet, spacious, contemplative."
+      },
+      "bar": {
+        "name": "Evening bar",
+        "description": "A cozy European-style bar with dark wood, amber lighting, candles on small round tables. Intimate, slightly crowded. Warm and alive."
+      },
+      "doorstep": {
+        "name": "Apartment doorstep",
+        "description": "A residential doorway on a quiet city street at night. A warm porch light overhead. Stone steps. The door is closed. A set of keys in someone's hand."
+      },
+      "phone_morning": {
+        "name": "Morning phone",
+        "description": "A phone on a kitchen counter in cold morning light. The screen shows a text message. Coffee mug nearby. The morning light is harsh and blue compared to the warm evening scenes."
+      }
+    }
+  },
+  "scenes": [
+    {
+      "scene_id": 1,
+      "sentences": ["Saturday, I went on my second date since the divorce."],
+      "pause_after": 1.0,
+      "video_description": "A man's hand reaches for a jacket hanging by a door. He pulls it on — we see his torso and arms but not his face. Afternoon light streams through a hallway window. He pauses, takes a breath. Then opens the front door. Light floods in.",
+      "camera_style": "Medium shot from behind, natural afternoon light, slow deliberate movement, the gravity of trying again",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 2,
+      "sentences": ["She asked if I wanted to go to the museum with her.", "I said yes."],
+      "pause_after": 0.6,
+      "video_description": "The grand entrance of a modern art museum. Two figures walk in through glass doors, seen from inside the lobby. Sunlight behind them creates silhouettes. The museum interior is calm, white, cathedral-like. Their footsteps echo slightly.",
+      "camera_style": "Wide interior shot from inside museum, two silhouettes entering against backlight, slow zoom out to reveal the space",
+      "consistent_objects": ["museum"]
+    },
+    {
+      "scene_id": 3,
+      "sentences": ["We spent over three hours there.", "It took about an hour to get a feeling for each other."],
+      "pause_after": 0.6,
+      "video_description": "Two people standing side by side in front of a large painting in a museum gallery. Shot from behind — we see their backs and the painting. They stand a polite distance apart. Warm museum spotlights. Other visitors drift by in soft focus.",
+      "camera_style": "Wide shot from behind, the two figures framed by the painting, static, observational",
+      "consistent_objects": ["museum"]
+    },
+    {
+      "scene_id": 4,
+      "sentences": ["But after that hour, we hit it off.", "I made her laugh. We talked a lot. Got comfortable."],
+      "pause_after": 0.6,
+      "video_description": "Same museum, different gallery. Now the two figures are closer together, leaning toward a sculpture. One gestures animatedly. Their shoulders almost touch. The gap between them has closed. Warm light, relaxed body language.",
+      "camera_style": "Medium shot from the side, slightly closer than scene 3, capturing the reduced distance between them",
+      "consistent_objects": ["museum"]
+    },
+    {
+      "scene_id": 5,
+      "sentences": ["She said, 'Would you like to get a drink somewhere, or do you want to go home?'"],
+      "pause_after": 0.8,
+      "video_description": "The museum exit. Evening light outside. Two figures pause at the glass doors. One turns toward the other — a question in the posture. The city outside is turning blue and gold as the sun sets. Shot through the glass, reflections layered.",
+      "camera_style": "Shot through glass doors from outside, reflections of the interior mixing with the evening city behind camera",
+      "consistent_objects": ["museum"]
+    },
+    {
+      "scene_id": 6,
+      "sentences": ["We walked twenty minutes through the city.", "Kept laughing and talking."],
+      "pause_after": 0.6,
+      "video_description": "Two people walking along a city street at dusk, shot from across the road. They're close together, animated. Street lights are on, casting warm pools. Cars pass occasionally, their headlights streaking. The couple is slightly out of focus — the city is the frame. No faces visible.",
+      "camera_style": "Wide shot from across the street, tracking slowly, warm street light bokeh, dreamy evening feel",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 7,
+      "sentences": ["Entered a nice bar. Spent another three hours.", "Fingers touched. Then fingers were held."],
+      "pause_after": 0.8,
+      "video_description": "Inside a warm, candlelit bar. Close-up of two hands on a small round table. One hand slowly moves toward the other. Fingertips touch. Then fingers intertwine. Two cocktail glasses nearby, condensation on the glass. Amber candlelight flickers. The moment is tender and slow.",
+      "camera_style": "Extreme close-up on hands, slow and deliberate, warm candlelight, slight rack focus between hands and glasses",
+      "consistent_objects": ["bar"]
+    },
+    {
+      "scene_id": 8,
+      "sentences": ["I thought — this is what others always tell you about.", "How the magic works."],
+      "pause_after": 1.0,
+      "video_description": "Wide shot of the bar interior. The couple is visible in the background at their small table, leaning close. The foreground is out of focus — other patrons, bottles, warm amber light. Everything glows. The scene radiates warmth and possibility.",
+      "camera_style": "Wide shot with couple in soft background, foreground bokeh of bar atmosphere, warm and alive",
+      "consistent_objects": ["bar"]
+    },
+    {
+      "scene_id": 9,
+      "sentences": ["At her door, that awkward silence that comes when you don't know what's next.", "Then a little peck on the lips. And then she kissed me."],
+      "pause_after": 1.0,
+      "video_description": "A residential doorstep at night. A warm porch light above. Two figures stand close, slightly hesitant. One holds keys. A moment of stillness — then they lean in. Shot from the street, slightly voyeuristic, like catching a private moment. The porch light halos them.",
+      "camera_style": "Wide shot from the street looking up at the lit doorstep, two silhouettes in the porch light, intimate distance",
+      "consistent_objects": ["doorstep"]
+    },
+    {
+      "scene_id": 10,
+      "sentences": ["I went home high as a kite.", "Met someone, clicked, everything was effortless."],
+      "pause_after": 0.8,
+      "video_description": "A man walking alone on an empty street at night, shot from behind. But his posture is different now — upright, light step, hands swinging. Street lights glow warmly. He's almost bouncing. The city at night feels magical, not lonely. Slight warm lens flare.",
+      "camera_style": "Tracking shot from behind, wider lens, the walk has energy, warm nighttime city glow",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 11,
+      "sentences": ["The next day, I told her I'd love to do it again.", "She said she'll think about which museum she'd like to see first."],
+      "pause_after": 0.8,
+      "video_description": "A phone screen showing a text conversation. Friendly messages back and forth — museum booklets mentioned, a smiley face. The phone sits on a sunlit kitchen counter, morning light, coffee steam nearby. Everything feels hopeful and easy.",
+      "camera_style": "Close-up on phone screen, warm morning light, gentle push-in",
+      "consistent_objects": ["phone_morning"]
+    },
+    {
+      "scene_id": 12,
+      "sentences": ["Then today, she texted."],
+      "pause_after": 1.5,
+      "video_description": "The same phone on the same counter. But now the light has shifted — it's colder, bluer, harsher. A new message notification slides down. The phone buzzes once against the counter. The coffee mug is still there but the steam is gone. Cold.",
+      "camera_style": "Same framing as scene 11, but color temperature drops sharply. Static. The buzz of the phone is the only movement.",
+      "consistent_objects": ["phone_morning"]
+    },
+    {
+      "scene_id": 13,
+      "sentences": ["'It was a very nice evening. It didn't click for me.'", "'But you're a very sweet guy. I wish you all the best.'"],
+      "pause_after": 2.0,
+      "video_description": "Close-up of the phone screen showing the message. The words are visible: 'It didn't click for me. But you're a very sweet guy.' Cold blue-white light from the screen. A hand reaches into frame, picks up the phone, holds it. Then slowly sets it back down, screen facing the counter. Black.",
+      "camera_style": "Extreme close-up on message text, pull back as hand picks up phone, follows hand setting it face-down, screen goes dark",
+      "consistent_objects": ["phone_morning"]
+    },
+    {
+      "scene_id": 14,
+      "sentences": ["Everything was right.", "But something invisible was missing."],
+      "pause_after": 2.5,
+      "video_description": "Callback to the museum — scene 3 composition. Two people standing before a painting, seen from behind. But now the museum is empty except for them. The lights are dimmer. They stand the same polite distance apart as the beginning — the gap never really closed. Melancholic, quiet.",
+      "camera_style": "Wide shot callback to scene 3, same composition but emptier and dimmer, held for a long beat",
+      "consistent_objects": ["museum"]
+    },
+    {
+      "scene_id": 15,
+      "sentences": [],
+      "pause_after": 3.0,
+      "video_description": "Fade to black. Silence for 2 seconds. White text fades in: 'What if your match already knew what makes you light up?' Below, smaller: 'Thumos — discover your soul, find your someone.' Hold for 3 seconds.",
+      "camera_style": "Fade to black, text fade-in, hold",
+      "consistent_objects": []
+    }
+  ]
+}

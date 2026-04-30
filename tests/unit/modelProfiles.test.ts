@@ -37,14 +37,49 @@ describe("model profiles", () => {
     const conversation = getTaskConfig("value_cjk", "conversation");
     expect(conversation.provider).toBe("fireworks_openai");
     expect(conversation.model).toContain("glm-5");
-    expect(conversation.reasoningMode).toBeUndefined();
+    expect(conversation.reasoningMode).toBe("disabled");
+  });
+
+  it("returns simulation task configs for all profiles", () => {
+    for (const profileId of ["frontier", "value_cjk", "value_default"] as const) {
+      const sim = getTaskConfig(profileId, "match_simulation");
+      expect(sim.temperature).toBe(0.7);
+      expect(sim.maxTokens).toBe(512);
+
+      const obs = getTaskConfig(profileId, "match_observer");
+      expect(obs.temperature).toBe(0.2);
+      expect(obs.maxTokens).toBe(4096);
+
+      const reas = getTaskConfig(profileId, "match_reasoning");
+      expect(reas.temperature).toBe(0.6);
+      expect(reas.maxTokens).toBe(1024);
+    }
+  });
+
+  it("frontier uses Anthropic for simulation tasks", () => {
+    const sim = getTaskConfig("frontier", "match_simulation");
+    expect(sim.provider).toBe("anthropic");
+
+    const obs = getTaskConfig("frontier", "match_observer");
+    expect(obs.provider).toBe("anthropic");
+    expect(obs.model).toContain("opus");
+  });
+
+  it("value profiles use Fireworks for simulation tasks", () => {
+    for (const profileId of ["value_cjk", "value_default"] as const) {
+      const sim = getTaskConfig(profileId, "match_simulation");
+      expect(sim.provider).toBe("fireworks_openai");
+
+      const obs = getTaskConfig(profileId, "match_observer");
+      expect(obs.provider).toBe("fireworks_openai");
+    }
   });
 
   it("returns fireworks glm-5 task configs for value_default", () => {
     const conversation = getTaskConfig("value_default", "conversation");
     expect(conversation.provider).toBe("fireworks_openai");
     expect(conversation.model).toContain("glm-5");
-    expect(conversation.reasoningMode).toBeUndefined();
+    expect(conversation.reasoningMode).toBe("disabled");
     expect(conversation.thinkingBudget).toBeUndefined();
   });
 

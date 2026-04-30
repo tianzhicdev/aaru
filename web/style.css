@@ -43,6 +43,18 @@ img {
   max-width: 100%;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 a {
   color: inherit;
 }
@@ -1032,4 +1044,97 @@ body:not(.home-page) main.section h1 {
 .alert-card {
   margin-top: 1.5rem;
   background: linear-gradient(180deg, rgba(210, 175, 82, 0.14), rgba(255, 255, 255, 0.03));
+}
+
+.compare-table-wrap {
+  margin-top: 2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+}
+
+.compare-table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.compare-table thead th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.compare-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.compare-table td {
+  color: var(--text-muted);
+}
+
+.compare-table td:first-child {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.compare-highlight {
+  color: var(--gold) !important;
+  font-weight: 600 !important;
+  background: rgba(210, 175, 82, 0.06);
+}
+
+.blog-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.blog-card {
+  display: block;
+  padding: 1.35rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  transition: border-color 180ms ease;
+}
+
+.blog-card:hover {
+  border-color: var(--border-strong);
+}
+
+.blog-card h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1.16rem;
+}
+
+.blog-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.blog-date {
+  margin: 0 0 0.35rem;
+  color: var(--gold);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }

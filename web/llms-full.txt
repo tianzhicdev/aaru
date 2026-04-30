@@ -1,0 +1,139 @@
+# Thumos
+
+Thumos is a dating app that uses AI conversations to build a living portrait of who you are, then matches you with deeply compatible people. No swiping. No photos. Just understanding.
+
+## What Is Thumos?
+
+Thumos is a romance-focused soul discovery app for iPhone. Instead of swiping on photos, users have reflective conversations with an AI that acts as a warm, perceptive friend. Through these conversations, Thumos builds a deep psychological portrait — a "soul file" — that captures who you really are in relationships.
+
+The app then uses LLM-based evaluation to match users with people who are genuinely compatible across dimensions like attachment style, love language, conflict approach, values, and partnership vision.
+
+Thumos is free, private by default, and available on the App Store.
+
+## How It Works
+
+### Phase 1: Soul Mirror
+
+You have reflective conversations with an AI that listens deeply. Not a chatbot that gives advice — a mirror that helps you see yourself clearly. Through natural conversation, Thumos builds a living portrait covering:
+
+- How you show up in relationships (your relational style)
+- Your attachment style and love language
+- How you handle conflict and repair
+- Your values, worldview, and daily rhythm
+- Your partnership vision and what you need to feel safe
+- Your playfulness, emotional depth, and vulnerability patterns
+
+The portrait evolves with every conversation. It gets richer and more accurate over time.
+
+### Phase 2: Soulmate Matching
+
+Once your portrait reaches sufficient depth, Thumos evaluates compatibility with other users. The matching engine:
+
+1. Compares soul portraits across romance dimensions (attachment fit, conflict compatibility, love language resonance, shared values, partnership vision alignment)
+2. Runs simulated conversations between AI personas built from each user's portrait
+3. An observer evaluates the simulated interactions for genuine connection signals
+4. Generates a personalized explanation of why two people connect
+
+Each match comes with a unique compatibility story — not a percentage, but a narrative of why your souls resonate.
+
+### Phase 3: Direct Messaging
+
+Matched users can message each other directly within the app. Your full portrait is never shared — matches only see your display name and a brief compatibility summary.
+
+## What Makes Thumos Different from Other Dating Apps?
+
+### Thumos vs Tinder
+Tinder matches based on photos and location. Thumos matches based on psychological compatibility through AI conversation. Tinder recently added AI features (Chemistry, camera roll scanning) that optimize swiping. Thumos eliminates swiping entirely.
+
+### Thumos vs Hinge
+Hinge is "designed to be deleted" with prompts and photo-based profiles. Thumos is designed to understand you through deep conversation before matching. Hinge shows your full profile to potential matches. Thumos never shows your portrait to anyone.
+
+### Thumos vs Bumble
+Bumble's differentiator is "women message first." Thumos's differentiator is that AI conversations replace swiping. Bumble recently added an AI assistant (Bee) for chat help. Thumos uses AI at the core — to understand who you are, not to help you chat.
+
+### Thumos vs eHarmony
+eHarmony uses a questionnaire-based scientific matching system. Thumos uses natural conversation instead of questionnaires. A 300-question form captures what you think you want; a conversation reveals who you actually are.
+
+### Thumos vs OkCupid
+OkCupid has the most complex matching algorithm based on user-answered questions. Thumos goes deeper — instead of multiple-choice questions, it has open-ended conversations that reveal attachment patterns, conflict styles, and values that users might not even be aware of.
+
+| Feature | Tinder | Hinge | Bumble | Thumos |
+|---------|--------|-------|--------|--------|
+| Matching basis | Photos + location | Photos + prompts | Photos + bio | AI soul portrait |
+| Swiping | Yes | Yes | Yes | No |
+| AI role | Camera roll scan | Profile tips | Chat assistant | Deep conversational understanding |
+| Self-discovery | None | None | None | Core feature (Soul Mirror) |
+| Privacy | Photos public | Photos public | Photos public | Portrait never shared |
+| What matches see | Full profile + photos | Full profile + photos | Full profile + photos | Display name + compatibility reasoning only |
+
+## Frequently Asked Questions
+
+### What makes Thumos different from other dating apps?
+Thumos replaces swiping on photos with AI-powered reflective conversations that build a deep psychological portrait of who you are. Matches are based on compatibility across romance dimensions like attachment style, conflict approach, and love language — not appearance.
+
+### How does Thumos matching work?
+Thumos uses LLM-based evaluation to compare soul portraits across romance dimensions including attachment fit, conflict compatibility, love language resonance, values alignment, and partnership vision. Each match includes a personalized explanation of why you were paired.
+
+### Is my data private on Thumos?
+Yes. Your Soul Mirror portrait is never shared with other users. Matches only see your display name and a brief compatibility summary. Your full portrait, conversation history, and psychological analysis remain completely private.
+
+### Is Thumos free?
+Yes. Thumos is free to use. Soul Mirror conversations are unlimited.
+
+### What platforms is Thumos available on?
+Thumos is currently available on iOS (iPhone) running iOS 17 or later. Download from the App Store.
+
+### Is Thumos a therapist?
+No. Thumos is not a therapist and does not provide medical advice, diagnosis, or treatment. It is a reflective tool — a mirror, not a prescription.
+
+### What AI powers Thumos?
+Thumos uses Claude, made by Anthropic. Conversations are powered by Claude models tuned for reflection and deep understanding.
+
+### How do I delete my data?
+In the app, open Settings and choose Delete My Data. This permanently deletes your conversations, soul file, and device identity. You can also email support@trythumos.com.
+
+## Blog
+
+### Why We Built Thumos: The Problem with Swiping
+
+Dating apps promised to solve loneliness. Instead, they optimized for engagement. More swipes, more screen time, more revenue. But more swipes don't lead to better matches — they lead to fatigue.
+
+The average dating app user spends 30 to 90 minutes a day swiping and comes away feeling more exhausted than hopeful. 78% of dating app users report burnout. The problem isn't the technology — it's what the technology measures. Photos tell you what someone looks like. They tell you nothing about how they love, how they fight, how they repair, or what they need to feel safe.
+
+We asked: what if a dating app understood you the way a close friend does? A good friend learns who you are by talking to you — by noticing what excites you, what you avoid, and what you really mean. That's what the Soul Mirror does. It builds a living portrait of who you are in relationships: your attachment style, love language, values, conflict patterns, and partnership vision.
+
+Once your portrait reaches sufficient depth, Thumos evaluates compatibility across romance dimensions. Each match comes with a compatibility story, not a percentage. Your portrait is never shared — matches see only your display name and a compatibility story.
+
+### How AI Conversations Replace Dating App Questionnaires
+
+The questionnaire model (eHarmony, OkCupid) captures what people think they want, not who they actually are. Ask someone "Are you an anxious or secure attacher?" and they'll say secure. Have a conversation about what happened when their partner pulled away, and the real attachment pattern emerges. This is the gap between self-report and behavioral truth.
+
+When you talk to Thumos, the AI listens for patterns: what you say vs. how you say it, what you return to, what you avoid, and how you handle vulnerability. A questionnaire asks "On a scale of 1-5, how comfortable are you with vulnerability?" A conversation actually sees how comfortable you are.
+
+The result isn't a score — it's a living portrait that evolves with every conversation. When matching, Thumos reads both portraits and evaluates across romance dimensions: attachment fit, conflict compatibility, love language resonance, values alignment, and emotional depth.
+
+### What Is a Soul Portrait?
+
+On most dating apps, your profile is a performance. On Thumos, the app builds a portrait — a living psychological sketch of who you actually are in relationships. It's built from conversations with the Soul Mirror and covers: How You Light Up, How You Show Up, How You Love, How You Weather Storms, What You're Looking For, and Your Growing Edges.
+
+The portrait also includes the Soul Compass (eight-axis chart: openness, vitality, warmth, connection, resilience, purpose, depth, autonomy) and Personality Spectrum (five continuums: consistency-curiosity, spontaneity-structure, solitude-engagement, challenge-harmony, calm-sensitive), plus attachment style and love signature.
+
+Unlike a static profile, the portrait evolves after every conversation. Your portrait is never shared with other users — matches see only your display name and a compatibility story. Many users find the portrait valuable for self-discovery even before matching begins.
+
+## Technical Details
+
+- Platform: iOS 17+
+- AI: Claude by Anthropic (Opus and Haiku models)
+- Backend: Cloudflare Workers + Neon Postgres
+- Privacy: No advertising, no data sales, no photo sharing
+- Price: Free
+- Developer: Kwafy LLC
+
+## Download
+
+Available on the App Store: https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301
+
+## Contact
+
+- Website: https://trythumos.com
+- Email: support@trythumos.com

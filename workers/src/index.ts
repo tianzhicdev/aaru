@@ -25,6 +25,7 @@ import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { handleUpdateLanguage } from "./handlers/update-language.ts";
+import { handleRunMatchingScan } from "./handlers/run-matching-scan.ts";
 import { handleMonitoring } from "./handlers/monitoring.ts";
 import { handleSoulSend } from "./handlers/soul-send.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
@@ -117,6 +118,11 @@ export default {
       case "run-matching":
         return withErrorHandling(request, (_payload, req) =>
           handleRunMatching(env, req)
+        );
+
+      case "run-matching-scan":
+        return withErrorHandling(request, (payload, req) =>
+          handleRunMatchingScan(sql, env, payload, req)
         );
 
       case "match-messages":

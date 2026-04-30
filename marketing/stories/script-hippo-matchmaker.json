@@ -1,0 +1,179 @@
+{
+  "episode": {
+    "title": "The Hippo",
+    "context": "A male hippo visits a matchmaker, absolutely certain he's a catch. His signature move is explosive poop-spraying via helicopter tail.",
+    "art_style": "Children's crayon drawing on white paper, thick waxy colorful strokes, simple childlike illustration, bright primary colors, messy and charming",
+    "voices": {
+      "hippo": {
+        "ref_wav": "theo_von_raw.wav",
+        "style": "Deep confident male, Southern drawl, zero self-awareness, gym bro energy. Loud and proud.",
+        "emotion": "happy",
+        "pitch": -2,
+        "speed": 0.95
+      },
+      "matchmaker": {
+        "ref_wav": "mark_narrations.wav",
+        "style": "Calm professional male, dry deadpan humor, therapist energy. Increasingly disturbed but composed.",
+        "emotion": "neutral",
+        "pitch": 0,
+        "speed": 1.0
+      }
+    }
+  },
+  "scenes": [
+    {
+      "scene_id": 1,
+      "speaker": "matchmaker",
+      "text": "So, what do you bring to a relationship?",
+      "pause_after": 0.4,
+      "image_prompt": "A cozy office with a big wooden desk, a small owl wearing glasses and a jacket sitting behind it, a huge round hippo squeezed into a tiny chair across the desk, arms crossed confidently."
+    },
+    {
+      "scene_id": 2,
+      "speaker": "hippo",
+      "text": "Everything. I'm three tons. I'm territorial. I own a whole stretch of river. Prime real estate.",
+      "pause_after": 0.5,
+      "image_prompt": "Close-up of a big proud hippo wearing a gold chain and tiny polo shirt, one hand gesturing wide, huge grin, sitting in a chair that's way too small."
+    },
+    {
+      "scene_id": 3,
+      "speaker": "matchmaker",
+      "text": "Great. And what's your approach when you see someone you like?",
+      "pause_after": 0.3,
+      "image_prompt": "A small owl with reading glasses holding a pen over a notepad, looking attentive, bookshelves behind him."
+    },
+    {
+      "scene_id": 4,
+      "speaker": "hippo",
+      "text": "OK so. I turn around. I lift my tail. And I spin it. Like a helicopter blade.",
+      "pause_after": 0.6,
+      "image_prompt": "A big excited hippo standing up from his chair, waving his hands demonstrating spinning motion, the little owl in background looks alarmed."
+    },
+    {
+      "scene_id": 5,
+      "speaker": "matchmaker",
+      "text": "A helicopter blade?",
+      "pause_after": 0.3,
+      "image_prompt": "Close-up of a worried owl face, one eyebrow raised, pen frozen in the air, glasses crooked."
+    },
+    {
+      "scene_id": 6,
+      "speaker": "hippo",
+      "text": "Yeah, real fast. Maximum RPM. And while I'm spinning — I spray. Everywhere. Full three-sixty coverage. She will be COVERED.",
+      "pause_after": 0.8,
+      "image_prompt": "A huge hippo making an explosion gesture with both hands spread wide, big grin, papers flying everywhere, the tiny owl leaning way back in his chair."
+    },
+    {
+      "scene_id": 7,
+      "speaker": "matchmaker",
+      "text": "Covered in —",
+      "pause_after": 0.2,
+      "image_prompt": "The owl slowly putting down his pen, staring forward with huge wide eyes, blank expression."
+    },
+    {
+      "scene_id": 8,
+      "speaker": "hippo",
+      "text": "My love.",
+      "pause_after": 0.8,
+      "image_prompt": "The hippo pressing both hands to his chest with eyes closed and a sweet smile, a big heart floating above his head, warm golden scribbles around him."
+    },
+    {
+      "scene_id": 9,
+      "speaker": "matchmaker",
+      "text": "That's not love, sir. That's feces.",
+      "pause_after": 0.6,
+      "image_prompt": "The owl pinching his nose with one wing, eyes squeezed shut, notepad with a big scribbled X on it."
+    },
+    {
+      "scene_id": 10,
+      "speaker": "hippo",
+      "text": "It's a DISPLAY. It shows her what I've been eating. It says look at my diet, look at my territory, look at my output. It's basically a resume.",
+      "pause_after": 0.6,
+      "image_prompt": "The hippo counting on his fingers passionately, leaning over the desk, the tiny chair cracking underneath him, office supplies scattered."
+    },
+    {
+      "scene_id": 11,
+      "speaker": "matchmaker",
+      "text": "A resume made of —",
+      "pause_after": 0.2,
+      "image_prompt": "The owl with mouth open and one wing raised giving up mid-gesture, glasses on the desk, looking defeated."
+    },
+    {
+      "scene_id": 12,
+      "speaker": "hippo",
+      "text": "Made of ME. Raw. Unfiltered. Authentic.",
+      "pause_after": 0.8,
+      "image_prompt": "The hippo pounding his chest like a superhero, standing tall with head near the ceiling, a 'BELIEVE' poster on the wall."
+    },
+    {
+      "scene_id": 13,
+      "speaker": "matchmaker",
+      "text": "Have you considered... flowers?",
+      "pause_after": 0.5,
+      "image_prompt": "The owl gently holding up a flower with a hopeful little smile, a small vase of colorful flowers on his desk."
+    },
+    {
+      "scene_id": 14,
+      "speaker": "hippo",
+      "text": "Flowers? FLOWERS? I'm not a flamingo. I'm a three-ton apex river beast. When I show up, things get wet and things get real. That's my brand.",
+      "pause_after": 0.8,
+      "image_prompt": "The hippo slamming both hands on the desk which is cracking in half, coffee mug flying, the owl pressed flat against his chair in shock."
+    },
+    {
+      "scene_id": 15,
+      "speaker": "matchmaker",
+      "text": "And how do the ladies respond to this... brand?",
+      "pause_after": 0.4,
+      "image_prompt": "The owl resting his chin on his wing, elbow on desk, looking exhausted, tie loosened, papers everywhere."
+    },
+    {
+      "scene_id": 16,
+      "speaker": "hippo",
+      "text": "Mixed reviews. But I think that's because they haven't experienced the full spray radius. I've been working on my distance.",
+      "pause_after": 0.6,
+      "image_prompt": "The hippo sitting with one hand on chin looking thoughtful and analytical, the chair bending under him."
+    },
+    {
+      "scene_id": 17,
+      "speaker": "matchmaker",
+      "text": "I'm sorry, your distance?",
+      "pause_after": 0.3,
+      "image_prompt": "Extreme close-up of the owl's face with huge shocked eyes and beak slightly open."
+    },
+    {
+      "scene_id": 18,
+      "speaker": "hippo",
+      "text": "Used to be six feet. Now I can hit twelve. Easy. On a good day — fifteen.",
+      "pause_after": 0.8,
+      "image_prompt": "The hippo holding his hands far apart proudly like a fisherman showing a big catch, big satisfied smile, numbers '6' crossed out and '15!!' written above."
+    },
+    {
+      "scene_id": 19,
+      "speaker": "matchmaker",
+      "text": "I need you to stop improving at this.",
+      "pause_after": 0.6,
+      "image_prompt": "The owl standing up with both wings flat on the desk, leaning forward with a dead serious face."
+    },
+    {
+      "scene_id": 20,
+      "speaker": "hippo",
+      "text": "You sound just like my last matchmaker. Before I sprayed her office.",
+      "pause_after": 0.8,
+      "image_prompt": "The hippo gazing off to the side wistfully with a dreamy expression, the owl in background looking around at the walls in panic."
+    },
+    {
+      "scene_id": 21,
+      "speaker": "matchmaker",
+      "text": "Is that why the walls are —",
+      "pause_after": 0.3,
+      "image_prompt": "Wide shot of the office from behind, the owl pointing at a big brown splatter on the wall, the hippo looking away innocently whistling."
+    },
+    {
+      "scene_id": 22,
+      "speaker": "hippo",
+      "text": "That was here when I got here.",
+      "pause_after": 1.5,
+      "image_prompt": "Close-up of the hippo's face completely deadpan, looking straight at viewer with zero guilt, one eyebrow raised."
+    }
+  ]
+}

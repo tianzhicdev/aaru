@@ -1,0 +1,142 @@
+{
+  "episode": {
+    "title": "Am I Just Boring?",
+    "context": "A guy who's been doing a lot of online dating realizes most dates don't go past the first one. He starts to wonder if he's fundamentally not interesting enough. Based on a real Reddit post from r/AskMen.",
+    "source": "https://www.reddit.com/r/AskMen/comments/1ne3j8a/what_is_making_me_get_ghosted_after_the_first_few/",
+    "art_style": "Photorealistic cinematic footage, shallow depth of field, warm indoor lighting mixed with cool evening city tones, slightly desaturated color grading, melancholic mood",
+    "narrator_style": "Male voice, late 20s, quiet and honest, like confiding in a close friend late at night. Slightly tired. Not dramatic — just real.",
+    "consistent_objects": {
+      "coffee_shop": {
+        "name": "Coffee shop",
+        "description": "A small, warmly lit independent coffee shop. Exposed brick walls, wooden tables, soft pendant lights. Two cups on a table — one barely touched."
+      },
+      "phone": {
+        "name": "Phone screen",
+        "description": "A modern smartphone lying face-up on a table or held in hand, screen showing a dating app conversation or an empty message thread."
+      },
+      "empty_chair": {
+        "name": "Empty chair",
+        "description": "A wooden chair across a small cafe table, recently vacated. A napkin left behind. The chair is slightly pulled out."
+      },
+      "city_street": {
+        "name": "City street at night",
+        "description": "A quiet urban sidewalk at dusk. Street lights casting warm pools. A man walking alone, seen from behind, slightly hunched. No face visible."
+      }
+    },
+    "tts_voices": {
+      "orpheus_zac": {
+        "model": "fal-ai/orpheus-tts",
+        "params": { "voice": "zac", "language": "english", "temperature": 0.9, "repetition_penalty": 1.2 }
+      },
+      "maya_irish": {
+        "model": "fal-ai/maya",
+        "params": { "prompt": "A young man, late 20s, soft Irish accent. Melancholic but not dramatic. Speaking slowly and honestly, like confiding after a few pints." }
+      },
+      "maya_brooklyn": {
+        "model": "fal-ai/maya",
+        "params": { "prompt": "A young man, late 20s, Brooklyn New York accent. Casual, self-deprecating humor even when sad. Talking quietly, like recording a voice memo at 2am." }
+      }
+    }
+  },
+  "scenes": [
+    {
+      "scene_id": 1,
+      "sentences": ["I've been doing a lot of online dating and I've noticed that most dates don't go past the first date."],
+      "sentences_tagged": ["I've been doing a lot of online dating and I've noticed that most dates don't go past the first date."],
+      "pause_after": 0.8,
+      "video_description": "A dating app interface on a phone screen, fingers swiping through profiles. The screen reflects softly on the surface of a dark wooden table. Blurred coffee shop background. Warm ambient light.",
+      "camera_style": "Close-up on phone screen, shallow depth of field, slow subtle push-in",
+      "consistent_objects": ["phone"]
+    },
+    {
+      "scene_id": 2,
+      "sentences": ["They would just ghost most of the time, and sometimes it happens after the second or third date."],
+      "sentences_tagged": ["They would just ghost most of the time, and sometimes it happens after the second or third date."],
+      "pause_after": 0.8,
+      "video_description": "A phone lying on a nightstand in a dim bedroom. The screen shows an open message thread — a blue sent message with no reply beneath it. A small lamp provides warm side light.",
+      "camera_style": "Overhead shot of phone on nightstand, slow zoom in on the unanswered message",
+      "consistent_objects": ["phone"]
+    },
+    {
+      "scene_id": 3,
+      "sentences": ["It feels like one slight mistake or awkward silence will trigger this ick in them, and it's game over."],
+      "sentences_tagged": ["It feels like one slight mistake or awkward silence will trigger this ick in them, and it's game over."],
+      "pause_after": 1.0,
+      "video_description": "Two people sitting across from each other at a small restaurant table, shot from behind one person's shoulder. Only the back of heads and shoulders visible. The moment is frozen — neither is talking. Two water glasses, bread basket between them. Warm tungsten lighting overhead.",
+      "camera_style": "Over-the-shoulder medium shot, static, the stillness is the point",
+      "consistent_objects": ["coffee_shop"]
+    },
+    {
+      "scene_id": 4,
+      "sentences": ["I'm starting to worry now because I'm concerned that I'm just too boring and don't have the it factor to hold a woman's interest and make her wanna stick around me long term."],
+      "sentences_tagged": ["I'm starting to worry now because I'm concerned that I'm just too boring and don't have the it factor to hold a woman's interest and make her wanna stick around me long term."],
+      "pause_after": 0.8,
+      "video_description": "A man sitting alone at a bar counter, seen from the side. His face is turned away from camera, looking down at his drink. The bar is warmly lit but nearly empty. Bottles glow on shelves behind. Solitary, contemplative mood.",
+      "camera_style": "Wide shot from the side, slow dolly left to right, shallow depth of field on the figure",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 5,
+      "sentences": ["I may not be the most attractive but I know I'm not ugly either."],
+      "sentences_tagged": ["I may not be the most attractive but I know I'm not ugly either."],
+      "pause_after": 0.6,
+      "video_description": "A bathroom mirror in dim warm light. A man's silhouette reflected, face not visible — just the outline of shoulders and head. Steam from a recent shower fogs the edges of the mirror.",
+      "camera_style": "Static medium shot of steamy mirror, shallow depth of field",
+      "consistent_objects": []
+    },
+    {
+      "scene_id": 6,
+      "sentences": ["Secretly, my insecurity has always been I'm not interesting enough and people get bored of me quickly."],
+      "sentences_tagged": ["Secretly, my insecurity has always been I'm not interesting enough and people get bored of me quickly."],
+      "pause_after": 1.0,
+      "video_description": "Close-up of hands wrapped around a coffee mug on a table. The hands are still. Steam rises gently from the cup. The background is completely blurred — just warm bokeh lights from a cafe. Intimate, vulnerable moment.",
+      "camera_style": "Extreme close-up on hands and mug, static shot, shallow depth of field",
+      "consistent_objects": ["coffee_shop"]
+    },
+    {
+      "scene_id": 7,
+      "sentences": ["It feels like I'm just wasting their time when they could be doing something or hanging out with someone much more fun.", "No matter how hard I try to improve being less boring and putting myself out there, it seems like I'm just falling short."],
+      "sentences_tagged": ["It feels like I'm just wasting their time when they could be doing something or hanging out with someone much more fun. No matter how hard I try to improve being less boring and putting myself out there, it seems like I'm just falling short."],
+      "pause_after": 0.8,
+      "video_description": "Two coffee cups on a small cafe table. One is half-empty, the other barely touched. The chair across is empty, slightly pulled back. Warm overhead light, blurred cafe background with other couples.",
+      "camera_style": "Static medium shot of the table, slight rack focus from cups to empty chair",
+      "consistent_objects": ["coffee_shop", "empty_chair"]
+    },
+    {
+      "scene_id": 8,
+      "sentences": ["I'll keep the conversation going the best I can, flirt and tease to make it more lively.", "But it never feels like I'm doing enough to meet the requirements if that makes sense."],
+      "sentences_tagged": ["I'll keep the conversation going the best I can, flirt and tease to make it more lively. But it never feels like I'm doing enough to meet the requirements if that makes sense."],
+      "pause_after": 1.0,
+      "video_description": "A busy coffee shop seen through the front window from outside. Inside, blurred figures sit at tables. Rain drops on the glass. Warm interior light contrasts with the cool blue evening outside. Anonymous, observational.",
+      "camera_style": "Static exterior shot through rain-spotted window, rack focus from raindrops to blurred interior",
+      "consistent_objects": ["coffee_shop"]
+    },
+    {
+      "scene_id": 9,
+      "sentences": ["I can't tell anyone I know about this, in fear of being judged and criticized for being too boring or too much of a loser."],
+      "sentences_tagged": ["I can't tell anyone I know about this, in fear of being judged and criticized for being too boring or too much of a loser."],
+      "pause_after": 0.8,
+      "video_description": "A man walking alone on a city sidewalk at dusk, shot from behind. Street lights are just turning on. Other couples walk past in the opposite direction, blurred. The man's silhouette is slightly hunched, hands in jacket pockets. Cool blue evening light with warm street lamp pools.",
+      "camera_style": "Tracking shot from behind, medium-wide, slow steady follow",
+      "consistent_objects": ["city_street"]
+    },
+    {
+      "scene_id": 10,
+      "sentences": ["I just pretend like it's all going well and that I never get burnt out or jaded."],
+      "sentences_tagged": ["I just pretend like it's all going well and that I never get burnt out or jaded."],
+      "pause_after": 1.0,
+      "video_description": "A phone screen showing a new match notification from a dating app. A thumb hovers over the screen for a moment, then taps. The screen lights up the person's chin and chest in a dark room. No face visible.",
+      "camera_style": "Close-up on phone and hand in dark room, the screen glow is the only light source",
+      "consistent_objects": ["phone"]
+    },
+    {
+      "scene_id": 11,
+      "sentences": ["It seems like being boring and unable to attract a long term mate is worse than being a mean person who hurts others."],
+      "sentences_tagged": ["It seems like being boring and unable to attract a long term mate is worse than being a mean person who hurts others."],
+      "pause_after": 1.5,
+      "video_description": "An empty park bench at dusk. Trees in soft focus behind it. A single street lamp illuminates the bench from above. The seat is wet from recent rain. Nobody is sitting there. Melancholic, quiet, still.",
+      "camera_style": "Wide static shot of empty bench, slow subtle zoom in, holding on the emptiness",
+      "consistent_objects": []
+    }
+  ]
+}

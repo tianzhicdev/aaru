@@ -2,14 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://trythumos.com/</loc>
-    <lastmod>2026-04-09</lastmod>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/about</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/compare</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/blog</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/blog/why-we-built-thumos</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/blog/ai-conversations-vs-questionnaires</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/blog/what-is-a-soul-portrait</loc>
+    <lastmod>2026-04-25</lastmod>
+  </url>
+  <url>
+    <loc>https://trythumos.com/support</loc>
+    <lastmod>2026-04-25</lastmod>
   </url>
   <url>
     <loc>https://trythumos.com/privacy</loc>
     <lastmod>2026-04-09</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/support</loc>
-    <lastmod>2026-04-09</lastmod>
+    <loc>https://trythumos.com/llms.txt</loc>
+    <lastmod>2026-04-25</lastmod>
   </url>
 </urlset>

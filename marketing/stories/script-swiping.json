@@ -1,0 +1,152 @@
+{
+  "episode": {
+    "title": "Everyone Is Swiping",
+    "context": "A man prepares a romantic dinner for his dating profile. His selfie enters the swipe machine — a girl swipes past him, gets in a taxi, the taxi driver is swiping too. The swiping accelerates into oblivion.",
+    "art_style": "Cinematic photorealistic, warm natural lighting, shallow depth of field, 35mm film grain, urban life documentary feel, 9:16 vertical",
+    "voices": {},
+
+    "characters": {
+      "the_man": {
+        "description": "30-year-old man, short dark brown wavy hair, light stubble, warm brown eyes, friendly face, medium build",
+        "hero_prompt": "Portrait photo of a 30-year-old man with short dark brown wavy hair, light stubble, warm brown eyes, friendly face, medium build, wearing a clean fitted heather-gray crew-neck t-shirt, soft warm indoor lighting, shallow depth of field, photorealistic, 9:16 vertical",
+        "hero_seed": 42,
+        "notes": "Generate this FIRST as the character reference. Use this output as reference_image for scenes 2, 3. His outfit is: clean heather-gray t-shirt (visible in selfie), baggy plaid boxer shorts, bright orange fuzzy slippers (visible only in scene 2 full-body shot)."
+      }
+    },
+
+    "generation_pipeline": {
+      "model": "gpt-image-2",
+      "api": "images.edit for scenes with references, images.generate for standalone scenes",
+      "step_1": "Generate hero portrait of 'the_man' using images.generate with hero_prompt. Save output as CHARACTER_REF.",
+      "step_2": "Generate scene 1 (dinner table, no person) using images.generate. Save output as DINNER_REF.",
+      "step_3": "Generate scene 2 using images.edit with CHARACTER_REF as reference image + input_fidelity=high. Full body shot showing the ridiculous outfit. Prompt references 'the man in image 1'.",
+      "step_4": "Generate scene 3 using images.edit with CHARACTER_REF + DINNER_REF as reference images + input_fidelity=high. Prompt: 'The man from image 1 taking a selfie with the dinner setup from image 2 visible behind him'. Save output as SELFIE_REF.",
+      "step_5": "Generate scene 4 using images.edit with SELFIE_REF as reference image. Prompt: 'Place the photo from image 1 inside a dating app profile card on a phone screen being swiped left by a woman walking on a busy city sidewalk'.",
+      "step_6": "Generate scenes 5, 6, 7 independently using images.generate (no references needed, different people). Scene 8 is a text card — no image generation."
+    }
+  },
+
+  "scenes": [
+    {
+      "scene_id": 1,
+      "speaker": null,
+      "text": "",
+      "duration": 5.0,
+      "pause_after": 0,
+      "camera": "Slow push-in toward the table, the window glowing with golden light behind it",
+      "image_prompt": "Interior of a cozy small apartment, shot from inside the room looking toward a small round wooden bistro table positioned in front of a window. Two beautifully plated pasta dishes on the table, a bottle of red wine, two tall empty wine glasses, a single candle flickering. Late afternoon golden hour light streaming through the window behind the table, sheer curtains glowing warm. Warm walls, intimate and inviting atmosphere, no people visible, photorealistic",
+      "sound": "Soft ambient room tone, distant city hum through glass",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.generate",
+      "gen_refs": [],
+      "gen_notes": "Standalone generation (no references). This establishes the dinner setting. Save output as DINNER_REF — scene 3 will reference this for the selfie background."
+    },
+    {
+      "scene_id": 2,
+      "speaker": null,
+      "text": "",
+      "duration": 4.0,
+      "pause_after": 0,
+      "camera": "Static medium-wide shot from behind, the man walks away from camera toward the dinner table carrying wine glasses",
+      "image_prompt": "Full body shot from behind of a 30-year-old man with short dark brown wavy hair, walking away from the camera toward a small dinner table by a window. He is carrying two tall wine glasses carefully, one in each hand. Wearing a clean fitted heather-gray crew-neck t-shirt on top, baggy plaid boxer shorts, and bright orange fuzzy slippers on his feet. Warm apartment interior with wooden floor, the dinner table with pasta and candle visible ahead of him near the window. Shot from behind at waist height showing his full body from slippers to head, photorealistic",
+      "sound": "Rubber slippers slapping on hardwood floor — comedic flat slapping rhythm",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.edit",
+      "gen_input_fidelity": "high",
+      "gen_refs": ["CHARACTER_REF"],
+      "gen_notes": "images.edit with CHARACTER_REF as reference + input_fidelity=high. Prompt references 'the man in image 1'. The comedy is the contrast: serious face + nice shirt vs boxers + slippers. MUST show full body head to toe."
+    },
+    {
+      "scene_id": 3,
+      "speaker": null,
+      "text": "",
+      "duration": 2.5,
+      "pause_after": 0,
+      "camera": "Quick cut — his expression breaks into a big natural smile, he holds his phone up for a selfie. We see this FROM the phone's perspective: his face filling the frame, the dinner table with wine and food visible over his shoulder behind him",
+      "image_prompt": "Selfie perspective photo: a 30-year-old man with short dark brown wavy hair, light stubble, warm brown eyes grinning naturally at camera, wearing a clean fitted heather-gray crew-neck t-shirt, holding phone up for selfie. Behind him over his shoulder: the dinner table with two pasta dishes, wine bottle, two tall wine glasses, candle, and a window glowing with warm golden light behind the table. Warm apartment interior, photorealistic phone selfie quality, slightly wide-angle selfie lens distortion, only his upper body and face visible — no boxers or slippers shown",
+      "sound": "Phone camera shutter click sound",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.edit",
+      "gen_input_fidelity": "high",
+      "gen_refs": ["CHARACTER_REF", "DINNER_REF"],
+      "gen_notes": "images.edit with 2 reference images + input_fidelity=high. Image 1 = CHARACTER_REF (his face), Image 2 = DINNER_REF (the dinner setup behind him). Prompt: 'The man from image 1 taking a selfie, grinning naturally. Behind him over his shoulder the dinner table from image 2 is visible. Selfie perspective, only chest-up visible.' The output looks like a genuine selfie — he looks great, the dinner looks impressive. This is the photo that becomes his dating profile. Save output as SELFIE_REF. CRITICAL: only show chest-up. The joke is that the selfie hides the boxers and slippers."
+    },
+    {
+      "scene_id": 4,
+      "speaker": null,
+      "text": "",
+      "duration": 5.0,
+      "pause_after": 0,
+      "camera": "Over-the-shoulder shot, her thumb swipes LEFT horizontally across the phone screen dismissing profiles one after another, rapid horizontal swipe gestures",
+      "image_prompt": "A woman in business casual clothes walking quickly on a busy city sidewalk, holding a smartphone with a generic dating app open showing horizontal swipeable profile cards like Tinder — the screen shows a profile card with a man's selfie photo (the selfie from @image1), her thumb is mid-swipe horizontally to the LEFT dismissing the profile, the dating app has a simple clean UI with no brand logos showing horizontally stackable photo cards, blurred city street with pedestrians and storefronts in the background, golden hour city light, shot from slightly behind her over her shoulder showing both her walking and the phone screen",
+      "sound": "Noisy city street: traffic passing, crosswalk beeping, crowd murmur, soft whoosh sound for each swipe",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.edit",
+      "gen_refs": ["SELFIE_REF"],
+      "gen_notes": "images.edit with SELFIE_REF as reference image. Prompt instructs: place the photo from image 1 inside a dating app profile card on a phone screen held by a walking woman. The dating app should look generic — no Tinder, Bumble, or Hinge branding. Just a clean white card UI."
+    },
+    {
+      "scene_id": 5,
+      "speaker": null,
+      "text": "",
+      "duration": 2.5,
+      "pause_after": 0,
+      "camera": "She steps off the curb without looking up, a taxi pulls over, she gets in — phone still in hand, still swiping",
+      "image_prompt": "A woman stepping into a yellow taxi on a busy city street, one foot on the curb one foot in the car, still looking down at her phone, taxi door open, the driver visible through the windshield, golden hour city light, busy urban street with other cars and pedestrians in soft focus background, photorealistic street photography style",
+      "sound": "Street noise: car horn nearby, taxi door opening, muffled city ambience",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.generate",
+      "gen_refs": [],
+      "gen_notes": "Standalone generation. New character (the woman). No character ref needed — she just needs to be a generic busy city woman. Doesn't need to match scene 4 exactly."
+    },
+    {
+      "scene_id": 6,
+      "speaker": null,
+      "text": "",
+      "duration": 4.0,
+      "pause_after": 0,
+      "camera": "Interior taxi, static shot from the backseat. The driver's right thumb swipes horizontally left across the dating app on his phone, one card after another, while his left hand steers",
+      "image_prompt": "Interior of a taxi viewed from the backseat, the back of a woman's head visible in the lower frame, the taxi driver visible ahead through the gap between seats. The driver has two smartphones mounted on the dashboard — left phone showing a ride-share navigation map with a blue route line, right phone showing a dating app with horizontal swipeable profile cards like Tinder showing a person's photo on a white card. His right hand thumb is mid-swipe horizontally to the left on the dating app while his left hand holds the steering wheel. City street and traffic visible through the windshield, warm late afternoon light, slightly gritty interior, photorealistic",
+      "sound": "Muffled street noise through car windows, engine hum, quiet radio playing, rhythmic soft swipe sounds from the driver's phone",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.generate",
+      "gen_refs": [],
+      "gen_notes": "Standalone generation. No character ref needed. The driver is a new character. The two phones are the visual joke — everyone is swiping, even the taxi driver. No brand logos on either app."
+    },
+    {
+      "scene_id": 7,
+      "speaker": null,
+      "text": "",
+      "duration": 6.0,
+      "pause_after": 0,
+      "camera": "Slow zoom into the phone screen filling the frame. The thumb swipes horizontally left faster and faster, profiles blur into a horizontal streak of faces. Screen gradually darkens from the edges inward to black.",
+      "image_prompt": "Extreme close-up of a smartphone screen showing a dating app with horizontal swipeable profile cards. A thumb is swiping horizontally to the left across profile cards of different people. The profile photos are becoming a horizontal motion blur streak of faces and colors moving left as the swiping speed increases, like a horizontal carousel spinning too fast. The edges of the frame darkening with a heavy black vignette closing in, photorealistic phone screen with slight fingerprint smudges on the glass",
+      "sound": "Dating app swipe sound effect (a soft pop or whoosh) starting at normal 1-per-second pace, accelerating to 2x then 4x then 8x, the individual sounds blurring into a continuous rising buzz/drone, all other sounds (street, engine, radio) fade out completely, the buzz peaks then cuts to complete silence as the screen goes black",
+      "gen_model": "gpt-image-2",
+      "gen_api": "images.generate",
+      "gen_refs": [],
+      "gen_notes": "Standalone generation. This is mostly a motion/editing effect rather than a single image. Generate one or two key frames: (a) the phone screen with profiles being swiped, (b) the same but with motion blur. The actual acceleration + darkening effect will be done in video post-production with FFmpeg speed ramp and vignette animation."
+    },
+    {
+      "scene_id": 8,
+      "speaker": "end_card",
+      "text": "",
+      "duration": 4.0,
+      "pause_after": 0,
+      "camera": "Static black screen. Text fades in line by line with 1s delay between lines.",
+      "image_prompt": null,
+      "overlay_text": [
+        "everyone is swiping.",
+        "",
+        "who is listening?",
+        "",
+        "",
+        "Thumos"
+      ],
+      "sound": "Complete silence for 1.5 seconds. Then a single soft piano note (middle C, sustained) fades in as 'who is listening?' appears. Silence again for Thumos.",
+      "gen_model": null,
+      "gen_refs": [],
+      "gen_notes": "Text card. No image generation needed. Built with FFmpeg drawtext."
+    }
+  ]
+}

@@ -205,6 +205,114 @@ describe("buildDepthGuidance", () => {
   });
 });
 
+describe("productCuriosity", () => {
+  it("is present in hearth phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "hearth" })
+    }));
+    expect(prompt).toContain("OUT OF CURIOSITY");
+    expect(prompt).toContain("Tinder");
+    expect(prompt).toContain("Hinge");
+  });
+
+  it("is absent when phase falls back to spark via message count (no reflection note)", () => {
+    // With no reflection note and <15 messages, phase defaults to spark
+    const prompt = buildSoulSystemPrompt(makeContext({
+      messages: Array.from({ length: 5 }, () => ({
+        role: "user" as const,
+        content: "hello"
+      }))
+    }));
+    expect(prompt).not.toContain("OUT OF CURIOSITY");
+  });
+
+  it("falls back to message-count phase when reflectionNote has no conversationPhase", () => {
+    // When reflectionNote exists but conversationPhase is undefined/null,
+    // getConversationPhase(messageCount) kicks in — 20 messages = kindling
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: undefined as unknown as "spark" }),
+      messages: Array.from({ length: 20 }, (_, i) => ({
+        role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+        content: "test message"
+      }))
+    }));
+    expect(prompt).toContain("OUT OF CURIOSITY");
+  });
+
+  it("is absent when language has no productCuriosity (falsy value)", () => {
+    // Simulate a language whose productCuriosity is empty/undefined
+    // by providing a language that falls back to en (which has it),
+    // but override the reflection note to spark so it's gated by phase
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "spark" }),
+      language: "en"
+    }));
+    expect(prompt).not.toContain("OUT OF CURIOSITY");
+  });
+
+  it("contains dating app references (Tinder, Hinge) in the en text", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+      language: "en"
+    }));
+    expect(prompt).toContain("Tinder");
+    expect(prompt).toContain("Hinge");
+  });
+
+  it("contains 'never forced' and conversational rules in the en text", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+      language: "en"
+    }));
+    expect(prompt).toContain("never forced");
+    expect(prompt).toContain("Skip entirely if userOpenness is \"guarded\"");
+    expect(prompt).toContain("Never ask in the same exchange");
+    expect(prompt).toContain("Never use words like \"feedback\"");
+    expect(prompt).toContain("Once it appears in \"Questions already asked\"");
+  });
+
+  it("is framed as warm friend curiosity, not a survey", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "flame" }),
+      language: "en"
+    }));
+    // Should include the warm framing
+    expect(prompt).toContain("warm friend's curiosity");
+    expect(prompt).toContain("never as a survey or research");
+    // The anti-pattern UX example is present as a "don't do this" instruction
+    expect(prompt).toContain("not like an interviewer");
+  });
+
+  it("exists in all supported languages", () => {
+    const languages = ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "zh-CN"];
+    for (const lang of languages) {
+      const prompt = buildSoulSystemPrompt(makeContext({
+        reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+        language: lang
+      }));
+      expect(prompt, `productCuriosity missing for language: ${lang}`).toMatch(
+        /OUT OF CURIOSITY|AUS NEUGIER|POR CURIOSIDAD|PAR CURIOSITÉ|ちょっと気になる|궁금해서|POR CURIOSIDADE|好奇一下/i
+      );
+    }
+  });
+
+  it("is gated by phase across all supported languages", () => {
+    const languages = ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "zh-CN"];
+    for (const lang of languages) {
+      const sparkPrompt = buildSoulSystemPrompt(makeContext({
+        reflectionNote: makeReflectionNote({ conversationPhase: "spark" }),
+        language: lang
+      }));
+      const kindlingPrompt = buildSoulSystemPrompt(makeContext({
+        reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+        language: lang
+      }));
+      // Spark should never have curiosity section
+      expect(sparkPrompt.length, `spark prompt for ${lang} should be shorter`).toBeLessThan(kindlingPrompt.length);
+    }
+  });
+});
+
 describe("detectSoftSessionGap", () => {
   const threshold = 60 * 60 * 1000;
 

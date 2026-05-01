@@ -1,10 +1,25 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { NeonSQL } from "../db.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
-import { getSoulmateProfile, upsertSoulmateProfile } from "../matchApp.ts";
+import {
+  getSoulmateProfile,
+  getSoulmatePhotoEtags,
+  upsertSoulmatePhotos,
+  upsertSoulmateProfile,
+  type SoulmatePhoto
+} from "../matchApp.ts";
 import type { SoulmateProfileInput } from "../matchApp.ts";
 
 const VALID_GENDERS = ["male", "female", "non_binary"];
+const MAX_BIO_CHARS = 200;
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 700 * 1024; // 700 KB per JPEG
+const MAX_SELFIE_URL_CHARS = 500;
+
+interface ValidatedProfile {
+  profile: SoulmateProfileInput;
+  photos: SoulmatePhoto[] | null; // null = no photo change; [] = clear all
+}
 
 export async function handleGetSoulmateProfile(
   sql: NeonSQL,
@@ -15,7 +30,19 @@ export async function handleGetSoulmateProfile(
   if (!auth.ok) return auth.error;
 
   const profile = await getSoulmateProfile(sql, auth.session.user_id);
-  return jsonResponse(200, { soulmate_profile: profile });
+  if (!profile) {
+    return jsonResponse(200, { soulmate_profile: null });
+  }
+
+  const photoEtags = await getSoulmatePhotoEtags(sql, auth.session.user_id);
+  return jsonResponse(200, {
+    soulmate_profile: {
+      ...profile,
+      bio: profile.bio ?? null,
+      photo_count: profile.photo_count ?? 0,
+      photo_etags: photoEtags
+    }
+  });
 }
 
 export async function handlePostSoulmateProfile(
@@ -27,18 +54,34 @@ export async function handlePostSoulmateProfile(
   if (!auth.ok) return auth.error;
 
   const body = payload as Record<string, unknown>;
-  const input = validateProfileInput(body);
-  if ("error" in input) {
-    return jsonResponse(400, { code: 400, message: input.error });
+  const validated = validateProfileInput(body);
+  if ("error" in validated) {
+    return jsonResponse(400, { code: 400, message: validated.error });
   }
 
-  const profile = await upsertSoulmateProfile(sql, auth.session.user_id, input);
-  return jsonResponse(200, { soulmate_profile: profile });
+  const profile = await upsertSoulmateProfile(sql, auth.session.user_id, validated.profile);
+
+  let photoEtags: string[];
+  if (validated.photos !== null) {
+    const result = await upsertSoulmatePhotos(sql, auth.session.user_id, validated.photos);
+    photoEtags = result.etags;
+  } else {
+    photoEtags = await getSoulmatePhotoEtags(sql, auth.session.user_id);
+  }
+
+  return jsonResponse(200, {
+    soulmate_profile: {
+      ...profile,
+      bio: profile.bio ?? null,
+      photo_count: validated.photos !== null ? validated.photos.length : profile.photo_count ?? 0,
+      photo_etags: photoEtags
+    }
+  });
 }
 
 function validateProfileInput(
   body: Record<string, unknown>
-): SoulmateProfileInput | { error: string } {
+): ValidatedProfile | { error: string } {
   const age = Number(body.age);
   if (!Number.isFinite(age) || age < 18 || age > 120) {
     return { error: "age must be between 18 and 120" };
@@ -82,32 +125,82 @@ function validateProfileInput(
     return { error: "display_name must be 1-50 characters" };
   }
 
-  const result: SoulmateProfileInput = {
-    display_name: displayName,
-    age: Math.floor(age),
-    gender,
-    latitude,
-    longitude,
-    preferred_age_min: Math.floor(preferredAgeMin),
-    preferred_age_max: Math.floor(preferredAgeMax),
-    preferred_genders: preferredGenders.map(String)
-  };
+  let bio: string | null = null;
+  if (body.bio !== undefined && body.bio !== null) {
+    const trimmed = String(body.bio).trim();
+    if (trimmed.length > MAX_BIO_CHARS) {
+      return { error: `bio must be ${MAX_BIO_CHARS} characters or less` };
+    }
+    bio = trimmed.length === 0 ? null : trimmed;
+  }
 
+  let selfieUrl: string | undefined;
   if (body.selfie_url !== undefined) {
-    const selfieUrl = String(body.selfie_url ?? "").trim();
-    if (selfieUrl.length > 500) {
-      return { error: "selfie_url must be at most 500 characters" };
+    const trimmed = String(body.selfie_url ?? "").trim();
+    if (trimmed.length > MAX_SELFIE_URL_CHARS) {
+      return { error: `selfie_url must be ${MAX_SELFIE_URL_CHARS} characters or less` };
     }
-    result.selfie_url = selfieUrl || undefined;
+    selfieUrl = trimmed || undefined;
   }
 
-  if (body.bio !== undefined) {
-    const bio = String(body.bio ?? "").trim();
-    if (bio.length > 280) {
-      return { error: "bio must be at most 280 characters" };
+  let photos: SoulmatePhoto[] | null = null;
+  if (body.photos !== undefined) {
+    if (!Array.isArray(body.photos)) {
+      return { error: "photos must be an array of base64 JPEG strings" };
     }
-    result.bio = bio || undefined;
+    if (body.photos.length > MAX_PHOTOS) {
+      return { error: `photos may have at most ${MAX_PHOTOS} entries` };
+    }
+    const decoded: SoulmatePhoto[] = [];
+    for (const entry of body.photos) {
+      const decodedPhoto = decodeJpegBase64(entry);
+      if ("error" in decodedPhoto) return decodedPhoto;
+      decoded.push(decodedPhoto.photo);
+    }
+    photos = decoded;
   }
 
-  return result;
+  return {
+    profile: {
+      display_name: displayName,
+      age: Math.floor(age),
+      gender,
+      latitude,
+      longitude,
+      preferred_age_min: Math.floor(preferredAgeMin),
+      preferred_age_max: Math.floor(preferredAgeMax),
+      preferred_genders: preferredGenders.map(String),
+      selfie_url: selfieUrl,
+      bio
+    },
+    photos
+  };
+}
+
+function decodeJpegBase64(
+  entry: unknown
+): { photo: SoulmatePhoto } | { error: string } {
+  if (typeof entry !== "string" || entry.length === 0) {
+    return { error: "each photo must be a non-empty base64 string" };
+  }
+  let bytes: Uint8Array;
+  try {
+    const binary = atob(entry);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+  } catch {
+    return { error: "photo is not valid base64" };
+  }
+  if (bytes.byteLength === 0) {
+    return { error: "photo decoded to empty bytes" };
+  }
+  if (bytes.byteLength > MAX_PHOTO_BYTES) {
+    return { error: `each photo must be ${MAX_PHOTO_BYTES} bytes or less` };
+  }
+  if (!(bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)) {
+    return { error: "photo must be a JPEG image" };
+  }
+  return { photo: { data: bytes, mime: "image/jpeg" } };
 }

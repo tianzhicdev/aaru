@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 """
-upload_tiktok.py — Upload a video to TikTok via Playwright with cookies from Chrome.
+upload_tiktok.py — Upload a video to TikTok via Playwright with Chrome cookies.
 
-Extracts TikTok session cookies from your running Chrome (via browser_cookie3),
-injects them into a fresh Playwright Chromium instance, and automates the upload.
+Extracts TikTok session cookies from your local Chrome (via browser_cookie3),
+launches a fresh Playwright Chromium with those cookies, then uploads the video
+and (unless --dry-run) clicks Post.
+
+Fully non-interactive: never blocks on stdin. All debug screenshots are saved
+into the video's output directory so a /reddit-story run can show them on failure.
 
 Usage:
-    python scripts/upload_tiktok.py \
-        --video marketing/stories/output/my-story/final.mp4 \
+    .venv/bin/python scripts/upload_tiktok.py \\
+        --video marketing/stories/output/my-story/final.mp4 \\
         --caption "My story title #hashtag1 #hashtag2"
 
-    # Dry run (stops before clicking Post):
-    python scripts/upload_tiktok.py \
-        --video marketing/stories/output/my-story/final.mp4 \
-        --caption "My story title" \
+    # Dry run — uploads + sets caption but does not click Post:
+    .venv/bin/python scripts/upload_tiktok.py \\
+        --video marketing/stories/output/my-story/final.mp4 \\
+        --caption "My story title" \\
         --dry-run
 
-Requirements:
-    pip install playwright browser-cookie3
-    playwright install chromium
+Requirements (handled by the project venv):
+    .venv/bin/pip install browser-cookie3 playwright
+    .venv/bin/playwright install chromium
 """
 
 import argparse
@@ -31,11 +35,18 @@ from playwright.sync_api import sync_playwright
 
 
 TIKTOK_UPLOAD_URL = "https://www.tiktok.com/tiktokstudio/upload?from=upload&lang=en"
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+
+def log(msg: str) -> None:
+    print(f"[upload_tiktok] {msg}", flush=True)
 
 
 def extract_tiktok_cookies():
-    """Extract TikTok cookies from Chrome."""
-    print("  Extracting TikTok cookies from Chrome...")
+    log("extracting TikTok cookies from Chrome…")
     cj = browser_cookie3.chrome(domain_name=".tiktok.com")
     cookies = []
     for c in cj:
@@ -50,172 +61,284 @@ def extract_tiktok_cookies():
         if c.expires:
             cookie["expires"] = c.expires
         cookies.append(cookie)
-    print(f"  Found {len(cookies)} cookies")
+    log(f"found {len(cookies)} cookies")
     return cookies
 
 
-def wait_for_upload_complete(page, timeout=120):
-    """Wait for the video to finish uploading."""
-    print("  Waiting for video upload to complete...", end="", flush=True)
+def wait_for_upload_complete(page, timeout: int = 180) -> bool:
+    log("waiting for TikTok to finish ingesting the video…")
     start = time.time()
     while time.time() - start < timeout:
         try:
-            done = page.evaluate("""() => {
-                const text = document.body.innerText;
-                return text.includes('Uploaded') ||
-                       text.includes('uploaded') ||
-                       text.includes('Change video') ||
-                       text.includes('Edit video') ||
-                       document.querySelector('[class*="reupload"]') !== null;
-            }""")
+            done = page.evaluate(
+                """() => {
+                    const text = document.body.innerText || '';
+                    return text.includes('Uploaded') ||
+                           text.includes('uploaded') ||
+                           text.includes('Change video') ||
+                           text.includes('Edit video') ||
+                           document.querySelector('[class*="reupload"]') !== null;
+                }"""
+            )
             if done:
-                print(" done")
+                log("upload complete")
                 return True
         except Exception:
             pass
         time.sleep(2)
-    print(" timeout")
+    log("upload wait timed out")
     return False
 
 
-def main():
+def dismiss_overlays(page) -> None:
+    """Dismiss TikTok Studio onboarding tour (react-joyride) only. Surgical:
+    only touches the joyride portal — other tooltips/popovers belong to the
+    real UI and removing them crashes the page."""
+    # Try clicking the joyride "Got it" / "Skip" button first (proper flow).
+    for label in ('Got it', 'Skip', 'Next', 'Close'):
+        try:
+            btn = page.query_selector(
+                f'#react-joyride-portal button:has-text("{label}")'
+            )
+            if btn:
+                btn.click(timeout=2000)
+                time.sleep(0.4)
+        except Exception:
+            pass
+    # Then remove the joyride portal entirely if it's still in the DOM.
+    try:
+        page.evaluate(
+            """() => {
+                const portal = document.getElementById('react-joyride-portal');
+                if (portal) portal.remove();
+            }"""
+        )
+    except Exception as e:
+        log(f"dismiss_overlays JS failed (non-fatal): {e}")
+
+
+def shot(page, out_dir: Path, name: str) -> None:
+    try:
+        path = out_dir / f"tiktok-{name}.png"
+        page.screenshot(path=str(path))
+        log(f"screenshot: {path}")
+    except Exception as e:
+        log(f"screenshot {name} failed: {e}")
+
+
+def main() -> int:
     parser = argparse.ArgumentParser(description="Upload video to TikTok")
     parser.add_argument("--video", required=True, help="Path to video file")
     parser.add_argument("--caption", required=True, help="Caption text with hashtags")
-    parser.add_argument("--dry-run", action="store_true", help="Stop before clicking Post")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Upload + set caption but do not click Post; closes browser after.",
+    )
+    parser.add_argument(
+        "--headful",
+        action="store_true",
+        default=True,
+        help="(default) show the browser window so you can watch / intervene.",
+    )
+    parser.add_argument(
+        "--headless",
+        dest="headful",
+        action="store_false",
+        help="Run Chromium headless (TikTok may detect this and block).",
+    )
     args = parser.parse_args()
 
     video_path = Path(args.video).resolve()
     if not video_path.exists():
-        print(f"Error: video not found: {video_path}")
-        sys.exit(1)
+        log(f"ERROR: video not found: {video_path}")
+        return 1
 
-    print(f"  Video: {video_path}")
-    print(f"  Caption: {args.caption}")
-    print(f"  Size: {video_path.stat().st_size / (1024*1024):.1f}MB")
+    out_dir = video_path.parent
+    log(f"video: {video_path}")
+    log(f"caption: {args.caption}")
+    log(f"size: {video_path.stat().st_size / (1024 * 1024):.1f}MB")
+    log(f"debug screenshots will be written under: {out_dir}")
 
-    # Extract cookies first (while Chrome is running — that's fine)
     cookies = extract_tiktok_cookies()
     if not cookies:
-        print("  ERROR: No TikTok cookies found. Log in to tiktok.com in Chrome first.")
-        sys.exit(1)
+        log("ERROR: no TikTok cookies found. Log in to tiktok.com in Chrome first.")
+        return 1
 
     with sync_playwright() as p:
-        # Launch a fresh Chromium (not Chrome — avoids profile lock)
-        print("\n  Launching Chromium...")
+        log(f"launching Chromium (headful={args.headful})…")
         browser = p.chromium.launch(
-            headless=False,
+            headless=not args.headful,
             args=["--disable-blink-features=AutomationControlled"],
         )
         context = browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            viewport={"width": 1440, "height": 1500},
+            user_agent=USER_AGENT,
         )
-
-        # Inject cookies
-        print("  Injecting cookies...")
         context.add_cookies(cookies)
 
         page = context.new_page()
-
-        # Navigate to TikTok upload
-        print("  Navigating to TikTok Studio upload...")
+        log("navigating to TikTok Studio upload…")
         page.goto(TIKTOK_UPLOAD_URL, wait_until="domcontentloaded")
         time.sleep(4)
 
-        # Check if logged in
         if "login" in page.url.lower():
-            print("\n  ERROR: Cookies didn't work — TikTok redirected to login.")
-            print("  Your session may have expired. Log in again in Chrome and retry.")
-            page.screenshot(path="/tmp/tiktok-login-debug.png")
-            print("  Screenshot: /tmp/tiktok-login-debug.png")
-            input("  Press Enter to close...")
+            log("ERROR: TikTok redirected to login. Cookies expired or wrong account.")
+            shot(page, out_dir, "login-redirect")
             browser.close()
-            sys.exit(1)
+            return 2
 
-        print("  Logged in! Looking for upload area...")
-        time.sleep(2)
+        log("logged in. locating file input (page + iframes)…")
+        shot(page, out_dir, "before-upload")
 
-        # Screenshot current state for debugging
-        page.screenshot(path="/tmp/tiktok-upload-state.png")
+        file_input = None
+        deadline = time.time() + 20
+        while time.time() < deadline and file_input is None:
+            for frame in page.frames:
+                try:
+                    el = frame.query_selector('input[type="file"]')
+                except Exception:
+                    el = None
+                if el is not None:
+                    file_input = el
+                    log(f"found file input in frame: {frame.url or '(main)'}")
+                    break
+            if file_input is None:
+                time.sleep(1)
 
-        # Find the file input and upload
-        file_input = page.query_selector('input[type="file"]')
-        if not file_input:
-            try:
-                file_input = page.wait_for_selector('input[type="file"]', timeout=10000)
-            except Exception:
-                print("  ERROR: Could not find file upload input.")
-                page.screenshot(path="/tmp/tiktok-upload-debug.png")
-                print("  Screenshot: /tmp/tiktok-upload-debug.png")
-                input("  Press Enter to close...")
-                browser.close()
-                sys.exit(1)
+        if file_input is None:
+            log("ERROR: could not find file upload input in page or any iframe")
+            shot(page, out_dir, "no-file-input")
+            browser.close()
+            return 3
 
-        print(f"  Uploading {video_path.name}...")
+        log(f"uploading {video_path.name}…")
         file_input.set_input_files(str(video_path))
 
-        # Wait for upload to complete
         if not wait_for_upload_complete(page):
-            print("  WARNING: Upload may not have completed. Continuing anyway...")
+            log("WARNING: upload completion not detected; continuing anyway")
 
         time.sleep(3)
-        page.screenshot(path="/tmp/tiktok-after-upload.png")
+        dismiss_overlays(page)
+        time.sleep(0.5)
+        shot(page, out_dir, "after-upload")
 
-        # Find and fill caption
-        print("  Setting caption...")
+        log("setting caption…")
         try:
             caption_editor = page.wait_for_selector(
-                '[contenteditable="true"]',
-                timeout=10000,
+                '[contenteditable="true"]', timeout=15000
             )
-            if caption_editor:
-                caption_editor.click()
-                time.sleep(0.3)
-                page.keyboard.press("Meta+a")
-                page.keyboard.press("Backspace")
-                time.sleep(0.5)
-                page.keyboard.type(args.caption, delay=30)
-                print(f"  Caption set: {args.caption[:60]}...")
+            dismiss_overlays(page)
+            time.sleep(0.3)
+            caption_editor.click()
+            time.sleep(0.3)
+            page.keyboard.press("Meta+a")
+            page.keyboard.press("Backspace")
+            time.sleep(0.3)
+            page.keyboard.type(args.caption, delay=25)
+            log(f"caption set ({len(args.caption)} chars)")
         except Exception as e:
-            print(f"  WARNING: Could not set caption: {e}")
-            print("  Type the caption manually in the browser window.")
+            log(f"WARNING: could not set caption automatically: {e}")
+            shot(page, out_dir, "caption-failed")
 
         time.sleep(2)
-        page.screenshot(path="/tmp/tiktok-before-post.png")
+        shot(page, out_dir, "before-post")
 
         if args.dry_run:
-            print("\n  DRY RUN — review in browser window.")
-            print("  Screenshots saved to /tmp/tiktok-*.png")
-            input("  Press Enter to close browser...")
+            log("DRY RUN — not clicking Post. Closing in 8s.")
+            time.sleep(8)
             browser.close()
-            return
+            return 0
 
-        # Click Post button
-        print("  Looking for Post button...")
+        # Scroll the upload form so the Post button is in view.
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(1)
+        dismiss_overlays(page)
+
+        log("looking for Post button…")
+        # The Post button is the *last* visible button on the page whose text
+        # is exactly 'Post' or 'Publish'. Other 'Post' substrings (sidebar
+        # links like 'Posts', 'Schedule a post') would otherwise match.
+        post_btn = None
         try:
-            post_btn = page.wait_for_selector(
-                'button:has-text("Post"), button:has-text("Publish")',
-                timeout=10000,
+            candidates = page.evaluate(
+                """() => {
+                    const out = [];
+                    document.querySelectorAll('button').forEach((b, i) => {
+                        const t = (b.innerText || '').trim();
+                        if (t === 'Post' || t === 'Publish') {
+                            const r = b.getBoundingClientRect();
+                            out.push({
+                                idx: i,
+                                text: t,
+                                disabled: b.disabled,
+                                visible: r.width > 0 && r.height > 0,
+                                x: Math.round(r.x), y: Math.round(r.y),
+                            });
+                        }
+                    });
+                    return out;
+                }"""
             )
-            if post_btn and post_btn.is_enabled():
-                print("  Clicking Post...")
-                post_btn.click()
-                time.sleep(8)
-                page.screenshot(path="/tmp/tiktok-posted.png")
-                print("\n  Posted! Check your TikTok profile to confirm.")
-            else:
-                print("  Post button found but disabled. Check the browser window.")
-                input("  Press Enter to close...")
+            log(f"post-button candidates: {candidates}")
+            visible_enabled = [c for c in candidates if c["visible"] and not c["disabled"]]
+            if not visible_enabled:
+                raise RuntimeError("no enabled+visible Post button found")
+            # Choose the bottom-most one.
+            target = max(visible_enabled, key=lambda c: c["y"])
+            post_btn = page.evaluate_handle(
+                f"document.querySelectorAll('button')[{target['idx']}]"
+            ).as_element()
         except Exception as e:
-            print(f"  Could not find Post button: {e}")
-            print("  Click Post manually in the browser window.")
-            input("  Press Enter to close...")
+            log(f"ERROR: post button not found: {e}")
+            shot(page, out_dir, "no-post-button")
+            browser.close()
+            return 4
 
+        log("clicking Post…")
+        post_btn.click()
+        time.sleep(3)
+
+        # TikTok may show a confirmation modal: "Continue to post? Copyright
+        # check is incomplete." with a "Post now" button. Click through it.
+        for label in ("Post now", "Post Now", "Continue", "Confirm"):
+            try:
+                btn = page.query_selector(f'button:has-text("{label}")')
+                if btn and btn.is_visible() and btn.is_enabled():
+                    log(f"confirming via '{label}' button…")
+                    btn.click()
+                    time.sleep(3)
+                    break
+            except Exception:
+                pass
+
+        # Wait for either redirect (success) or stable success indicator.
+        success = False
+        for _ in range(15):
+            try:
+                url_now = page.url
+                body_text = page.evaluate("() => document.body.innerText || ''")
+                if (
+                    "/upload" not in url_now
+                    or "Your video is being uploaded" in body_text
+                    or "Your video is being posted" in body_text
+                    or "Posted" in body_text
+                ):
+                    success = True
+                    break
+            except Exception:
+                pass
+            time.sleep(2)
+
+        time.sleep(3)
+        shot(page, out_dir, "posted")
+        if success:
+            log(f"posted. final URL: {page.url}")
+        else:
+            log("WARNING: no clear success signal. Check the screenshot.")
         browser.close()
-
-    print("\n  Done!")
+        return 0 if success else 6
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -29,9 +29,12 @@ targets:
           - SpaceGrotesk-Light.ttf
           - SpaceGrotesk-Regular.ttf
           - SpaceGrotesk-Medium.ttf
+          - InstrumentSerif-Regular.ttf
+          - InstrumentSerif-Italic.ttf
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSLocationWhenInUseUsageDescription: "Thumos uses your location to find soulmates near you."
+        NSCameraUsageDescription: "Thumos uses your camera so you can add photos to your match profile."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UILaunchScreen: {}

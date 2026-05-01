@@ -1,0 +1,104 @@
+[
+  {
+    "idx": 0,
+    "start": 0.0,
+    "end": 5.0,
+    "prompt": "Soft watercolor illustration, POV first-person, hands holding phone in cozy bedroom, warm lamp light, pastel pink walls, gentle motion of scrolling, New Yorker animation style, 9:16 vertical"
+  },
+  {
+    "idx": 1,
+    "start": 5.0,
+    "end": 10.0,
+    "prompt": "Hand-drawn ink art, painterly style, close-up of hands typing message in soft morning light, coffee cup blurred on nightstand, warm watercolor palette, subtle hand motion, intimate POV, 9:16"
+  },
+  {
+    "idx": 2,
+    "start": 10.0,
+    "end": 15.0,
+    "prompt": "Soft pastel illustration, POV view of calendar on wall, hand circling date with pencil, kitchen doorway visible behind, gentle watercolor brushstrokes, New Yorker aesthetic, 9:16 vertical"
+  },
+  {
+    "idx": 3,
+    "start": 15.0,
+    "end": 20.0,
+    "prompt": "Hand-drawn kitchen scene, POV standing at counter, flour bag open, soft morning sunlight through window, painterly watercolor palette, cinematic calm motion, 9:16 vertical composition"
+  },
+  {
+    "idx": 4,
+    "start": 20.0,
+    "end": 25.0,
+    "prompt": "Ink line art, close-up POV of hands cracking eggs into bowl, shells scattered, soft pastel yellows and whites, gentle motion, New Yorker animation style, 9:16"
+  },
+  {
+    "idx": 5,
+    "start": 25.0,
+    "end": 30.0,
+    "prompt": "Watercolor illustration, POV view of mixing ingredients, three milk cartons arranged on counter, soft afternoon light, painterly brushwork, subtle motion of hands stirring, 9:16 vertical"
+  },
+  {
+    "idx": 6,
+    "start": 30.0,
+    "end": 35.0,
+    "prompt": "Hand-drawn kitchen, POV view into open oven, warm golden light spilling out, cake baking inside visible, soft pastel palette, cinematic gentle motion, 9:16"
+  },
+  {
+    "idx": 7,
+    "start": 35.0,
+    "end": 40.0,
+    "prompt": "Ink art illustration, POV kitchen table, finished carrot cake tres leches cooling, soft bakery-warm lighting, painterly watercolor style, New Yorker aesthetic, 9:16 vertical"
+  },
+  {
+    "idx": 8,
+    "start": 40.0,
+    "end": 45.0,
+    "prompt": "Soft pastel hand-drawn, POV reaching toward phone on counter, cake in background blurred, warm kitchen afternoon light, gentle cinematic motion, ink line art, 9:16"
+  },
+  {
+    "idx": 9,
+    "start": 45.0,
+    "end": 50.0,
+    "prompt": "Watercolor kitchen illustration, POV looking at phone in hand, cake displayed on plate behind, soft afternoon glow, painterly brushstrokes, New Yorker style, 9:16"
+  },
+  {
+    "idx": 10,
+    "start": 50.0,
+    "end": 55.0,
+    "prompt": "Hand-drawn ink art, POV first-person standing in kitchen wearing apron, beautiful cake on counter, clock on wall showing late afternoon, soft pastel palette, 9:16 vertical"
+  },
+  {
+    "idx": 11,
+    "start": 55.0,
+    "end": 60.0,
+    "prompt": "Painterly watercolor, POV kitchen counter with empty place settings, gorgeous cake uneaten, soft muted colors, melancholic gentle motion, cinematic composition, 9:16"
+  },
+  {
+    "idx": 12,
+    "start": 60.0,
+    "end": 65.0,
+    "prompt": "Ink line art illustration, POV sink overflowing with dishes, hands in soapy water, warm kitchen light fading to dusky blue, pastel palette, New Yorker style, 9:16"
+  },
+  {
+    "idx": 13,
+    "start": 65.0,
+    "end": 70.0,
+    "prompt": "Soft watercolor hand-drawn, POV sitting at kitchen table, fork in hand, single plate with cake slice, lonely warm lamp light, painterly brushwork, 9:16 vertical"
+  },
+  {
+    "idx": 14,
+    "start": 70.0,
+    "end": 75.0,
+    "prompt": "Pastel illustration, POV kitchen window at night, rain on glass, fork and plate in foreground, cake on counter, melancholic cinematic light, ink line art, 9:16"
+  },
+  {
+    "idx": 15,
+    "start": 75.0,
+    "end": 80.0,
+    "prompt": "Hand-drawn watercolor, POV sitting with fork, eating cake alone, soft lamp glow, kitchen walls closing in gently, New Yorker animation aesthetic, 9:16 vertical"
+  },
+  {
+    "idx": 16,
+    "start": 80.0,
+    "end": 83.2,
+    "prompt": "Gentle ink art, POV table with empty cake plate and fork, window beyond showing night sky, soft melancholic watercolor palette, cinematic fade, painterly, 9:16"
+  }
+]

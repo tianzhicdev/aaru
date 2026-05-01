@@ -10,7 +10,7 @@
  * and verifying both TypeScript and Swift test suites pass.
  */
 
-import type { VisibleSoulFile } from "../domain/schemas.ts";
+import type { DomainCoverageEntry, VisibleSoulFile } from "../domain/schemas.ts";
 
 // ── POST /bootstrap-soul ─────────────────────────────────────
 
@@ -30,6 +30,7 @@ export interface GetSoulFileWireResponse {
   version: number;
   last_updated: string | null;
   synthesis_pending: boolean;
+  domain_coverage: DomainCoverageEntry[];
 }
 
 // ── GET /sync-messages ───────────────────────────────────────
@@ -74,6 +75,9 @@ export interface SoulmateProfileWirePayload {
   active: boolean;
   created_at: string;
   updated_at: string;
+  bio: string | null;
+  photo_count: number;
+  photo_etags: string[];
 }
 
 export interface GetSoulmateProfileWireResponse {
@@ -94,6 +98,9 @@ export interface SoulmateMatchWirePayload {
   display_name: string;
   matched_at: string;
   reasoning: string | null;
+  bio: string | null;
+  photo_count: number;
+  photo_etags: string[];
 }
 
 export interface GetSoulmateMatchesWireResponse {

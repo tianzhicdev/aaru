@@ -314,19 +314,28 @@ struct SoulFileResponse: Codable {
     let version: Int
     let lastUpdated: String?
     let synthesisPending: Bool
+    let domainCoverage: [DomainCoverageEntry]
 
     enum CodingKeys: String, CodingKey {
         case visibleSoulFile = "visible_soul_file"
         case version
         case lastUpdated = "last_updated"
         case synthesisPending = "synthesis_pending"
+        case domainCoverage = "domain_coverage"
     }
 
-    init(visibleSoulFile: VisibleSoulFile, version: Int, lastUpdated: String?, synthesisPending: Bool) {
+    init(
+        visibleSoulFile: VisibleSoulFile,
+        version: Int,
+        lastUpdated: String?,
+        synthesisPending: Bool,
+        domainCoverage: [DomainCoverageEntry] = []
+    ) {
         self.visibleSoulFile = visibleSoulFile
         self.version = version
         self.lastUpdated = lastUpdated
         self.synthesisPending = synthesisPending
+        self.domainCoverage = domainCoverage
     }
 
     init(from decoder: Decoder) throws {
@@ -335,6 +344,7 @@ struct SoulFileResponse: Codable {
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 0
         lastUpdated = try container.decodeIfPresent(String.self, forKey: .lastUpdated)
         synthesisPending = try container.decodeIfPresent(Bool.self, forKey: .synthesisPending) ?? false
+        domainCoverage = try container.decodeIfPresent([DomainCoverageEntry].self, forKey: .domainCoverage) ?? []
     }
 }
 
@@ -394,6 +404,9 @@ struct SoulmateProfile: Codable, Equatable {
     let active: Bool
     let createdAt: String
     let updatedAt: String
+    let bio: String?
+    let photoCount: Int
+    let photoEtags: [String]
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -408,6 +421,28 @@ struct SoulmateProfile: Codable, Equatable {
         case active
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case bio
+        case photoCount = "photo_count"
+        case photoEtags = "photo_etags"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try c.decode(String.self, forKey: .userId)
+        displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
+        age = try c.decode(Int.self, forKey: .age)
+        gender = try c.decode(String.self, forKey: .gender)
+        latitude = try c.decode(Double.self, forKey: .latitude)
+        longitude = try c.decode(Double.self, forKey: .longitude)
+        preferredAgeMin = try c.decode(Int.self, forKey: .preferredAgeMin)
+        preferredAgeMax = try c.decode(Int.self, forKey: .preferredAgeMax)
+        preferredGenders = try c.decode([String].self, forKey: .preferredGenders)
+        active = try c.decode(Bool.self, forKey: .active)
+        createdAt = try c.decode(String.self, forKey: .createdAt)
+        updatedAt = try c.decode(String.self, forKey: .updatedAt)
+        bio = try c.decodeIfPresent(String.self, forKey: .bio)
+        photoCount = try c.decodeIfPresent(Int.self, forKey: .photoCount) ?? 0
+        photoEtags = try c.decodeIfPresent([String].self, forKey: .photoEtags) ?? []
     }
 }
 
@@ -425,6 +460,9 @@ struct SoulmateMatch: Codable, Identifiable, Equatable, Hashable {
     let displayName: String
     let matchedAt: String
     let reasoning: String?
+    let bio: String?
+    let photoCount: Int
+    let photoEtags: [String]
 
     var id: String { matchId }
 
@@ -434,6 +472,41 @@ struct SoulmateMatch: Codable, Identifiable, Equatable, Hashable {
         case displayName = "display_name"
         case matchedAt = "matched_at"
         case reasoning
+        case bio
+        case photoCount = "photo_count"
+        case photoEtags = "photo_etags"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        matchId = try c.decode(String.self, forKey: .matchId)
+        matchedUserId = try c.decode(String.self, forKey: .matchedUserId)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        matchedAt = try c.decode(String.self, forKey: .matchedAt)
+        reasoning = try c.decodeIfPresent(String.self, forKey: .reasoning)
+        bio = try c.decodeIfPresent(String.self, forKey: .bio)
+        photoCount = try c.decodeIfPresent(Int.self, forKey: .photoCount) ?? 0
+        photoEtags = try c.decodeIfPresent([String].self, forKey: .photoEtags) ?? []
+    }
+
+    init(
+        matchId: String,
+        matchedUserId: String,
+        displayName: String,
+        matchedAt: String,
+        reasoning: String?,
+        bio: String? = nil,
+        photoCount: Int = 0,
+        photoEtags: [String] = []
+    ) {
+        self.matchId = matchId
+        self.matchedUserId = matchedUserId
+        self.displayName = displayName
+        self.matchedAt = matchedAt
+        self.reasoning = reasoning
+        self.bio = bio
+        self.photoCount = photoCount
+        self.photoEtags = photoEtags
     }
 }
 
@@ -465,15 +538,28 @@ struct SoulmateMatchesResponse: Codable {
     let matches: [SoulmateMatch]
 }
 
+struct DomainCoverageEntry: Codable, Equatable, Hashable {
+    let domain: String
+    let depth: String   // "untouched" | "mentioned" | "explored" | "deep"
+    let evidence: String
+
+    init(domain: String, depth: String, evidence: String) {
+        self.domain = domain
+        self.depth = depth
+        self.evidence = evidence
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        domain = try container.decodeIfPresent(String.self, forKey: .domain) ?? ""
+        depth = try container.decodeIfPresent(String.self, forKey: .depth) ?? "untouched"
+        evidence = try container.decodeIfPresent(String.self, forKey: .evidence) ?? ""
+    }
+}
+
 // MARK: - Debug (stripped from Release builds)
 
 #if DEBUG
-struct DomainCoverageEntry: Codable {
-    let domain: String
-    let depth: String
-    let evidence: String
-}
-
 struct ReflectionNote: Codable {
     let updatedAt: String
     let domainCoverage: [DomainCoverageEntry]?

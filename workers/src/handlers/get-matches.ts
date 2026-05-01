@@ -1,8 +1,7 @@
 import { jsonResponse } from "../../../src/lib/http.ts";
 import type { NeonSQL } from "../db.ts";
 import { requireDeviceSession } from "../requestAuth.ts";
-import { getMatchesForUser } from "../matchApp.ts";
-import { getSoulmateProfile } from "../matchApp.ts";
+import { getMatchesForUser, getSoulmatePhotoEtags, getSoulmateProfile } from "../matchApp.ts";
 
 export async function handleGetMatches(
   sql: NeonSQL,
@@ -21,11 +20,13 @@ export async function handleGetMatches(
       const profile = await getSoulmateProfile(sql, matchedUserId);
       if (!profile?.display_name) return null;
 
-      // Per-user reasoning: use reasoning_a/b based on which side the requesting user is
+      // Per-user reasoning: use reasoning_a/b based on which side the requesting user is.
+      // Falls back to legacy unified reasoning for pre-simulation matches.
       const isUserA = m.user_a_id === userId;
       const perUserReasoning = isUserA ? m.reasoning_a : m.reasoning_b;
-      // Fallback to old unified reasoning for pre-simulation matches
       const reasoning = perUserReasoning ?? m.reasoning ?? null;
+
+      const photoEtags = await getSoulmatePhotoEtags(sql, matchedUserId);
 
       return {
         match_id: m.id,
@@ -36,7 +37,9 @@ export async function handleGetMatches(
         matched_at: m.evaluated_at,
         reasoning,
         connection_zones: m.connection_zones ?? null,
-        score: m.score ?? null
+        score: m.score ?? null,
+        photo_count: profile.photo_count ?? 0,
+        photo_etags: photoEtags
       };
     })
   );

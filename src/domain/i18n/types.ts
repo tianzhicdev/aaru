@@ -32,6 +32,7 @@ export interface SoulPromptStrings {
   goodResponse: string;
   openingFirstEver: string;
   openingReturning: string;
+  productCuriosity?: string;
 }
 
 export interface NavigationStrings {

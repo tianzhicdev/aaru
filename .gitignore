@@ -1,5 +1,6 @@
 node_modules
 .pnpm-store
+.venv
 coverage
 dist
 .DS_Store
@@ -29,6 +30,11 @@ debug-dumps/
 dev-data/
 dry-run-output/
 
-# Marketing media (large binaries)
+# Marketing pipeline artifacts (regenerated each run)
+marketing/stories/cron.log
+marketing/stories/cron.stderr.log
+marketing/stories/cron.stdout.log
+marketing/stories/voices/
+marketing/stories/music/
 marketing/stories/output/
 marketing/stories/tts-auditions/

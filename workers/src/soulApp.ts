@@ -432,15 +432,18 @@ export async function getProcessingRequestId(
   return (rows[0]?.processing_request_id as string) ?? null;
 }
 
+export type SoulMessageSource = "user_chat" | "admin_message";
+
 export async function insertSoulMessage(
   sql: NeonSQL,
   userId: string,
   role: "user" | "assistant",
-  content: string
+  content: string,
+  source: SoulMessageSource = "user_chat"
 ): Promise<void> {
   await sql`
-    INSERT INTO soul_messages (user_id, role, content)
-    VALUES (${userId}, ${role}, ${content})
+    INSERT INTO soul_messages (user_id, role, content, source)
+    VALUES (${userId}, ${role}, ${content}, ${source})
   `;
 }
 

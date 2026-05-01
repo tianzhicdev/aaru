@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
     @State private var showDebug = false
@@ -12,10 +13,9 @@ struct SettingsView: View {
 
     var body: some View {
         settingsContent
-            .preferredColorScheme(.dark)
-            .alert("Delete All Data?", isPresented: $showDeleteConfirmation) {
+            .alert("Delete all data?", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
-                Button("Delete Everything", role: .destructive) {
+                Button("Delete everything", role: .destructive) {
                     Task {
                         await model.deleteAccount()
                         dismiss()
@@ -29,119 +29,210 @@ struct SettingsView: View {
 
     private var settingsContent: some View {
         ZStack {
-            Theme.backgroundGradient.ignoresSafeArea()
+            Theme.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer()
-                    Text("Settings")
-                        .font(Theme.sans(14, weight: .medium))
-                        .foregroundStyle(Theme.accent)
-                        .textCase(.uppercase)
-                        .tracking(2)
-                    Spacer()
-                    // Balance spacer
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.clear)
-                }
-                .padding(.horizontal, 20)
-                .frame(height: 52)
-
-                Divider()
-                    .frame(height: 0.5)
-                    .overlay(Theme.divider)
+                header
 
                 ScrollView {
-                    VStack(spacing: 0) {
-                        settingsRow(icon: "lock.shield", title: "Privacy Policy") {
-                            if let url = URL(string: "https://trythumos.com/privacy") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-
-                        Divider()
-                            .frame(height: 0.5)
-                            .overlay(Theme.divider)
-                            .padding(.horizontal, 20)
-
-                        settingsRow(icon: "questionmark.circle", title: "Support") {
-                            if let url = URL(string: "https://trythumos.com/support") {
-                                UIApplication.shared.open(url)
-                            }
-                        }
-
-                        Divider()
-                            .frame(height: 0.5)
-                            .overlay(Theme.divider)
-                            .padding(.horizontal, 20)
-
-                        // Delete My Data
-                        Button {
-                            showDeleteConfirmation = true
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(Theme.errorText)
-                                    .frame(width: 24)
-                                Text("Delete My Data")
-                                    .font(Theme.sans(16))
-                                    .foregroundStyle(Theme.errorText)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                        }
-                        .disabled(model.isDeletingAccount)
+                    VStack(spacing: 22) {
+                        privacyGroup
+                        accountGroup
 
                         if DebugSheetModifier.isDebug {
-                            Divider()
-                                .frame(height: 0.5)
-                                .overlay(Theme.divider)
-                                .padding(.horizontal, 20)
-
-                            settingsRow(icon: "ant", title: "Debug") {
-                                showDebug = true
-                            }
+                            debugGroup
                         }
 
-                        Spacer().frame(height: 40)
-
-                        Text("Thumos v\(appVersion)")
-                            .font(Theme.sans(12))
+                        Text("thumos · v\(appVersion)")
+                            .font(.system(size: 11))
                             .foregroundStyle(Theme.textTertiary)
+                            .kerning(0.4)
+                            .padding(.top, 12)
+                            .padding(.bottom, 24)
                     }
-                    .padding(.top, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
                 }
             }
         }
     }
 
-    private func settingsRow(icon: String, title: String, action: @escaping () -> Void) -> some View {
+    private var header: some View {
+        HStack {
+            Button { dismiss() } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Back")
+                        .font(.system(size: 15, weight: .medium))
+                }
+                .foregroundStyle(Theme.primaryDeep)
+            }
+            Spacer()
+            Text("You")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Color.clear.frame(width: 50, height: 1)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.divider).frame(height: 0.5)
+        }
+    }
+
+    // MARK: - Groups
+
+    private var privacyGroup: some View {
+        settingsGroup("Privacy") {
+            settingsRow(icon: "lock.shield", title: "Privacy Policy", trailing: .external) {
+                if let url = URL(string: "https://trythumos.com/privacy") {
+                    UIApplication.shared.open(url)
+                }
+            }
+            divider
+            settingsRow(icon: "questionmark.circle", title: "Support", trailing: .external) {
+                if let url = URL(string: "https://trythumos.com/support") {
+                    UIApplication.shared.open(url)
+                }
+            }
+        }
+    }
+
+    private var accountGroup: some View {
+        settingsGroup("Account") {
+            settingsRow(
+                icon: "trash",
+                title: "Delete my data",
+                tint: Theme.danger,
+                background: Theme.dangerSoft
+            ) {
+                showDeleteConfirmation = true
+            }
+            .disabled(model.isDeletingAccount)
+        }
+    }
+
+    private var debugGroup: some View {
+        settingsGroup("Debug") {
+            settingsRow(icon: "ant", title: "Debug menu", trailing: .chevron) {
+                showDebug = true
+            }
+            divider
+            // Theme picker mirrors DebugView's, but visible directly inside Settings
+            // for quick switching during the redesign.
+            VStack(spacing: 0) {
+                ForEach(ThemeTokens.allPresets) { preset in
+                    Button {
+                        themeManager.setTheme(preset)
+                    } label: {
+                        HStack(spacing: 12) {
+                            themeSwatch(preset)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(preset.displayName)
+                                    .font(.system(size: 15.5, weight: .medium))
+                                    .foregroundStyle(Theme.textPrimary)
+                            }
+                            Spacer()
+                            if preset.id == themeManager.current.id {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Theme.primary)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    if preset.id != ThemeTokens.allPresets.last?.id {
+                        divider
+                    }
+                }
+            }
+        }
+    }
+
+    private func themeSwatch(_ tokens: ThemeTokens) -> some View {
+        HStack(spacing: 0) {
+            tokens.bg
+            tokens.primary
+            tokens.primarySoft
+            tokens.butter
+        }
+        .frame(width: 40, height: 24)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.divider, lineWidth: 0.5))
+    }
+
+    // MARK: - Group + row primitives
+
+    @ViewBuilder
+    private func settingsGroup<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.primaryDeep)
+                .textCase(.uppercase)
+                .tracking(0.6)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) { content() }
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Theme.card)
+                        .shadow(color: Theme.bubbleShadowReceived, radius: 12, x: 0, y: 4)
+                )
+        }
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Theme.divider).frame(height: 0.5).padding(.leading, 16)
+    }
+
+    private enum SettingsRowTrailing { case chevron, external, none }
+
+    private func settingsRow(
+        icon: String,
+        title: String,
+        tint: Color = Theme.primary,
+        background: Color = Theme.primarySoft,
+        trailing: SettingsRowTrailing = .chevron,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 24)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9).fill(background)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(tint)
+                }
+                .frame(width: 30, height: 30)
+
                 Text(title)
-                    .font(Theme.sans(16))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(.system(size: 15.5, weight: .medium))
+                    .foregroundStyle(tint == Theme.danger ? Theme.danger : Theme.textPrimary)
+
                 Spacer()
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textTertiary)
+
+                switch trailing {
+                case .chevron:
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                case .external:
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                case .none:
+                    EmptyView()
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 

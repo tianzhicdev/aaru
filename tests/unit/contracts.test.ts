@@ -72,10 +72,27 @@ describe("API contract fixtures", () => {
   // ── get-soul-file ────────────────────────────────────────
 
   test("get-soul-file fixture matches wire type", () => {
-    const typed: GetSoulFileWireResponse = getSoulFileFixture;
+    const typed = getSoulFileFixture as unknown as GetSoulFileWireResponse;
     expect(typed.version).toBeTypeOf("number");
     expect(typed.last_updated).toBeTypeOf("string");
     expect(typed.synthesis_pending).toBeTypeOf("boolean");
+    expect(Array.isArray(typed.domain_coverage)).toBe(true);
+  });
+
+  test("get-soul-file fixture has domain_coverage with all 7 romance domains", () => {
+    const coverage = getSoulFileFixture.domain_coverage;
+    expect(coverage.length).toBe(7);
+    const expected = [
+      "daily_rhythm", "play_and_joy", "values_and_worldview", "love_language",
+      "conflict_and_repair", "vulnerability_and_trust", "partnership_vision"
+    ];
+    expect(coverage.map((e: { domain: string }) => e.domain).sort()).toEqual(expected.sort());
+    for (const entry of coverage) {
+      expect(entry).toHaveProperty("domain");
+      expect(entry).toHaveProperty("depth");
+      expect(entry).toHaveProperty("evidence");
+      expect(["untouched", "mentioned", "explored", "deep"]).toContain(entry.depth);
+    }
   });
 
   test("get-soul-file fixture has complete visible_soul_file", () => {
@@ -141,6 +158,7 @@ describe("API contract fixtures", () => {
     expect(getSoulFileFixture).toHaveProperty("visible_soul_file");
     expect(getSoulFileFixture).toHaveProperty("last_updated");
     expect(getSoulFileFixture).toHaveProperty("synthesis_pending");
+    expect(getSoulFileFixture).toHaveProperty("domain_coverage");
 
     // sync-messages
     expect(syncMessagesFixture.messages[0]).toHaveProperty("created_at");

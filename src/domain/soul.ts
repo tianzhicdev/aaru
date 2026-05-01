@@ -272,6 +272,11 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
 
   const openingSection = buildOpeningSection(context);
 
+  const phase = note.conversationPhase ?? getConversationPhase(messageCount);
+  const curiositySection = phase !== "spark" && soul.productCuriosity
+    ? `\n\n${soul.productCuriosity}`
+    : "";
+
   const languageDirective = getLanguageDirective(context.language);
 
   return `${soul.preamble}
@@ -289,7 +294,7 @@ ${soul.pacing}
 
 ${soul.difficultMoments}
 
-${soul.goodResponse}${languageDirective}`;
+${soul.goodResponse}${curiositySection}${languageDirective}`;
 }
 
 export function detectSoftSessionGap(

@@ -1,7 +1,11 @@
 import { describe, test, expect } from "vitest";
-import { computeSoulFileCompleteness, COMPLETENESS_THRESHOLD } from "../../src/domain/matching.ts";
+import {
+  COMPLETENESS_THRESHOLD,
+  computeCoverageProgress,
+  computeSoulFileCompleteness
+} from "../../src/domain/matching.ts";
 import { emptyVisibleSoulFile } from "../../src/domain/soulFile.ts";
-import type { VisibleSoulFile } from "../../src/domain/schemas.ts";
+import { LIFE_DOMAINS, type DomainCoverageEntry, type VisibleSoulFile } from "../../src/domain/schemas.ts";
 
 describe("computeSoulFileCompleteness", () => {
   test("empty soul file has completeness 0", () => {
@@ -89,6 +93,81 @@ describe("computeSoulFileCompleteness", () => {
     file.sections.howYouLightUp = "  \n  ";
     file.relationalStyle = "   ";
     expect(computeSoulFileCompleteness(file)).toBe(0);
+  });
+});
+
+describe("computeCoverageProgress", () => {
+  test("empty coverage gives all untouched and locked", () => {
+    const progress = computeCoverageProgress([]);
+    expect(progress.unlocked).toBe(false);
+    expect(progress.exploredCount).toBe(0);
+    expect(progress.totalDomains).toBe(7);
+    for (const domain of LIFE_DOMAINS) {
+      expect(progress.perDomain[domain]).toBe("untouched");
+    }
+  });
+
+  test("null/undefined coverage is treated as empty", () => {
+    expect(computeCoverageProgress(null).unlocked).toBe(false);
+    expect(computeCoverageProgress(undefined).unlocked).toBe(false);
+  });
+
+  test("'mentioned' depth does NOT satisfy the gate", () => {
+    const coverage: DomainCoverageEntry[] = LIFE_DOMAINS.map((d) => ({
+      domain: d,
+      depth: "mentioned",
+      evidence: ""
+    }));
+    const progress = computeCoverageProgress(coverage);
+    expect(progress.unlocked).toBe(false);
+    expect(progress.exploredCount).toBe(0);
+  });
+
+  test("all 7 domains at 'explored' unlocks", () => {
+    const coverage: DomainCoverageEntry[] = LIFE_DOMAINS.map((d) => ({
+      domain: d,
+      depth: "explored",
+      evidence: ""
+    }));
+    const progress = computeCoverageProgress(coverage);
+    expect(progress.unlocked).toBe(true);
+    expect(progress.exploredCount).toBe(7);
+  });
+
+  test("mix of 'explored' and 'deep' counts equally and unlocks", () => {
+    const coverage: DomainCoverageEntry[] = LIFE_DOMAINS.map((d, i) => ({
+      domain: d,
+      depth: i % 2 === 0 ? "deep" : "explored",
+      evidence: ""
+    }));
+    expect(computeCoverageProgress(coverage).unlocked).toBe(true);
+  });
+
+  test("6 of 7 explored does not unlock", () => {
+    const coverage: DomainCoverageEntry[] = LIFE_DOMAINS.slice(0, 6).map((d) => ({
+      domain: d,
+      depth: "explored",
+      evidence: ""
+    }));
+    const progress = computeCoverageProgress(coverage);
+    expect(progress.unlocked).toBe(false);
+    expect(progress.exploredCount).toBe(6);
+  });
+
+  test("ignores entries with unknown domain names", () => {
+    const coverage = [
+      { domain: "not_a_real_domain", depth: "deep", evidence: "" }
+    ] as unknown as DomainCoverageEntry[];
+    const progress = computeCoverageProgress(coverage);
+    expect(progress.exploredCount).toBe(0);
+  });
+
+  test("last entry wins for duplicate domain", () => {
+    const coverage: DomainCoverageEntry[] = [
+      { domain: "daily_rhythm", depth: "untouched", evidence: "" },
+      { domain: "daily_rhythm", depth: "deep", evidence: "" }
+    ];
+    expect(computeCoverageProgress(coverage).perDomain.daily_rhythm).toBe("deep");
   });
 });
 

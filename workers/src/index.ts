@@ -22,12 +22,15 @@ import { handleGetDebugInfo } from "./handlers/get-debug-info.ts";
 import { handleDebugDump } from "./handlers/debug-dump.ts";
 import { handleSetModelProfile } from "./handlers/set-model-profile.ts";
 import { handleGetSoulmateProfile, handlePostSoulmateProfile } from "./handlers/soulmate-profile.ts";
+import { handleGetSoulmatePhoto } from "./handlers/soulmate-photo.ts";
 import { handleGetMatches } from "./handlers/get-matches.ts";
 import { handleGetMatchMessages, handlePostMatchMessage } from "./handlers/match-messages.ts";
 import { handleUpdateLanguage } from "./handlers/update-language.ts";
 import { handleRunMatchingScan } from "./handlers/run-matching-scan.ts";
 import { handleMonitoring } from "./handlers/monitoring.ts";
 import { handleSoulSend } from "./handlers/soul-send.ts";
+import { handleRegisterPushToken } from "./handlers/register-push-token.ts";
+import { handleAdminSendMessage } from "./handlers/admin-send-message.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
@@ -110,6 +113,9 @@ export default {
           handlePostSoulmateProfile(sql, payload, req)
         );
 
+      case "soulmate-photo":
+        return handleGetSoulmatePhoto(sql, request);
+
       case "soulmate-matches":
         return withErrorHandling(request, (payload, req) =>
           handleGetMatches(sql, payload, req)
@@ -142,6 +148,16 @@ export default {
 
       case "monitoring":
         return handleMonitoring(sql, env, request);
+
+      case "push-tokens/register":
+        return withErrorHandling(request, (payload, req) =>
+          handleRegisterPushToken(sql, payload, req)
+        );
+
+      case "admin/send-message":
+        return withErrorHandling(request, (payload, req) =>
+          handleAdminSendMessage(sql, env, payload, req, _ctx)
+        );
 
       default:
         return new Response(JSON.stringify({ code: 404, message: "Not found" }), {

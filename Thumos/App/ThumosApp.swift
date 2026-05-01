@@ -4,6 +4,7 @@ import SwiftUI
 struct ThumosApp: App {
     @StateObject private var model: AppModel
     @StateObject private var notificationManager = NotificationManager()
+    @StateObject private var themeManager = ThemeManager.shared
 
     init() {
         let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -15,6 +16,10 @@ struct ThumosApp: App {
             RootView()
                 .environmentObject(model)
                 .environmentObject(notificationManager)
+                .environmentObject(themeManager)
+                .environment(\.theme, themeManager.current)
+                .preferredColorScheme(themeManager.current.isDark ? .dark : .light)
+                .id(themeManager.current.id)
                 .onAppear {
                     model.notificationManager = notificationManager
                 }

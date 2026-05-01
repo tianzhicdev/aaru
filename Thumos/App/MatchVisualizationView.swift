@@ -103,6 +103,7 @@ private struct MatchConnectionLines: View {
 struct MatchVisualizationView: View {
     let match: SoulmateMatch
     var vizData: MatchVisualizationData = .mock
+    @EnvironmentObject private var model: AppModel
 
     private let gold = Color(red: 0.831, green: 0.690, blue: 0.302)
     private let noteColor = Color(red: 0.690, green: 0.678, blue: 0.643)
@@ -141,9 +142,65 @@ struct MatchVisualizationView: View {
                         .padding(.horizontal, 28)
                         .padding(.bottom, 28)
                 }
+
+                if let bio = match.bio, !bio.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ABOUT")
+                            .font(Theme.sans(10, weight: .medium))
+                            .foregroundStyle(gold.opacity(0.4))
+                            .tracking(1.4)
+                        Text(bio)
+                            .font(Theme.serif(16))
+                            .foregroundStyle(Theme.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            .lineSpacing(4)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 24)
+                }
+
+                if match.photoCount > 0 {
+                    photoStrip
+                        .padding(.bottom, 32)
+                }
             }
         }
         .background(Theme.backgroundGradient)
+    }
+
+    private var photoStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(0..<match.photoCount, id: \.self) { idx in
+                    photoTile(idx: idx)
+                }
+            }
+            .padding(.horizontal, 28)
+        }
+    }
+
+    @ViewBuilder
+    private func photoTile(idx: Int) -> some View {
+        let etag = match.photoEtags.indices.contains(idx) ? match.photoEtags[idx] : nil
+        let request = model.backend.soulmatePhotoRequest(
+            userId: match.matchedUserId,
+            idx: idx,
+            etag: etag
+        )
+
+        ZStack {
+            Theme.surface
+            if let request {
+                AuthedPhotoView(request: request)
+            }
+        }
+        .frame(width: 240, height: 240)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Theme.divider, lineWidth: 0.5)
+        )
     }
 
     // MARK: - Highlighted Text

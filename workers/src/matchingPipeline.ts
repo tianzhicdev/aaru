@@ -1,8 +1,11 @@
 import type { NeonSQL } from "./db.ts";
 import type { Env } from "./env.ts";
-import { insertMatchAttempt, getSoulmateProfile } from "./matchApp.ts";
+import { computeCoverageProgress } from "../../src/domain/matching.ts";
+import type { DomainCoverageEntry } from "../../src/domain/schemas.ts";
+import { insertMatchAttempt } from "./matchApp.ts";
 import { runSimulatedMatch } from "./matchSimulation.ts";
-import { enqueueMatchReasoning, type BackgroundQueueBinding } from "./backgroundJobsQueue.ts";
+import { enqueueMatchReasoning } from "./backgroundJobsQueue.ts";
+import { notifyNewMatch } from "./notifications.ts";
 
 const MAX_MATCHES_PER_RUN = 2;
 const CANDIDATE_BATCH = 20;
@@ -106,16 +109,18 @@ async function runMatchingForUsers(
         matchCounts.set(candidate.user_id, (matchCounts.get(candidate.user_id) ?? 0) + 1);
 
         // Enqueue per-user reasoning generation
-        const [profileA, profileB] = await Promise.all([
-          getSoulmateProfile(sql, userAId),
-          getSoulmateProfile(sql, userBId)
-        ]);
         const langA = await getUserLanguage(sql, userAId);
         const langB = await getUserLanguage(sql, userBId);
 
         await Promise.all([
           enqueueMatchReasoning(env.BACKGROUND_QUEUE, matchId, userAId, nameB, "a", langA),
-          enqueueMatchReasoning(env.BACKGROUND_QUEUE, matchId, userBId, nameA, "b", langB)
+          enqueueMatchReasoning(env.BACKGROUND_QUEUE, matchId, userBId, nameA, "b", langB),
+          notifyNewMatch(sql, env, userAId, nameB).catch((err) =>
+            console.error("notifyNewMatch failed for user_a:", err)
+          ),
+          notifyNewMatch(sql, env, userBId, nameA).catch((err) =>
+            console.error("notifyNewMatch failed for user_b:", err)
+          )
         ]);
       }
     }
@@ -132,12 +137,20 @@ async function getActiveSoulmateUsers(sql: NeonSQL): Promise<ActiveSoulmateUser[
     SELECT sp.user_id, sp.display_name, sp.age, sp.gender, sp.latitude, sp.longitude,
            sp.preferred_age_min, sp.preferred_age_max, sp.preferred_genders,
            vsf.version AS soul_version,
-           COALESCE(u.language, 'en') AS language
+           COALESCE(u.language, 'en') AS language,
+           rs.note AS reflection_note
     FROM soulmate_profiles sp
     JOIN users u ON u.id = sp.user_id
     JOIN visible_soul_files vsf ON vsf.user_id = sp.user_id
       AND vsf.status = 'ready'
       AND vsf.completeness >= ${ELIGIBILITY_MIN_COMPLETENESS}
+    LEFT JOIN LATERAL (
+      SELECT note
+      FROM reflection_snapshots
+      WHERE user_id = sp.user_id AND status = 'ready'
+      ORDER BY version DESC
+      LIMIT 1
+    ) rs ON true
     WHERE sp.active = true
       AND vsf.version = (
         SELECT MAX(v2.version) FROM visible_soul_files v2
@@ -148,7 +161,24 @@ async function getActiveSoulmateUsers(sql: NeonSQL): Promise<ActiveSoulmateUser[
         WHERE user_id = sp.user_id AND role = 'user'
       ) >= ${ELIGIBILITY_MIN_USER_MESSAGES}
   `;
-  return rows as unknown as ActiveSoulmateUser[];
+
+  return (rows as unknown as Array<ActiveSoulmateUser & { reflection_note: unknown }>)
+    .filter((row) => {
+      const coverage = extractDomainCoverage(row.reflection_note);
+      return computeCoverageProgress(coverage).unlocked;
+    })
+    .map(({ reflection_note: _ignored, ...user }) => user);
+}
+
+function extractDomainCoverage(note: unknown): DomainCoverageEntry[] {
+  if (!note || typeof note !== "object") return [];
+  const coverage = (note as { domainCoverage?: unknown }).domainCoverage;
+  if (!Array.isArray(coverage)) return [];
+  return coverage.filter((entry): entry is DomainCoverageEntry =>
+    !!entry && typeof entry === "object" &&
+    typeof (entry as { domain?: unknown }).domain === "string" &&
+    typeof (entry as { depth?: unknown }).depth === "string"
+  );
 }
 
 async function getCandidates(
@@ -159,6 +189,7 @@ async function getCandidates(
   const rows = await sql`
     SELECT sp2.user_id, sp2.display_name,
            vsf.version AS soul_version,
+           rs.note AS reflection_note,
            2 * 6371000 * asin(sqrt(
              power(sin(radians(sp2.latitude - ${user.latitude}) / 2), 2) +
              cos(radians(${user.latitude})) * cos(radians(sp2.latitude)) *
@@ -169,6 +200,13 @@ async function getCandidates(
     JOIN visible_soul_files vsf ON vsf.user_id = sp2.user_id
       AND vsf.status = 'ready'
       AND vsf.completeness >= ${ELIGIBILITY_MIN_COMPLETENESS}
+    LEFT JOIN LATERAL (
+      SELECT note
+      FROM reflection_snapshots
+      WHERE user_id = sp2.user_id AND status = 'ready'
+      ORDER BY version DESC
+      LIMIT 1
+    ) rs ON true
     WHERE sp2.user_id != ${user.user_id}
       AND sp2.active = true
       -- Same language
@@ -206,5 +244,8 @@ async function getCandidates(
     ORDER BY distance_m ASC
     LIMIT ${limit}
   `;
-  return rows as unknown as Candidate[];
+
+  return (rows as unknown as Array<Candidate & { reflection_note: unknown }>)
+    .filter((row) => computeCoverageProgress(extractDomainCoverage(row.reflection_note)).unlocked)
+    .map(({ reflection_note: _ignored, ...candidate }) => candidate);
 }

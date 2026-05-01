@@ -71,4 +71,13 @@ describe("i18n", () => {
       }
     }
   });
+
+  it("all languages have a productCuriosity prompt mentioning Tinder and Hinge", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const p = getPrompts(lang);
+      expect(p.soul.productCuriosity).toBeTruthy();
+      expect(p.soul.productCuriosity).toContain("Tinder");
+      expect(p.soul.productCuriosity).toContain("Hinge");
+    }
+  });
 });

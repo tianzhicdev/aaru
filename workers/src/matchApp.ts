@@ -13,8 +13,20 @@ export interface SoulmateProfileRow {
   active: boolean;
   selfie_url: string | null;
   bio: string | null;
+  photo_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface SoulmatePhoto {
+  data: Uint8Array;
+  mime: string;
+}
+
+export interface SoulmatePhotoRow {
+  data: Uint8Array;
+  mime_type: string;
+  etag: string;
 }
 
 export interface MatchRow {
@@ -43,7 +55,7 @@ export interface SoulmateProfileInput {
   preferred_age_max: number;
   preferred_genders: string[];
   selfie_url?: string;
-  bio?: string;
+  bio?: string | null;
 }
 
 export interface MatchMessageRow {
@@ -100,6 +112,70 @@ export async function upsertSoulmateProfile(
     RETURNING *
   `;
   return rows[0] as unknown as SoulmateProfileRow;
+}
+
+export async function computePhotoEtag(data: Uint8Array): Promise<string> {
+  const buffer = new ArrayBuffer(data.byteLength);
+  new Uint8Array(buffer).set(data);
+  const hash = await crypto.subtle.digest("SHA-256", buffer);
+  const hex: string[] = [];
+  const bytes = new Uint8Array(hash);
+  for (let i = 0; i < 6; i++) {
+    hex.push(bytes[i].toString(16).padStart(2, "0"));
+  }
+  return hex.join("");
+}
+
+export async function upsertSoulmatePhotos(
+  sql: NeonSQL,
+  userId: string,
+  photos: SoulmatePhoto[]
+): Promise<{ etags: string[] }> {
+  await sql`DELETE FROM soulmate_photos WHERE user_id = ${userId}`;
+
+  const etags: string[] = [];
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
+    const etag = await computePhotoEtag(photo.data);
+    etags.push(etag);
+    await sql`
+      INSERT INTO soulmate_photos (user_id, idx, data, mime_type, byte_size, etag)
+      VALUES (${userId}, ${i}, ${photo.data}, ${photo.mime}, ${photo.data.byteLength}, ${etag})
+    `;
+  }
+
+  await sql`
+    UPDATE soulmate_profiles
+    SET photo_count = ${photos.length}, updated_at = now()
+    WHERE user_id = ${userId}
+  `;
+
+  return { etags };
+}
+
+export async function getSoulmatePhotoEtags(
+  sql: NeonSQL,
+  userId: string
+): Promise<string[]> {
+  const rows = await sql`
+    SELECT etag FROM soulmate_photos
+    WHERE user_id = ${userId}
+    ORDER BY idx ASC
+  `;
+  return rows.map((r) => r.etag as string);
+}
+
+export async function getSoulmatePhoto(
+  sql: NeonSQL,
+  userId: string,
+  idx: number
+): Promise<SoulmatePhotoRow | null> {
+  const rows = await sql`
+    SELECT data, mime_type, etag
+    FROM soulmate_photos
+    WHERE user_id = ${userId} AND idx = ${idx}
+  `;
+  return (rows[0] as unknown as SoulmatePhotoRow) ?? null;
 }
 
 export async function getMatchesForUser(

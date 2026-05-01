@@ -60,6 +60,18 @@ final class ContractTests: XCTestCase {
         XCTAssertFalse(response.synthesisPending)
         XCTAssertFalse(response.visibleSoulFile.sections.howYouLightUp.isEmpty)
         XCTAssertGreaterThanOrEqual(response.visibleSoulFile.completeness, 0)
+
+        // domain_coverage: all 7 romance domains, valid depth values
+        XCTAssertEqual(response.domainCoverage.count, 7)
+        let validDepths: Set<String> = ["untouched", "mentioned", "explored", "deep"]
+        let expectedDomains: Set<String> = [
+            "daily_rhythm", "play_and_joy", "values_and_worldview", "love_language",
+            "conflict_and_repair", "vulnerability_and_trust", "partnership_vision"
+        ]
+        XCTAssertEqual(Set(response.domainCoverage.map(\.domain)), expectedDomains)
+        for entry in response.domainCoverage {
+            XCTAssertTrue(validDepths.contains(entry.depth), "Unknown depth: \(entry.depth)")
+        }
     }
 
     // MARK: - sync-messages
@@ -132,5 +144,6 @@ final class ContractTests: XCTestCase {
         XCTAssertEqual(response.version, 0)
         XCTAssertFalse(response.synthesisPending)
         XCTAssertTrue(response.visibleSoulFile.isEmpty)
+        XCTAssertEqual(response.domainCoverage.count, 0)
     }
 }

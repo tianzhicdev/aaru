@@ -202,9 +202,11 @@ final class BackendClient {
         longitude: Double,
         preferredAgeMin: Int,
         preferredAgeMax: Int,
-        preferredGenders: [String]
+        preferredGenders: [String],
+        bio: String?,
+        photos: [Data]?
     ) async throws -> SoulmateProfileResponse {
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "display_name": displayName,
             "age": age,
             "gender": gender,
@@ -214,7 +216,38 @@ final class BackendClient {
             "preferred_age_max": preferredAgeMax,
             "preferred_genders": preferredGenders
         ]
+        if let bio {
+            body["bio"] = bio.isEmpty ? NSNull() : bio
+        }
+        if let photos {
+            body["photos"] = photos.map { $0.base64EncodedString() }
+        }
         return try await postRaw("soulmate-profile", body: body)
+    }
+
+    func soulmatePhotoRequest(userId: String, idx: Int, etag: String?) -> URLRequest? {
+        guard let baseURL = configuration.functionBaseURL else { return nil }
+        var components = URLComponents(
+            url: baseURL.appendingPathComponent("soulmate-photo"),
+            resolvingAgainstBaseURL: false
+        )
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "user_id", value: userId),
+            URLQueryItem(name: "idx", value: "\(idx)")
+        ]
+        if let etag, !etag.isEmpty {
+            items.append(URLQueryItem(name: "v", value: etag))
+        }
+        components?.queryItems = items
+        guard let url = components?.url else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        if let sessionToken {
+            request.setValue(sessionToken, forHTTPHeaderField: "x-thumos-session")
+        }
+        request.cachePolicy = .returnCacheDataElseLoad
+        return request
     }
 
     func getSoulmateMatches() async throws -> SoulmateMatchesResponse {

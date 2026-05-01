@@ -1,6 +1,47 @@
-import type { VisibleSoulFile } from "./schemas.ts";
+import { LIFE_DOMAINS, type DomainCoverageEntry, type LifeDomain, type VisibleSoulFile } from "./schemas.ts";
 
 export const COMPLETENESS_THRESHOLD = 0.7;
+
+export type CoverageDepth = "untouched" | "mentioned" | "explored" | "deep";
+
+export const REQUIRED_COVERAGE_DEPTHS: ReadonlySet<CoverageDepth> = new Set(["explored", "deep"]);
+
+export interface CoverageProgress {
+  unlocked: boolean;
+  exploredCount: number;
+  totalDomains: number;
+  perDomain: Record<LifeDomain, CoverageDepth>;
+}
+
+export function computeCoverageProgress(
+  domainCoverage: readonly DomainCoverageEntry[] | null | undefined
+): CoverageProgress {
+  const perDomain = {} as Record<LifeDomain, CoverageDepth>;
+  for (const domain of LIFE_DOMAINS) {
+    perDomain[domain] = "untouched";
+  }
+
+  if (domainCoverage) {
+    const allowed = new Set<string>(LIFE_DOMAINS);
+    for (const entry of domainCoverage) {
+      if (allowed.has(entry.domain)) {
+        perDomain[entry.domain as LifeDomain] = entry.depth as CoverageDepth;
+      }
+    }
+  }
+
+  const exploredCount = LIFE_DOMAINS.reduce(
+    (count, domain) => (REQUIRED_COVERAGE_DEPTHS.has(perDomain[domain]) ? count + 1 : count),
+    0
+  );
+
+  return {
+    unlocked: exploredCount === LIFE_DOMAINS.length,
+    exploredCount,
+    totalDomains: LIFE_DOMAINS.length,
+    perDomain
+  };
+}
 
 const COMPASS_AXES = [
   "openness", "playfulness", "warmth", "emotional_depth",

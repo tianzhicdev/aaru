@@ -81,7 +81,6 @@ struct AIConsentView: View {
                 .padding(.top, 12)
             }
         }
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $showPrivacySheet) {
             PrivacyPolicySheet()
         }
@@ -177,7 +176,6 @@ private struct PrivacyPolicySheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private func section(title: String, body: String) -> some View {

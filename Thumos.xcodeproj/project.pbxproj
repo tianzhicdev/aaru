@@ -13,6 +13,7 @@
 		079CE20535102EFCBB67FD3A /* PersonalitySpectrumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 318FC4EED8BCE83F5D2A6107 /* PersonalitySpectrumView.swift */; };
 		0EE16D8865E72A282410EFC0 /* MatchReasoningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6986602F354D39C1CD78D48 /* MatchReasoningSheet.swift */; };
 		10652552B9B6D8C68EB8A6AC /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 427464C56B70E731B3E93B29 /* SpaceGrotesk-Regular.ttf */; };
+		115EE68C053D85A59A207258 /* SoulCoverageConstellation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681C4B762D7468B35ABD11D5 /* SoulCoverageConstellation.swift */; };
 		16FAF3C4E8A0B516B1309861 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2515DAFDA782E1E49D886250 /* Models.swift */; };
 		19C32519AC26D20D76EB9F29 /* CormorantGaramond-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8AC4956A0F9ECCF6F2B44DCB /* CormorantGaramond-Medium.ttf */; };
 		1BCDD5B1C16B35801CA32527 /* SoulmateProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */; };
@@ -28,6 +29,7 @@
 		40DF4454C84DB08855B6B54E /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 557A75DDC74B75962FFCDAE9 /* NotificationManager.swift */; };
 		4295129C5B53E91C71BA3600 /* f09_artist_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = EF9FD5D9AE86FAAE5989719F /* f09_artist_walk.png */; };
 		4392AEA5BE25BA2E5A63A4B4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84C512C8DCA175C367F9EBC9 /* Theme.swift */; };
+		463282AD19985A7434480901 /* ChatComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2C8118BDC404FBCFF7AFC2 /* ChatComponents.swift */; };
 		4AEC7256422D90472218626E /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44FAE79B4B5A28D497C6CA81 /* ForceUpdateView.swift */; };
 		4CAC4C3FD6B4837A29567024 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB73545F8E80D874512B0FEB /* SplashView.swift */; };
 		4F9AA515B185A34BBFDD4A75 /* f03_scholar_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 8F8144501D1085F17F1D1479 /* f03_scholar_walk.png */; };
@@ -44,8 +46,10 @@
 		7E21740C4C0EFBEE02F337C5 /* f07_royal_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = FFBBC9511B9706FF00C58C10 /* f07_royal_walk.png */; };
 		7F5BA0942BEEC661B6682B48 /* m03_sage_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 38980E9538DFFF63E52B4871 /* m03_sage_walk.png */; };
 		7FA6A0182F405AE2B6114427 /* f05_botanist_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 575DFF4C1EF96DD7C64919A6 /* f05_botanist_walk.png */; };
+		80B79F6057E652E173C9E4F4 /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90227EE898C4EC6A92703B43 /* CameraCapture.swift */; };
 		832B1649B0E26F9DDAC0C178 /* f14_cozy_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = BD4B319AE6C30CEF3CA81BAD /* f14_cozy_walk.png */; };
 		8515AD19B8A6A2BDAA456950 /* ThumosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF86DC7FAF1336E26410AE14 /* ThumosApp.swift */; };
+		869531C30E4F155A70E63189 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 99152E6C5BB8B717B4956815 /* InstrumentSerif-Regular.ttf */; };
 		89FC63749E36F64B101F5618 /* SoulCompassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E613C373AB75F417D77807 /* SoulCompassView.swift */; };
 		8CB26FF7AF0F20112DF11AF3 /* f01_wanderer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 4C6478DC97B6CE1E460191E9 /* f01_wanderer_walk.png */; };
 		8DEA953A6339828CE5B281DE /* MatchChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B73963BD607BA969DBCB3A6 /* MatchChatView.swift */; };
@@ -71,6 +75,7 @@
 		E7E600B98C9B9A24D8BAFCA1 /* m04_rebel_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 0E0C051A3655BF0C1A3C2C5B /* m04_rebel_walk.png */; };
 		E920DB9DD49DB040FFDDA252 /* SoulFileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = A422632A54F8509B551FF7EE /* SoulFileScreen.swift */; };
 		EBD32529F95D31428BDB7580 /* f13_sporty_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = C63F57A075D7C50C2354B409 /* f13_sporty_walk.png */; };
+		EDC9673629187415C8C27C50 /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 60BB5135FBE0472E526C9014 /* InstrumentSerif-Italic.ttf */; };
 		EE1B02D76202326E0A451721 /* m08_scholar_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = BFFE2AF3976EC454C8E66DF2 /* m08_scholar_walk.png */; };
 		F0EEDA20864D6C8BB70DC4BD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 86C8107DAA52FF82EBF761C9 /* Assets.xcassets */; };
 		F189045FB0DE1E276E7DAFFC /* m09_athlete_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = A456BF1E776665C452218A7C /* m09_athlete_walk.png */; };
@@ -90,7 +95,7 @@
 
 /* Begin PBXFileReference section */
 		03353E9AD37FA9DA221FAD83 /* CormorantGaramond-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Light.ttf"; sourceTree = "<group>"; };
-		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		07C8DB7E7688CE168AF30E6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		098EE04C9BB8C0998B00BB7C /* MatchVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchVisualizationView.swift; sourceTree = "<group>"; };
 		0E0C051A3655BF0C1A3C2C5B /* m04_rebel_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m04_rebel_walk.png; sourceTree = "<group>"; };
 		10394D66BFD5E8E083AB1711 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
@@ -121,7 +126,9 @@
 		58FCDD68908F904ACFE332CE /* MessagePoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePoller.swift; sourceTree = "<group>"; };
 		594FC516B410231D9CCB794C /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
 		5C6722F25C9D83408E960D09 /* f12_natural_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f12_natural_walk.png; sourceTree = "<group>"; };
+		60BB5135FBE0472E526C9014 /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
 		61CB2540924FC677CCCDFAAA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		681C4B762D7468B35ABD11D5 /* SoulCoverageConstellation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulCoverageConstellation.swift; sourceTree = "<group>"; };
 		6E409B84AEBFC3877FD3FA83 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		722C30D2A06E75B300348A9A /* SoulMirrorTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulMirrorTabView.swift; sourceTree = "<group>"; };
 		7B73963BD607BA969DBCB3A6 /* MatchChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchChatView.swift; sourceTree = "<group>"; };
@@ -130,8 +137,11 @@
 		87822998F4CD1541C3F2EA1A /* SoulConversationScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulConversationScreen.swift; sourceTree = "<group>"; };
 		8AC4956A0F9ECCF6F2B44DCB /* CormorantGaramond-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Medium.ttf"; sourceTree = "<group>"; };
 		8F8144501D1085F17F1D1479 /* f03_scholar_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f03_scholar_walk.png; sourceTree = "<group>"; };
+		90227EE898C4EC6A92703B43 /* CameraCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCapture.swift; sourceTree = "<group>"; };
 		90330016D1EF6B46C0151C62 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		99152E6C5BB8B717B4956815 /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
 		99412CCF94091117EDB0EA8C /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
+		9B2C8118BDC404FBCFF7AFC2 /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
 		9E0AD81894993C4A288A885C /* BackendClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClientTests.swift; sourceTree = "<group>"; };
 		A0DE9C8E97C682B9EB38425B /* f11_studious_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f11_studious_walk.png; sourceTree = "<group>"; };
 		A422632A54F8509B551FF7EE /* SoulFileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulFileScreen.swift; sourceTree = "<group>"; };
@@ -154,7 +164,7 @@
 		DD1ED1D7A1E96A186F09A788 /* CormorantGaramond-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Regular.ttf"; sourceTree = "<group>"; };
 		E3C7D49379171BC95FB8C4CD /* f10_adventurer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f10_adventurer_walk.png; sourceTree = "<group>"; };
 		E9F27E3DC5F4793996F7CF06 /* m02_artisan_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m02_artisan_walk.png; sourceTree = "<group>"; };
-		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE69E59DD30DCCAD425BAEBB /* Thumos.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Thumos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF9FD5D9AE86FAAE5989719F /* f09_artist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f09_artist_walk.png; sourceTree = "<group>"; };
 		F93A116D54888ADD10E7C0DF /* m05_gentleman_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m05_gentleman_walk.png; sourceTree = "<group>"; };
 		F9DFE166F49AD94C8312BAFC /* t01_student_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = t01_student_walk.png; sourceTree = "<group>"; };
@@ -203,6 +213,8 @@
 				B0D8F3BEC27918956884E30C /* CormorantGaramond-LightItalic.ttf */,
 				8AC4956A0F9ECCF6F2B44DCB /* CormorantGaramond-Medium.ttf */,
 				DD1ED1D7A1E96A186F09A788 /* CormorantGaramond-Regular.ttf */,
+				60BB5135FBE0472E526C9014 /* InstrumentSerif-Italic.ttf */,
+				99152E6C5BB8B717B4956815 /* InstrumentSerif-Regular.ttf */,
 				B425334B8B0F944E7D1708FB /* SpaceGrotesk-Light.ttf */,
 				3A42797FCE74E392D97A7C65 /* SpaceGrotesk-Medium.ttf */,
 				427464C56B70E731B3E93B29 /* SpaceGrotesk-Regular.ttf */,
@@ -272,6 +284,8 @@
 				CFF17CD9EF6C056634061764 /* AppModel.swift */,
 				99412CCF94091117EDB0EA8C /* BackendClient.swift */,
 				FC465A3D7E111EDF94753404 /* BackendEnvironment.swift */,
+				90227EE898C4EC6A92703B43 /* CameraCapture.swift */,
+				9B2C8118BDC404FBCFF7AFC2 /* ChatComponents.swift */,
 				10394D66BFD5E8E083AB1711 /* DebugView.swift */,
 				44FAE79B4B5A28D497C6CA81 /* ForceUpdateView.swift */,
 				7B73963BD607BA969DBCB3A6 /* MatchChatView.swift */,
@@ -286,6 +300,7 @@
 				61CB2540924FC677CCCDFAAA /* SettingsView.swift */,
 				51E613C373AB75F417D77807 /* SoulCompassView.swift */,
 				87822998F4CD1541C3F2EA1A /* SoulConversationScreen.swift */,
+				681C4B762D7468B35ABD11D5 /* SoulCoverageConstellation.swift */,
 				A422632A54F8509B551FF7EE /* SoulFileScreen.swift */,
 				2E858E10D3DD185BF9CC5C27 /* SoulmateMatchesView.swift */,
 				3211FFF64B5A81F7547BB856 /* SoulmateProfileSetupView.swift */,
@@ -346,6 +361,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 888EC908255CC0B5B03B6862 /* Build configuration list for PBXProject "Thumos" */;
 			developmentRegion = en;
@@ -377,6 +394,8 @@
 				3F39518087B030309472108B /* CormorantGaramond-LightItalic.ttf in Resources */,
 				19C32519AC26D20D76EB9F29 /* CormorantGaramond-Medium.ttf in Resources */,
 				551ACF04C71A0EB735DA3E17 /* CormorantGaramond-Regular.ttf in Resources */,
+				EDC9673629187415C8C27C50 /* InstrumentSerif-Italic.ttf in Resources */,
+				869531C30E4F155A70E63189 /* InstrumentSerif-Regular.ttf in Resources */,
 				AC9C5638BD0DDE6D166C78C5 /* PrivacyInfo.xcprivacy in Resources */,
 				2BA76081C14794E2B90B5B9B /* SpaceGrotesk-Light.ttf in Resources */,
 				DFD5A7A67354AD1E0044A31C /* SpaceGrotesk-Medium.ttf in Resources */,
@@ -433,6 +452,8 @@
 				038F2A7118603C8601DA77D7 /* AppModel.swift in Sources */,
 				A6AC7CF6AA3485125519244B /* BackendClient.swift in Sources */,
 				3E004DFD11FADD8FA3BED750 /* BackendEnvironment.swift in Sources */,
+				80B79F6057E652E173C9E4F4 /* CameraCapture.swift in Sources */,
+				463282AD19985A7434480901 /* ChatComponents.swift in Sources */,
 				ABB220E56E575861A5F6F13C /* DebugView.swift in Sources */,
 				4AEC7256422D90472218626E /* ForceUpdateView.swift in Sources */,
 				8DEA953A6339828CE5B281DE /* MatchChatView.swift in Sources */,
@@ -447,6 +468,7 @@
 				02A3865906B6EB9B37F2EF6A /* SettingsView.swift in Sources */,
 				89FC63749E36F64B101F5618 /* SoulCompassView.swift in Sources */,
 				3947B8F2AD411BC62687B475 /* SoulConversationScreen.swift in Sources */,
+				115EE68C053D85A59A207258 /* SoulCoverageConstellation.swift in Sources */,
 				E920DB9DD49DB040FFDDA252 /* SoulFileScreen.swift in Sources */,
 				9B5D0B615B731FB472B9277B /* SoulMirrorTabView.swift in Sources */,
 				BA931875105EEE8FD1C6780B /* SoulmateMatchesView.swift in Sources */,
@@ -484,7 +506,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -641,7 +662,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = LYGZYH82G8;
 				INFOPLIST_FILE = Thumos/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

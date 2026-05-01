@@ -10,5 +10,42 @@
     "title": "TIFU By Going On A Date With An Ill-Behaved Manchild",
     "produced_at": "2026-04-26",
     "output_dir": "marketing/stories/output/tifu-date-with-ill-behaved-manchild/"
+  },
+  {
+    "reddit_url": "https://www.reddit.com/r/AskReddit/comments/wildest_tinder_date",
+    "title": "My Tinder date screamed about his anatomy in a museum when I tried to break up with him",
+    "produced_at": "2026-04-27",
+    "output_dir": "marketing/stories/output/tinder-museum-meltdown/"
+  },
+  {
+    "reddit_url": "https://reddit.com/r/Vent/comments/1onxtta/i_30f_went_on_my_first_date_in_6_years_and_i_am/",
+    "title": "I (30f) went on my first date in 6 years and I am NEVER dating again",
+    "produced_at": "2026-04-28",
+    "output_dir": "marketing/stories/output/hinge-dine-and-dash/"
+  },
+  {
+    "reddit_url": "https://www.reddit.com/r/Vent/comments/1seb0hz/date_catfished_me_using_photos_of_her_best/",
+    "title": "Date catfished me using photos of her best friend...then brought her bestfriend to the date for girl support...",
+    "produced_at": "2026-04-28",
+    "output_dir": "marketing/stories/output/bumble-catfish-pretty-friend/"
+  },
+  {
+    "reddit_url": "https://reddit.com/r/mildlyinfuriating/comments/1m507ee/made_a_cake_for_a_girl_and_got_stood_up_and/",
+    "title": "Made a cake for a girl and got stood up and ghosted",
+    "produced_at": "2026-04-28",
+    "output_dir": "marketing/stories/output/bumble-cake-ghosted/",
+    "mode": "broll"
+  },
+  {
+    "reddit_url": "composite",
+    "title": "TIFU by going on a Bumble date with a girl who brought a CLIPBOARD and rated me on a checklist",
+    "produced_at": "2026-04-28",
+    "output_dir": "marketing/stories/output/bumble-clipboard-girl/"
+  },
+  {
+    "reddit_url": "https://www.reddit.com/r/tifu/comments/werclv/tifu_by_going_on_a_date_with_a_girl_from_tinder/",
+    "title": "TIFU by going on a date with a girl from Tinder who seemed way too good to be true and not seeing the red flags",
+    "produced_at": "2026-04-29",
+    "output_dir": "marketing/stories/output/tifu-tinder-mlm-date/"
   }
 ]

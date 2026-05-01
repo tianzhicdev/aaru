@@ -28,7 +28,6 @@ struct SoulMirrorTabView: View {
                 .tag(2)
         }
         .tint(Theme.accentBright)
-        .preferredColorScheme(.dark)
         .onChange(of: selectedTab) { _, newTab in
             if newTab == 1 {
                 Task { await model.requestSoulFileUpdateIfNeeded() }

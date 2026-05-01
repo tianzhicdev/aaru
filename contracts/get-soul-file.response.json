@@ -82,5 +82,14 @@
   },
   "version": 3,
   "last_updated": "2026-03-15T10:30:00Z",
-  "synthesis_pending": false
+  "synthesis_pending": false,
+  "domain_coverage": [
+    { "domain": "daily_rhythm", "depth": "deep", "evidence": "Talked extensively about morning routines, work patterns, and weekend preferences." },
+    { "domain": "play_and_joy", "depth": "explored", "evidence": "Several conversations about hobbies and what brings joy." },
+    { "domain": "values_and_worldview", "depth": "explored", "evidence": "Discussed core beliefs, what matters most, and life philosophy." },
+    { "domain": "love_language", "depth": "mentioned", "evidence": "Briefly touched on how care is expressed." },
+    { "domain": "conflict_and_repair", "depth": "mentioned", "evidence": "Single mention of conflict style; no repair patterns yet." },
+    { "domain": "vulnerability_and_trust", "depth": "untouched", "evidence": "" },
+    { "domain": "partnership_vision", "depth": "untouched", "evidence": "" }
+  ]
 }

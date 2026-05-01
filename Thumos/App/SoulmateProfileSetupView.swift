@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import UIKit
 
 struct SoulmateProfileSetupView: View {
     @EnvironmentObject private var model: AppModel
@@ -17,6 +18,16 @@ struct SoulmateProfileSetupView: View {
     @State private var hasExistingLocation = false
     @StateObject private var locationManager = LocationHelper()
 
+    @State private var bio = ""
+    @State private var photos: [UIImage?] = [nil, nil, nil]
+    @State private var existingPhotoEtags: [String] = []
+    @State private var photosTouched = false
+    @State private var pendingSlot: Int? = nil
+    @State private var showCamera = false
+
+    private static let maxBioChars = 200
+    private static let maxPhotoSlots = 3
+
     private var isEditing: Bool { model.soulmateProfile != nil }
 
     private let genderOptions = [
@@ -31,7 +42,8 @@ struct SoulmateProfileSetupView: View {
         let hasLocation = locationManager.hasLocation || hasExistingLocation
         let hasMinAge = Int(preferredAgeMin) != nil
         let hasMaxAge = Int(preferredAgeMax) != nil
-        return hasName && hasAge && hasLocation && hasMinAge && hasMaxAge
+        let bioOK = bio.count <= Self.maxBioChars
+        return hasName && hasAge && hasLocation && hasMinAge && hasMaxAge && bioOK
     }
 
     var body: some View {
@@ -49,6 +61,14 @@ struct SoulmateProfileSetupView: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
                 }
+
+                // MARK: - Photos
+
+                photosSection
+
+                // MARK: - Bio
+
+                bioSection
 
                 // MARK: - About You
 
@@ -232,6 +252,23 @@ struct SoulmateProfileSetupView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.backgroundGradient)
+        .sheet(isPresented: $showCamera) {
+            CameraCapture(
+                onCapture: { image in
+                    if let slot = pendingSlot, slot < photos.count {
+                        photos[slot] = image
+                        photosTouched = true
+                    }
+                    pendingSlot = nil
+                    showCamera = false
+                },
+                onCancel: {
+                    pendingSlot = nil
+                    showCamera = false
+                }
+            )
+            .ignoresSafeArea()
+        }
         .onAppear {
             guard let profile = model.soulmateProfile else { return }
             displayName = profile.displayName ?? ""
@@ -243,6 +280,120 @@ struct SoulmateProfileSetupView: View {
             latitude = profile.latitude
             longitude = profile.longitude
             hasExistingLocation = true
+            bio = profile.bio ?? ""
+            existingPhotoEtags = profile.photoEtags
+            photosTouched = false
+        }
+    }
+
+    // MARK: - Photos section
+
+    private var photosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("PHOTOS")
+            Text("Up to 3 camera shots — no library uploads.")
+                .font(Theme.sans(13, weight: .light))
+                .foregroundStyle(Theme.textSecondary)
+
+            HStack(spacing: 10) {
+                ForEach(0..<Self.maxPhotoSlots, id: \.self) { idx in
+                    photoSlot(idx)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func photoSlot(_ idx: Int) -> some View {
+        let cornerRadius: CGFloat = 14
+        let local = photos[idx]
+        let etag: String? = existingPhotoEtags.indices.contains(idx) ? existingPhotoEtags[idx] : nil
+
+        Group {
+            if let local {
+                Image(uiImage: local)
+                    .resizable()
+                    .scaledToFill()
+            } else if let etag, let userId = model.userID?.uuidString,
+                      let request = model.backend.soulmatePhotoRequest(userId: userId, idx: idx, etag: etag) {
+                AuthedPhotoView(request: request)
+            } else {
+                ZStack {
+                    Theme.surface
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(1, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .strokeBorder(Theme.divider, lineWidth: 0.5)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            pendingSlot = idx
+            showCamera = true
+        }
+        .contextMenu {
+            if photos[idx] != nil || (existingPhotoEtags.indices.contains(idx)) {
+                Button("Retake") {
+                    pendingSlot = idx
+                    showCamera = true
+                }
+                Button("Remove", role: .destructive) {
+                    removePhoto(at: idx)
+                }
+            }
+        }
+    }
+
+    private func removePhoto(at idx: Int) {
+        // Pack: drop slot idx, shift remaining left, pad with nil.
+        var local = photos
+        local.remove(at: idx)
+        while local.count < Self.maxPhotoSlots { local.append(nil) }
+        photos = local
+
+        if existingPhotoEtags.indices.contains(idx) {
+            existingPhotoEtags.remove(at: idx)
+        }
+        photosTouched = true
+    }
+
+    // MARK: - Bio section
+
+    private var bioSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("BIO")
+            ZStack(alignment: .topLeading) {
+                if bio.isEmpty {
+                    Text("A line or two about you (optional).")
+                        .font(Theme.serif(16))
+                        .foregroundStyle(Theme.textTertiary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                }
+                TextEditor(text: $bio)
+                    .font(Theme.serif(16))
+                    .foregroundStyle(Theme.textPrimary)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            }
+            .frame(minHeight: 96)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            HStack {
+                Spacer()
+                Text("\(bio.count)/\(Self.maxBioChars)")
+                    .font(Theme.sans(12, weight: .light))
+                    .foregroundStyle(bio.count > Self.maxBioChars ? Theme.errorText : Theme.textTertiary)
+            }
         }
     }
 
@@ -282,6 +433,12 @@ struct SoulmateProfileSetupView: View {
             return
         }
 
+        let trimmedBio = bio.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedBio.count <= Self.maxBioChars else {
+            errorMessage = "Bio must be \(Self.maxBioChars) characters or less."
+            return
+        }
+
         // Resolve location
         var lat: Double?
         var lng: Double?
@@ -299,6 +456,32 @@ struct SoulmateProfileSetupView: View {
             return
         }
 
+        // Photos: if user touched them, encode the locally-captured ones in order.
+        // Slots that still have a remote etag but no local override stay as-is —
+        // since the backend treats `photos` as a full replace, those need to be
+        // re-uploaded too. We can only fully replace, so we require all kept
+        // slots to be locally present when photosTouched is true.
+        var encodedPhotos: [Data]? = nil
+        if photosTouched {
+            var encoded: [Data] = []
+            for (idx, image) in photos.enumerated() {
+                if let image {
+                    guard let data = PhotoCompressor.compressedJPEG(from: image) else {
+                        errorMessage = "Photo \(idx + 1) is too large after compression. Try another."
+                        return
+                    }
+                    encoded.append(data)
+                } else if existingPhotoEtags.indices.contains(idx) {
+                    // Untouched remote slot — we cannot re-encode without bytes.
+                    // Treat it as kept by skipping; backend full-replace would
+                    // drop it, so warn the user.
+                    errorMessage = "Retake photo \(idx + 1) before saving."
+                    return
+                }
+            }
+            encodedPhotos = encoded
+        }
+
         isSubmitting = true
         defer { isSubmitting = false }
 
@@ -311,10 +494,16 @@ struct SoulmateProfileSetupView: View {
                 longitude: finalLng,
                 preferredAgeMin: minAge,
                 preferredAgeMax: maxAge,
-                preferredGenders: Array(preferredGenders)
+                preferredGenders: Array(preferredGenders),
+                bio: trimmedBio,
+                photos: encodedPhotos
             )
             await MainActor.run {
                 model.soulmateProfile = response.soulmateProfile
+                if let updated = response.soulmateProfile {
+                    existingPhotoEtags = updated.photoEtags
+                }
+                photosTouched = false
                 if isEditing { dismiss() }
             }
         } catch {

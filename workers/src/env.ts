@@ -12,4 +12,11 @@ export interface Env {
   ENABLE_DEBUG_TRACES?: string;
   ENABLE_SOULMATE?: string;
   MIN_SUPPORTED_VERSION?: string;
+
+  ADMIN_TOKEN?: string;
+  APNS_KEY_P8?: string;
+  APNS_KEY_ID?: string;
+  APNS_TEAM_ID?: string;
+  APNS_TOPIC?: string;
+  APNS_USE_SANDBOX?: string;
 }

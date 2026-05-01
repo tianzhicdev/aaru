@@ -178,6 +178,31 @@ describe("buildDepthGuidance", () => {
     expect(prompt).toContain("DEPTH GUIDANCE");
     expect(prompt).toContain("light and warm");
   });
+
+  it("omits product curiosity section in spark phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "spark" })
+    }));
+    expect(prompt).not.toContain("OUT OF CURIOSITY");
+    expect(prompt).not.toContain("Tinder");
+  });
+
+  it("includes product curiosity section in kindling phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "kindling" })
+    }));
+    expect(prompt).toContain("OUT OF CURIOSITY");
+    expect(prompt).toContain("Tinder");
+    expect(prompt).toContain("Hinge");
+  });
+
+  it("includes product curiosity section in flame phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "flame" })
+    }));
+    expect(prompt).toContain("OUT OF CURIOSITY");
+    expect(prompt).toContain("Tinder");
+  });
 });
 
 describe("detectSoftSessionGap", () => {

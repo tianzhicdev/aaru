@@ -3,6 +3,7 @@ import SwiftUI
 
 struct DebugView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var themeManager: ThemeManager
     @Environment(\.dismiss) private var dismiss
     @State private var deviceIDInput = ""
     @State private var selectedEnvironment = BackendEnvironmentKind.dev
@@ -22,6 +23,7 @@ struct DebugView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
+                        themeSection
                         matchVizButton
                         backendSection
                         identitySection
@@ -46,6 +48,55 @@ struct DebugView: View {
                 await model.fetchDebugInfo()
             }
         }
+    }
+
+    // MARK: - Theme
+
+    private var themeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Theme")
+            ForEach(ThemeTokens.allPresets) { preset in
+                Button {
+                    themeManager.setTheme(preset)
+                } label: {
+                    HStack(spacing: 12) {
+                        themeSwatch(preset)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(preset.displayName)
+                                .font(Theme.sans(14, weight: .medium))
+                                .foregroundStyle(Theme.textPrimary)
+                            Text(preset.id)
+                                .font(Theme.sans(11))
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                        Spacer()
+                        if preset.id == themeManager.current.id {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Theme.accentBright)
+                        }
+                    }
+                    .padding(12)
+                    .background(Theme.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private func themeSwatch(_ tokens: ThemeTokens) -> some View {
+        HStack(spacing: 0) {
+            tokens.bg
+            tokens.primary
+            tokens.primarySoft
+            tokens.butter
+        }
+        .frame(width: 56, height: 28)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(Theme.divider, lineWidth: 0.5)
+        )
     }
 
     // MARK: - Match Visualization

@@ -30,6 +30,27 @@ final class AppModel: ObservableObject {
     @Published var soulmateProfile: SoulmateProfile?
     @Published var soulmateMatches: [SoulmateMatch] = []
     @Published var selectedMatchForReasoning: SoulmateMatch?
+    @Published var domainCoverage: [DomainCoverageEntry] = []
+
+    static let romanceDomains: [String] = [
+        "daily_rhythm", "play_and_joy", "values_and_worldview", "love_language",
+        "conflict_and_repair", "vulnerability_and_trust", "partnership_vision"
+    ]
+
+    var matchingUnlocked: Bool {
+        let required: Set<String> = ["explored", "deep"]
+        let covered = Set(domainCoverage.filter { required.contains($0.depth) }.map(\.domain))
+        return Self.romanceDomains.allSatisfy(covered.contains)
+    }
+
+    var coverageDepthByDomain: [String: String] {
+        var result: [String: String] = [:]
+        for d in Self.romanceDomains { result[d] = "untouched" }
+        for entry in domainCoverage where Self.romanceDomains.contains(entry.domain) {
+            result[entry.domain] = entry.depth
+        }
+        return result
+    }
     private var lastSoulFileSynthesisRequest: Date?
     private var isBootstrapping = false
     private let iso8601Formatter = ISO8601DateFormatter()
@@ -154,6 +175,7 @@ final class AppModel: ObservableObject {
         soulmateProfile = nil
         soulmateMatches = []
         selectedMatchForReasoning = nil
+        domainCoverage = []
     }
 
     // MARK: - Notifications
@@ -214,9 +236,13 @@ final class AppModel: ObservableObject {
 
             logger.info("Soul bootstrap complete: hasMessages=\(self.hasMessages)")
 
-            // Post-bootstrap: load soulmate profile if unlocked
-            if visibleSoulFile.completeness >= 0.7 {
-                Task { await loadSoulmateProfile() }
+            // Post-bootstrap: refresh soul file to get domain coverage,
+            // then load soulmate profile if matching is unlocked
+            Task {
+                await refreshSoulFile()
+                if matchingUnlocked {
+                    await loadSoulmateProfile()
+                }
             }
 
             // Post-bootstrap: schedule local notification
@@ -245,6 +271,7 @@ final class AppModel: ObservableObject {
                 cacheVisibleSoulFile(visibleSoulFile)
                 markFirstSessionCompleted()
             }
+            domainCoverage = response.domainCoverage
             isSoulFileUpdating = response.synthesisPending
         } catch {
             logger.error("Soul file refresh failed: \(error.localizedDescription, privacy: .public)")

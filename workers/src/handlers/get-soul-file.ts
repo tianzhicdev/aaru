@@ -3,6 +3,7 @@ import type { Env } from "../env.ts";
 import type { NeonSQL } from "../db.ts";
 import {
   checkHiddenSynthesisNeeded,
+  getLatestReflectionSnapshot,
   getVisibleSoulFile,
   checkSynthesisNeeded,
   markHiddenSynthesisFailed,
@@ -31,9 +32,10 @@ export async function handleGetSoulFile(
 
   const userId = auth.session.user_id;
   const visibleSoulFile = await getVisibleSoulFile(sql, userId);
-  const [{ needed, pending }, hiddenState] = await Promise.all([
+  const [{ needed, pending }, hiddenState, reflectionNote] = await Promise.all([
     checkSynthesisNeeded(sql, userId),
-    checkHiddenSynthesisNeeded(sql, userId)
+    checkHiddenSynthesisNeeded(sql, userId),
+    getLatestReflectionSnapshot(sql, userId)
   ]);
 
   let synthesisPending = pending;
@@ -78,6 +80,7 @@ export async function handleGetSoulFile(
     visible_soul_file: withCompatSections(file), // COMPAT: remove after MIN_SUPPORTED_VERSION bump
     version: file.version ?? 0,
     last_updated: file.lastUpdated ?? null,
-    synthesis_pending: synthesisPending
+    synthesis_pending: synthesisPending,
+    domain_coverage: reflectionNote?.domainCoverage ?? []
   });
 }

@@ -26,7 +26,6 @@ private let depthOrder: [String: Int] = [
 
 struct SoulCoverageConstellation: View {
     let domainCoverage: [DomainCoverageEntry]
-    @State private var selectedEntry: DomainCoverageEntry?
     @State private var pulse = false
 
     private var depthByDomain: [String: String] {
@@ -62,9 +61,6 @@ struct SoulCoverageConstellation: View {
         }
         .background(Theme.bg.ignoresSafeArea())
         .onAppear { withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { pulse.toggle() } }
-        .sheet(item: $selectedEntry) { entry in
-            DomainDetailSheet(entry: entry)
-        }
     }
 
     private var header: some View {
@@ -93,14 +89,6 @@ struct SoulCoverageConstellation: View {
                     let pos = domainPositions[domain] ?? UnitPoint(x: 0.5, y: 0.5)
                     StarNode(label: domainLabels[domain] ?? domain, depth: depth, pulse: pulse)
                         .position(x: pos.x * geo.size.width, y: pos.y * geo.size.height)
-                        .onTapGesture {
-                            let evidence = domainCoverage.first { $0.domain == domain }?.evidence ?? ""
-                            selectedEntry = DomainCoverageEntry(
-                                domain: domainLabels[domain] ?? domain,
-                                depth: depth,
-                                evidence: evidence
-                            )
-                        }
                 }
             }
         }
@@ -227,7 +215,6 @@ private struct StarNode: View {
                 .lineLimit(2)
                 .frame(width: 92)
         }
-        .contentShape(Rectangle())
     }
 
     private var starFill: Color {
@@ -235,57 +222,6 @@ private struct StarNode: View {
         case "deep", "explored": return Theme.butter
         default: return Theme.textSecondary
         }
-    }
-}
-
-private struct DomainDetailSheet: View {
-    let entry: DomainCoverageEntry
-    @Environment(\.dismiss) private var dismiss
-
-    private var depthLabel: String {
-        switch entry.depth {
-        case "deep": return "Deeply explored"
-        case "explored": return "Explored"
-        case "mentioned": return "Just mentioned"
-        default: return "Not yet touched"
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(entry.domain)
-                    .font(Theme.wordmark(24))
-                    .foregroundStyle(Theme.primaryDeep)
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
-
-            Text(depthLabel)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.primary)
-
-            if !entry.evidence.isEmpty {
-                Text(entry.evidence)
-                    .font(.system(size: 15))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineSpacing(3)
-            } else {
-                Text("Bring this up in your next conversation to light it up.")
-                    .font(.system(size: 14).italic())
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
-            Spacer()
-        }
-        .padding(24)
-        .presentationDetents([.fraction(0.32)])
-        .presentationDragIndicator(.visible)
     }
 }
 

@@ -215,6 +215,7 @@ struct MatchChatView: View {
                     Color.clear.frame(width: 28, height: 28)
                 }
             }
+            if mine { Spacer(minLength: 0) }
             VStack(alignment: mine ? .trailing : .leading, spacing: 2) {
                 PillowChatBubble(
                     text: message.content,
@@ -230,7 +231,6 @@ struct MatchChatView: View {
                         .padding(.horizontal, 4)
                 }
             }
-            if mine { Spacer(minLength: 0) }
         }
         .padding(.top, stackTop ? 2 : 8)
         .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)

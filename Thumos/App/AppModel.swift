@@ -263,6 +263,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshSoulFile() async {
+        guard backend.sessionToken != nil else { return }
         do {
             let response = try await backend.getSoulFile()
             let file = response.visibleSoulFile

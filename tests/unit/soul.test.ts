@@ -313,6 +313,63 @@ describe("productCuriosity", () => {
   });
 });
 
+describe("matchingAwareness", () => {
+  it("is absent in spark phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "spark" })
+    }));
+    expect(prompt).not.toContain("MATCHING (only if they ask");
+  });
+
+  it("is present in kindling phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "kindling" })
+    }));
+    expect(prompt).toContain("MATCHING (only if they ask");
+    expect(prompt).toContain("seven life domains");
+    expect(prompt).toContain("Connect tab");
+  });
+
+  it("is present in flame phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "flame" })
+    }));
+    expect(prompt).toContain("MATCHING (only if they ask");
+  });
+
+  it("is present in hearth phase", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "hearth" })
+    }));
+    expect(prompt).toContain("MATCHING (only if they ask");
+  });
+
+  it("contains key phrases in en text", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+      language: "en"
+    }));
+    expect(prompt).toContain("never bring this up yourself");
+    expect(prompt).toContain("seven life domains");
+    expect(prompt).toContain("Connect tab");
+    expect(prompt).toContain("Never say exact percentages");
+    expect(prompt).toContain("the better I know you, the better the matches will be");
+  });
+
+  it("exists in all supported languages", () => {
+    const languages = ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "zh-CN"];
+    for (const lang of languages) {
+      const prompt = buildSoulSystemPrompt(makeContext({
+        reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
+        language: lang
+      }));
+      expect(prompt, `matchingAwareness missing for language: ${lang}`).toMatch(
+        /MATCHING \(only if they ask|MATCHING \(nur wenn sie fragen|MATCHING \(solo si preguntan|MATCHING \(uniquement s'ils demandent|マッチング（聞かれた場合のみ|매칭 \(상대가 물어볼 때만|MATCHING \(só se perguntarem|匹配（只有在他们问的时候/i
+      );
+    }
+  });
+});
+
 describe("detectSoftSessionGap", () => {
   const threshold = 60 * 60 * 1000;
 

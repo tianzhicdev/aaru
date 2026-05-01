@@ -33,6 +33,7 @@ export interface SoulPromptStrings {
   openingFirstEver: string;
   openingReturning: string;
   productCuriosity?: string;
+  matchingAwareness?: string;
 }
 
 export interface NavigationStrings {

@@ -80,4 +80,11 @@ describe("i18n", () => {
       expect(p.soul.productCuriosity).toContain("Hinge");
     }
   });
+
+  it("all languages have a matchingAwareness prompt", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const p = getPrompts(lang);
+      expect(p.soul.matchingAwareness, `matchingAwareness missing for ${lang}`).toBeTruthy();
+    }
+  });
 });

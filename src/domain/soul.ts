@@ -276,6 +276,9 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
   const curiositySection = phase !== "spark" && soul.productCuriosity
     ? `\n\n${soul.productCuriosity}`
     : "";
+  const matchingSection = phase !== "spark" && soul.matchingAwareness
+    ? `\n\n${soul.matchingAwareness}`
+    : "";
 
   const languageDirective = getLanguageDirective(context.language);
 
@@ -294,7 +297,7 @@ ${soul.pacing}
 
 ${soul.difficultMoments}
 
-${soul.goodResponse}${curiositySection}${languageDirective}`;
+${soul.goodResponse}${curiositySection}${matchingSection}${languageDirective}`;
 }
 
 export function detectSoftSessionGap(

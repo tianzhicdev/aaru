@@ -279,6 +279,7 @@ struct SoulConversationScreen: View {
                         Color.clear.frame(width: 28, height: 28)
                     }
                 }
+                if mine { Spacer(minLength: 0) }
                 let bubble = PillowChatBubble(text: item.content, mine: mine)
                     .frame(maxWidth: 280, alignment: mine ? .trailing : .leading)
 
@@ -293,8 +294,6 @@ struct SoulConversationScreen: View {
                 } else {
                     bubble
                 }
-
-                if mine { Spacer(minLength: 0) }
             }
             .padding(.top, previousRowIsSameRole(index: index, role: item.role) ? 2 : 8)
             .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
@@ -314,13 +313,11 @@ struct SoulConversationScreen: View {
     }
 
     private var thumosAvatar: some View {
-        ZStack {
-            Circle().fill(Theme.butterSoft)
-            Image(systemName: "moon.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.butter)
-        }
-        .frame(width: 28, height: 28)
+        Image("ThumosLogo")
+            .resizable()
+            .scaledToFill()
+            .frame(width: 28, height: 28)
+            .clipShape(Circle())
     }
 
     private var scrollToBottomFAB: some View {
@@ -370,12 +367,11 @@ struct SoulConversationScreen: View {
             Spacer()
 
             VStack(spacing: 24) {
-                ZStack {
-                    Circle().fill(Theme.butterSoft).frame(width: 96, height: 96)
-                    Image(systemName: "moon.fill")
-                        .font(.system(size: 38))
-                        .foregroundStyle(Theme.butter)
-                }
+                Image("ThumosLogo")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 96, height: 96)
+                    .clipShape(Circle())
 
                 Text("Welcome")
                     .font(Theme.wordmark(40))

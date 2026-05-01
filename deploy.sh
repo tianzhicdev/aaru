@@ -144,6 +144,11 @@ if [[ "$TARGET" == "dev" ]]; then
   ENABLE_DEBUG_TRACES_VALUE="$(pick_first ENABLE_DEBUG_TRACES_DEV ENABLE_DEBUG_TRACES || true)"
   ENABLE_SOULMATE_VALUE="$(pick_first ENABLE_SOULMATE_DEV ENABLE_SOULMATE || true)"
   MIN_SUPPORTED_VERSION_VALUE="$(pick_first MIN_SUPPORTED_VERSION_DEV MIN_SUPPORTED_VERSION || true)"
+  APNS_KEY_P8_VALUE="$(pick_first APNS_KEY_P8_DEV APNS_KEY_P8 || true)"
+  APNS_KEY_ID_VALUE="$(pick_first APNS_KEY_ID_DEV APNS_KEY_ID || true)"
+  APNS_TEAM_ID_VALUE="$(pick_first APNS_TEAM_ID_DEV APNS_TEAM_ID || true)"
+  APNS_TOPIC_VALUE="$(pick_first APNS_TOPIC_DEV APNS_TOPIC || true)"
+  APNS_USE_SANDBOX_VALUE="$(pick_first APNS_USE_SANDBOX_DEV APNS_USE_SANDBOX || true)"
 else
   WRANGLER_ENV="production"
   QUEUE_NAME="thumos-soul-synthesis"
@@ -160,6 +165,11 @@ else
   ENABLE_DEBUG_TRACES_VALUE="$(pick_first ENABLE_DEBUG_TRACES || true)"
   ENABLE_SOULMATE_VALUE="$(pick_first ENABLE_SOULMATE || true)"
   MIN_SUPPORTED_VERSION_VALUE="$(pick_first MIN_SUPPORTED_VERSION || true)"
+  APNS_KEY_P8_VALUE="$(pick_first APNS_KEY_P8 || true)"
+  APNS_KEY_ID_VALUE="$(pick_first APNS_KEY_ID || true)"
+  APNS_TEAM_ID_VALUE="$(pick_first APNS_TEAM_ID || true)"
+  APNS_TOPIC_VALUE="$(pick_first APNS_TOPIC || true)"
+  APNS_USE_SANDBOX_VALUE="$(pick_first APNS_USE_SANDBOX || true)"
 fi
 
 [[ -n "$CLOUDFLARE_API_TOKEN_VALUE" ]] || die "Missing Cloudflare API token for $TARGET"
@@ -197,6 +207,11 @@ put_secret "DEBUG_API_TOKEN" "$DEBUG_API_TOKEN_VALUE"
 put_secret "ENABLE_DEBUG_TRACES" "$ENABLE_DEBUG_TRACES_VALUE"
 put_secret "ENABLE_SOULMATE" "$ENABLE_SOULMATE_VALUE"
 put_secret "MIN_SUPPORTED_VERSION" "$MIN_SUPPORTED_VERSION_VALUE"
+put_secret "APNS_KEY_P8" "$APNS_KEY_P8_VALUE"
+put_secret "APNS_KEY_ID" "$APNS_KEY_ID_VALUE"
+put_secret "APNS_TEAM_ID" "$APNS_TEAM_ID_VALUE"
+put_secret "APNS_TOPIC" "$APNS_TOPIC_VALUE"
+put_secret "APNS_USE_SANDBOX" "$APNS_USE_SANDBOX_VALUE"
 
 echo "Deploying Worker"
 (

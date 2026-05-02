@@ -13,7 +13,7 @@
  *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only charlie-scene
  *        npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --exchanges 100
  *
- * Optional env: THUMOS_API_BASE=https://api.trythumos.com
+ * Optional env: THUMOS_API_BASE=https://api.trymagpie.xyz
  *
  * See scripts/SIMULATION.md for methodology and verification checklist.
  */
@@ -22,7 +22,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import "dotenv/config";
 
-const API_BASE = process.env.THUMOS_API_BASE || "https://api.trythumos.com";
+const API_BASE = process.env.THUMOS_API_BASE || "https://api.trymagpie.xyz";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const DEBUG_API_TOKEN = process.env.THUMOS_DEBUG_API_TOKEN
   || process.env.DEBUG_API_TOKEN

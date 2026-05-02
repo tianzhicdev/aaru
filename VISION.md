@@ -30,7 +30,7 @@ we should be able to have a debug build that is only available to developer wher
 
 
 === marketing ===
-trythumos.com for SEO
+trymagpie.xyz for SEO
 social networks for initial feedback
 
 

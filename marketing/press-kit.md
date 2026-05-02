@@ -1,34 +1,34 @@
-# Thumos Press Kit
+# Magpie Press Kit
 
 ## One-liner
-Thumos is a soul mirror — an AI that builds a living portrait of who you are through reflective conversation.
+Magpie is a soul mirror — an AI that builds a living portrait of who you are through reflective conversation.
 
 ## Short description (100 words)
-Thumos is an iOS app that helps you understand who you really are. Not through personality quizzes or labels — through honest, reflective conversation with an AI that listens more than it speaks. Over multiple conversations, Thumos builds a "soul file" — a living portrait written in your own words and metaphors. Seven sections capture how you move, think, connect, what you carry, what lights you up, your contradictions, and your voice. The portrait evolves with every conversation. No accounts needed. No labels. No advice. Just a mirror.
+Magpie is an iOS app that helps you understand who you really are. Not through personality quizzes or labels — through honest, reflective conversation with an AI that listens more than it speaks. Over multiple conversations, Magpie builds a "soul file" — a living portrait written in your own words and metaphors. Seven sections capture how you move, think, connect, what you carry, what lights you up, your contradictions, and your voice. The portrait evolves with every conversation. No accounts needed. No labels. No advice. Just a mirror.
 
 ## Long description (250 words)
-Thumos is a soul mirror.
+Magpie is a soul mirror.
 
 It's an AI-powered iOS app that helps you understand who you really are — not through personality quizzes, labels, or diagnostic categories, but through honest, reflective conversation.
 
-When you open Thumos, you're greeted with a single question. The AI asks one thing at a time, listens carefully, quotes your own words back to you, and notices what you contradicted, what you avoided, and what lit you up. Responses are short — 2-4 sentences — because a mirror doesn't lecture.
+When you open Magpie, you're greeted with a single question. The AI asks one thing at a time, listens carefully, quotes your own words back to you, and notices what you contradicted, what you avoided, and what lit you up. Responses are short — 2-4 sentences — because a mirror doesn't lecture.
 
-Over multiple conversations, Thumos builds your "soul file" — a living portrait organized into seven sections: How You Move, How You Think, How You Connect, What You Carry, What Lights You Up, Your Contradictions, and Your Voice. The portrait is written in second person, using your own language and metaphors. Not "Openness: 82%" — more like "You reach for metaphors before logic, and the metaphors are usually about water."
+Over multiple conversations, Magpie builds your "soul file" — a living portrait organized into seven sections: How You Move, How You Think, How You Connect, What You Carry, What Lights You Up, Your Contradictions, and Your Voice. The portrait is written in second person, using your own language and metaphors. Not "Openness: 82%" — more like "You reach for metaphors before logic, and the metaphors are usually about water."
 
 The synthesis engine runs your conversations through four expert lenses — a psychologist, sociologist, linguist, and narrative analyst — each capturing patterns the others miss. The result is richer than any single perspective.
 
-Thumos is not therapy, not a chatbot companion, and not a personality test. It's a mirror. Your conversations are private, processed by Claude (Anthropic), and no human reads them. Free to use, no account needed.
+Magpie is not therapy, not a chatbot companion, and not a personality test. It's a mirror. Your conversations are private, processed by Claude (Anthropic), and no human reads them. Free to use, no account needed.
 
 ## Key facts
 - **Developer**: Kwafy LLC
 - **Platform**: iOS 17+
 - **Price**: Free
 - **AI**: Claude by Anthropic (Opus 4 + Haiku 4.5)
-- **Website**: trythumos.com
-- **Contact**: support@trythumos.com
+- **Website**: trymagpie.xyz
+- **Contact**: support@trymagpie.xyz
 
 ## Positioning
-| What Thumos is | What Thumos is NOT |
+| What Magpie is | What Magpie is NOT |
 |---|---|
 | A soul mirror | A chatbot companion (Replika) |
 | Reflective conversation | A personality quiz (Dimensional) |
@@ -38,7 +38,7 @@ Thumos is not therapy, not a chatbot companion, and not a personality test. It's
 
 ## Key quotes
 > "I'm not a therapist — I'm a mirror."
-> — Thumos (the AI's actual response when asked for advice)
+> — Magpie (the AI's actual response when asked for advice)
 
 > "The most interesting thing about any person is the contradiction — the part that doesn't fit in a box."
 

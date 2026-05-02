@@ -1,14 +1,14 @@
 # Show HN Post
 
 ## Title
-Show HN: Thumos – AI conversations replace swiping to match on who you actually are
+Show HN: Magpie – AI conversations replace swiping to match on who you actually are
 
 ## URL
-https://trythumos.com
+https://trymagpie.xyz
 
 ## Post
 
-I built an iOS app that replaces swiping with AI conversations. Instead of photos, Thumos builds a living psychological portrait of who you are in relationships, then matches you with compatible people based on that portrait. Your portrait is never shared — matches only see your display name and a compatibility story.
+I built an iOS app that replaces swiping with AI conversations. Instead of photos, Magpie builds a living psychological portrait of who you are in relationships, then matches you with compatible people based on that portrait. Your portrait is never shared — matches only see your display name and a compatibility story.
 
 **The problem I'm solving:**
 
@@ -20,7 +20,7 @@ Dating apps match on photos. Questionnaire-based apps (eHarmony, OkCupid) match 
 
 2. As you talk, it builds a living portrait covering: How You Light Up, How You Show Up, How You Love, How You Weather Storms, What You're Looking For, and Your Growing Edges. Plus a Soul Compass (8-axis radar: openness, vitality, warmth, connection, resilience, purpose, depth, autonomy) and Personality Spectrum (5 continuums like consistency↔curiosity, calm↔sensitive).
 
-3. Once the portrait reaches sufficient depth, Thumos evaluates compatibility with other users across romance dimensions — attachment fit, conflict compatibility, love language resonance, values alignment, partnership vision. Each match comes with a personalized compatibility story, not a percentage.
+3. Once the portrait reaches sufficient depth, Magpie evaluates compatibility with other users across romance dimensions — attachment fit, conflict compatibility, love language resonance, values alignment, partnership vision. Each match comes with a personalized compatibility story, not a percentage.
 
 **Architecture:**
 
@@ -47,4 +47,4 @@ Free, no account needed, iPhone only. Early stage — small user base, still gro
 Would love technical feedback, especially on the matching approach. Using LLMs for compatibility evaluation (reading two full portraits and evaluating across dimensions) is a different bet than collaborative filtering or embedding similarity.
 
 App Store: https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301
-Website: https://trythumos.com
+Website: https://trymagpie.xyz

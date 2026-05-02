@@ -76,12 +76,12 @@ export function buildDefaultReflectionNote(): ReflectionNote {
     avoidPastObservations: [],
     avoidPastQuestions: [],
     steerToTopics: [
-      "Daily Rhythm — where do they live, what does their everyday life look like?",
-      "Play & Joy — are they seeing anyone right now, and what does fun look like for them?",
-      "Daily Rhythm — where did they grow up, and what's their story so far?"
+      "Daily Rhythm — what would a normal day together look like with someone?",
+      "Play & Joy — what do they want to do for fun with someone they're into?",
+      "Daily Rhythm — what kind of life would their person need to fit into?"
     ],
     steeringPressure: "gentle",
-    steeringReasoning: "First conversation — learn the basics (where from, single/not, love history) through natural conversation before going deeper.",
+    steeringReasoning: "First conversation — explore what they're looking for through light, easy questions.",
     userOpenness: "warming",
     opennessEvidence: "First conversation — no data yet.",
     summary: ""
@@ -94,10 +94,10 @@ function buildSummarySection(note: ReflectionNote): string {
 }
 
 const DEPTH_GUIDANCE: Record<UserOpenness, string> = {
-  guarded: "DEPTH GUIDANCE: Keep it light and warm. One concrete, easy question. No probing.",
-  warming: "DEPTH GUIDANCE: Match their pace. You can lean in a little, but don't push past where they've gone.",
-  open: "DEPTH GUIDANCE: They're ready for depth. Explore tensions, contradictions, the real stuff.",
-  deep: "DEPTH GUIDANCE: Go as deep as they're going. Mine the rich material."
+  guarded: "DEPTH GUIDANCE: Ask about what they want in someone — easy, concrete, no pressure.",
+  warming: "DEPTH GUIDANCE: Match their pace. You can lean in a little — explore what they really need vs. what they say they want.",
+  open: "DEPTH GUIDANCE: They're ready for depth. Explore what they really need vs. what they say they want. Mirror and invert.",
+  deep: "DEPTH GUIDANCE: Surface contradictions, connect their partner desires to their own patterns. Mine the rich material."
 };
 
 export function buildDepthGuidance(note: ReflectionNote | null): string {
@@ -276,7 +276,7 @@ export function buildSoulSystemPrompt(context: SoulConversationContext): string 
   const curiositySection = phase !== "spark" && soul.productCuriosity
     ? `\n\n${soul.productCuriosity}`
     : "";
-  const matchingSection = phase !== "spark" && soul.matchingAwareness
+  const matchingSection = soul.matchingAwareness
     ? `\n\n${soul.matchingAwareness}`
     : "";
 

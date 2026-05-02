@@ -1,31 +1,31 @@
-# Thumos
+# Magpie
 
-> Thumos is a dating app that uses AI conversations to build a living portrait of who you are, then matches you with deeply compatible people. No swiping. No photos. Just understanding.
+> Magpie is a dating app that uses AI conversations to build a living portrait of who you are, then matches you with deeply compatible people. No swiping. No photos. Just understanding.
 
-Thumos replaces swiping with reflective AI conversations called Soul Mirror. Through natural conversation, it builds a deep psychological portrait covering attachment style, love language, conflict approach, values, and partnership vision. The matching engine then evaluates compatibility across romance dimensions to find genuinely compatible people.
+Magpie replaces swiping with reflective AI conversations. Through natural conversation, it builds a deep psychological portrait covering attachment style, love language, conflict approach, values, and partnership vision. The matching engine then evaluates compatibility across romance dimensions to find genuinely compatible people.
 
-Unlike Tinder, Hinge, or Bumble, Thumos never shows your profile or photos to other users. Matches only see a display name and an AI-generated explanation of why you connect. Available free on iOS.
+Unlike Tinder, Hinge, or Bumble, Magpie never shows your profile or photos to other users. Matches only see a display name and an AI-generated explanation of why you connect. Available free on iOS.
 
 ## Core Pages
-- [Home](https://trythumos.com/): Landing page and app download
-- [About Thumos](https://trythumos.com/about): What Thumos is, how it works, who it's for
-- [Compare Dating Apps](https://trythumos.com/compare): Thumos vs Tinder vs Hinge vs Bumble vs eHarmony vs OkCupid
-- [Support & FAQ](https://trythumos.com/support): How Thumos works, privacy, data deletion, matching FAQ
-- [Privacy Policy](https://trythumos.com/privacy): Data handling, third-party disclosures
+- [Home](https://trymagpie.xyz/): Landing page and app download
+- [About Magpie](https://trymagpie.xyz/about): What Magpie is, how it works, who it's for
+- [Compare Dating Apps](https://trymagpie.xyz/compare): Magpie vs Tinder vs Hinge vs Bumble vs eHarmony vs OkCupid
+- [Support & FAQ](https://trymagpie.xyz/support): How Magpie works, privacy, data deletion, matching FAQ
+- [Privacy Policy](https://trymagpie.xyz/privacy): Data handling, third-party disclosures
 
 ## Blog
-- [Why We Built Thumos](https://trythumos.com/blog/why-we-built-thumos): The problem with swiping and what comes next
-- [AI Conversations vs Questionnaires](https://trythumos.com/blog/ai-conversations-vs-questionnaires): Why conversations reveal more than multiple-choice questions
-- [What Is a Soul Portrait?](https://trythumos.com/blog/what-is-a-soul-portrait): A living psychological portrait, not a curated dating profile
+- [Why We Built Magpie](https://trymagpie.xyz/blog/why-we-built-magpie): The problem with swiping and what comes next
+- [AI Conversations vs Questionnaires](https://trymagpie.xyz/blog/ai-conversations-vs-questionnaires): Why conversations reveal more than multiple-choice questions
+- [What Is a Soul Portrait?](https://trymagpie.xyz/blog/what-is-a-soul-portrait): A living psychological portrait, not a curated dating profile
 
 ## Key Features
-- [Soul Mirror](https://trythumos.com/about#soul-mirror-ai-powered-self-discovery): AI-powered reflective conversations that build a living portrait
-- [Soulmate Matching](https://trythumos.com/about#matching-compatibility-across-romance-dimensions): LLM-based compatibility evaluation across romance dimensions
-- [Privacy-First Design](https://trythumos.com/privacy): Your portrait is never shared with other users
+- [How It Works](https://trymagpie.xyz/about): AI-powered reflective conversations that build a living portrait
+- [Soulmate Matching](https://trymagpie.xyz/about): LLM-based compatibility evaluation across romance dimensions
+- [Privacy-First Design](https://trymagpie.xyz/privacy): Your portrait is never shared with other users
 
 ## App
-- [Download on the App Store](https://apps.apple.com/us/app/thumos-the-soul-mirror/id6761300301)
+- [Download on the App Store](https://apps.apple.com/us/app/magpie-the-soul-mirror/id6761300301)
 
 ## Contact
-- Email: support@trythumos.com
-- Website: https://trythumos.com
+- Email: hey@trymagpie.xyz
+- Website: https://trymagpie.xyz

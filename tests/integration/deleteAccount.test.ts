@@ -28,7 +28,7 @@ const mockDeviceSession = {
 };
 
 function makeRequest(headers: Record<string, string> = {}): Request {
-  return new Request("https://api.trythumos.com/delete-account", {
+  return new Request("https://api.trymagpie.xyz/delete-account", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers }
   });

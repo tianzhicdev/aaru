@@ -22,7 +22,7 @@
 ### Deploy
 
 ```bash
-npx wrangler pages deploy web --project-name=thumos-web
+npx wrangler pages deploy web --project-name=magpie-web
 ```
 
 ---
@@ -42,7 +42,7 @@ npx wrangler pages deploy web --project-name=thumos-web
 ### Third-Party Profiles (free, 1-2 hours total)
 
 - [ ] **Product Hunt** — create listing (marketing/product-hunt.md already has the copy)
-- [ ] **Trustpilot** — claim business profile at trythumos.com
+- [ ] **Trustpilot** — claim business profile at trymagpie.xyz
 - [ ] **AlternativeTo** — list Thumos as alternative to Tinder/Hinge/Bumble
 - [ ] **AppSumo / AppRater / SaaSHub** — list on app discovery platforms
 - [ ] **Bing Webmaster Tools** — submit sitemap (feeds Microsoft Copilot)
@@ -145,7 +145,7 @@ Pitch the story: "This dating app replaces swiping with AI conversations that bu
 | Reddit | Highest (40% of training data) | Not started |
 | YouTube | Strongest correlation (0.74) | Not started |
 | Tech press (TechCrunch etc.) | 82% of AI citations | Not started |
-| Your website (trythumos.com) | Foundation — canonical entity | Enhanced today |
+| Your website (trymagpie.xyz) | Foundation — canonical entity | Enhanced today |
 | Review platforms (Trustpilot etc.) | 3x citation boost | Not started |
 | Wikipedia | Entity knowledge foundation | Needs notability first |
 | Product Hunt | Low direct AI impact, but generates coverage | Copy ready |

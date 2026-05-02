@@ -32,7 +32,7 @@ npx tsc -p tsconfig.json --noEmit
 
 ### iOS unit tests (requires macOS + Xcode + simulator)
 ```bash
-xcodebuild test -project Thumos.xcodeproj -scheme Thumos \
+xcodebuild test -project Magpie.xcodeproj -scheme Magpie \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -resultBundlePath ./TestResults \
   | xcpretty
@@ -40,7 +40,7 @@ xcodebuild test -project Thumos.xcodeproj -scheme Thumos \
 
 ### iOS build
 ```bash
-xcodebuild build -project Thumos.xcodeproj -scheme Thumos \
+xcodebuild build -project Magpie.xcodeproj -scheme Magpie \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1' \
   -derivedDataPath ./DerivedData \
   | xcpretty
@@ -136,14 +136,14 @@ A task is complete when ALL of the following are true:
 2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
 3. No regressions in existing functionality
 4. Code is committed with a clear message
-5. If iOS code was changed: `xcodebuild build -project Thumos.xcodeproj` succeeds (when available)
+5. If iOS code was changed: `xcodebuild build -project Magpie.xcodeproj` succeeds (when available)
 
 ## Known Constraints & Gotchas
 - **No API keys in CI/test** — LLM-dependent code must remain unit-testable without real API calls. The conversation path keeps a fallback; background jobs fail closed.
 - **Dual soul file architecture** — VisibleSoulFile (user-facing, "accurate and loving") + HiddenSoulFile (agent-facing, clinical). Generated independently from raw messages + latest reflection note — no shared assessment step, no merge with previous versions. Each synthesis is a clean overwrite (INSERT new version). Visible and hidden are queued as separate background jobs. Psychometric scores (personality spectrum, compass) live only in the visible file. If synthesis fails, keep the last ready file and retry later.
 - **No soul sessions** — Messages belong directly to users (no session grouping)
 - **iOS client is a display layer** — all state is server-authoritative
-- **XcodeGen** — project.yml generates Thumos.xcodeproj; don't edit .xcodeproj directly
+- **XcodeGen** — project.yml generates Magpie.xcodeproj; don't edit .xcodeproj directly
 - **SSE streaming** — soul-converse returns Server-Sent Events; iOS uses URLSession.bytes
 - **Canonical transcript** — Live conversation uses the full persisted `soul_messages` transcript, not a last-10 slice.
 - **Opening flow** — Assistant-led starts are unified under `POST /soul-converse` with `mode: "opening"`. There is no separate re-engagement endpoint in the chat flow. Opening mode can fetch current events via xAI web search (Grok 4) for topics from openThreads + recurringThemes, injected as optional "CURRENT CONTEXT" in the system prompt.
@@ -190,7 +190,7 @@ The iOS ↔ server wire format is locked. Golden fixtures in `contracts/` are th
 ## Verify (standard process — run after every change)
 1. `npx vitest run` — all tests pass
 2. `npx tsc -p tsconfig.json --noEmit` — zero type errors
-3. If iOS code was changed: `xcodebuild build-for-testing -project Thumos.xcodeproj -scheme Thumos -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1'`
+3. If iOS code was changed: `xcodebuild build-for-testing -project Magpie.xcodeproj -scheme Magpie -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.1'`
 4. If tests fail: read error, fix, rerun — repeat up to 3 times
 5. If still failing after 3 attempts: write BLOCKED.md explaining why
 
@@ -209,7 +209,7 @@ sudo ./deploy.sh --prod --secrets /Users/biubiu/.secrets/prod.env
 Active endpoints: ping, version, bootstrap-soul, sync-messages, soul-converse (deprecated), soul-send, get-soul-file, soulmate-profile, get-matches, match-messages, delete-account, get-debug-info, debug-dump
 
 ## iOS QA (when macOS/Xcode available)
-- Scheme: Thumos
+- Scheme: Magpie
 - Bundle ID: com.trythumos.app
 - Simulator: iPhone 17 Pro (iOS 26.1)
 - Boot: `xcrun simctl boot "iPhone 17 Pro"`

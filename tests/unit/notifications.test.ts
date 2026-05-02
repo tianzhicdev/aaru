@@ -74,7 +74,7 @@ describe("notifications", () => {
     expect(sendPush).toHaveBeenCalledTimes(2);
     const firstCall = vi.mocked(sendPush).mock.calls[0];
     expect(firstCall[1]).toBe("tok-a");
-    expect(firstCall[2].alert.title).toBe("Thumos");
+    expect(firstCall[2].alert.title).toBe("Magpie");
     expect(firstCall[2].alert.body.length).toBeLessThanOrEqual(180);
     expect(firstCall[2].customData?.type).toBe("admin_message");
   });

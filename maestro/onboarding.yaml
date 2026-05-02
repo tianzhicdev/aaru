@@ -1,7 +1,7 @@
 appId: com.trythumos.app
 ---
 - launchApp
-- assertVisible: "Thumos"
+- assertVisible: "Magpie"
 - assertVisible: "Describe your soul"
 - tapOn: "Describe your soul.*"
 - inputText: "I love exploring ancient myths, writing poetry, and stargazing on quiet nights."

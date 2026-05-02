@@ -80,7 +80,7 @@ The arc moves from **connection** → **introspection** → **crystallization** 
 
 ## Web Application
 
-The landing page at trythumos.com should reflect this language:
+The landing page at trymagpie.xyz should reflect this language:
 - Shift accent color from ember/orange (`#ff8f3f`) to gold (`#C9A84C`)
 - Use the App Store screenshots as hero/feature imagery
 - Adopt the narrative arc as the page scroll story

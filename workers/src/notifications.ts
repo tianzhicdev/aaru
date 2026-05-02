@@ -83,7 +83,7 @@ export async function notifyAdminMessage(
   preview: string
 ): Promise<void> {
   await fanOut(sql, env, userId, {
-    alert: { title: "Thumos", body: truncate(preview, 180) },
+    alert: { title: "Magpie", body: truncate(preview, 180) },
     customData: { type: "admin_message" }
   });
 }

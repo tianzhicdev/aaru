@@ -1,0 +1,738 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0349566B1F9CF50C5F3E9B90 /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90450AB66DD61425A2040795 /* ForceUpdateView.swift */; };
+		08ADD78F620B7B1BBFB94417 /* CormorantGaramond-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0B16D211FFAED9D9B76764E2 /* CormorantGaramond-LightItalic.ttf */; };
+		09D2B14EF5660FCA29118DA8 /* m03_sage_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 69C30884C2431D84692552A7 /* m03_sage_walk.png */; };
+		0B970663260A21463484AE3C /* m14_cowlick_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 101B63D3C83081F39F7E6BF7 /* m14_cowlick_walk.png */; };
+		0BDF04469525DF488D392CE4 /* BackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88763E50BE2A0C89202AE770 /* BackendClient.swift */; };
+		0CBADC47F4E52F1BE99128C8 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9792DE990BB6293C8214AC4C /* NotificationManager.swift */; };
+		0CFF0CF90DECEA225A753AAC /* CormorantGaramond-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E32ADDBD481CADC3E5967B4F /* CormorantGaramond-Medium.ttf */; };
+		1151E4D11825F4BC34F6D59C /* m04_rebel_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 30E6C788795EAFE620EE7F55 /* m04_rebel_walk.png */; };
+		1A741C816DED9F447D8D32AB /* MagpieApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE3EDEFFA3312B7416A3144 /* MagpieApp.swift */; };
+		1A809BD1B25B2A883BD88FEE /* f03_scholar_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 3CDBDD1FFDA28052A924B497 /* f03_scholar_walk.png */; };
+		259A8266AEDF441707B74C70 /* f05_botanist_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 9DC16C9B39656B6D4CCC57E9 /* f05_botanist_walk.png */; };
+		2CD4C4C84F4A905D9271AE2C /* f06_dancer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 153C42FD0741A4B7FD65F037 /* f06_dancer_walk.png */; };
+		2F3509DE3F82BA4E761460F1 /* SoulFileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53D5ACDDDBFAFFFF1A872F4C /* SoulFileScreen.swift */; };
+		338151420E806C94910E586C /* BackendEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54CF4725834BD0D33AF3EA6 /* BackendEnvironment.swift */; };
+		348054734CF74D7065AFE040 /* f11_studious_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 0B1F418574B5A84C89FFD612 /* f11_studious_walk.png */; };
+		34EA7E596F40F934FDD461DC /* SoulConversationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F567A0EC35EE4DDB140DA1C /* SoulConversationScreen.swift */; };
+		354244B1847E4E11D7DBB26D /* AIConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AE3EE15B82F6D553F6626C /* AIConsentView.swift */; };
+		39FBCA91116ABCA71B253789 /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF34E28C885FCA32E6575495 /* DebugView.swift */; };
+		3C93330FC88F5FD4835203D3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD198E6E8AEBB65285C5657 /* SettingsView.swift */; };
+		40FDA7A983402CFC69ABA09F /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 560A5931F90D460DF224386C /* Theme.swift */; };
+		44D910BC9644200BD465DBCA /* TopValuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B02F83BD9BD7F26079957E2 /* TopValuesView.swift */; };
+		488895005754B4BFD7988A73 /* m12_surfer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 5E1ACA6A590A7E6596BAB8DE /* m12_surfer_walk.png */; };
+		4D672862D11E0682471E4C12 /* CormorantGaramond-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 95D10E6519C8BDB91EA34D97 /* CormorantGaramond-Light.ttf */; };
+		5A0CE6C67D13B17A8BA8BB8F /* t01_student_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 9AB6568FC0F06C3A320ABDD9 /* t01_student_walk.png */; };
+		5EDA16E4EA73234DC8FD0FD9 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D77F2EE38C55CBB4F35846F /* AppModel.swift */; };
+		622B641D4731B9FDAABDEC3E /* SoulMirrorTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D13B6413CC96E841A43A7685 /* SoulMirrorTabView.swift */; };
+		62AB84798B2D14DADA5C0829 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA713FC856BD9FC26B103D16 /* SplashView.swift */; };
+		63CC8C8FAD6C5D5444724337 /* SoulCoverageConstellation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C645EC16208B84B5DEE29638 /* SoulCoverageConstellation.swift */; };
+		65321FFF1183A84CE2892EB5 /* SecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1FFA46084ADEFBA6EDBC0CE /* SecureStore.swift */; };
+		68335F9F39AEDC3CA3C989A5 /* ChatComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE2A98C8D54FCA93DAD0A66F /* ChatComponents.swift */; };
+		6AD82BD13B9085C6827BFAF2 /* f04_punk_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 79AC250746DEF7C41B303F05 /* f04_punk_walk.png */; };
+		6E0E3CEAF41E5C764E15291D /* f13_sporty_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 7420D1812A4E8B26D3626C2F /* f13_sporty_walk.png */; };
+		71CB4229E8473363CAD39674 /* contracts in Resources */ = {isa = PBXBuildFile; fileRef = 2C91DD7C00100EF06DF43DFF /* contracts */; };
+		71F04E39D686E9DABBBB68EC /* InstrumentSerif-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 46E5BD4604EBB045EE42001B /* InstrumentSerif-Italic.ttf */; };
+		747D9271B7021A965D90996C /* ContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFD367545742BEBE88ECA00C /* ContractTests.swift */; };
+		79ABCF757F01F84551D699F8 /* m09_athlete_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = A5321AA86B45B237D0C00CC6 /* m09_athlete_walk.png */; };
+		7C86D83A4262B100E4C80798 /* MatchReasoningSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BAECBB34D8886A6B6D1F13A /* MatchReasoningSheet.swift */; };
+		7E5E0374AD0DDBA99C835A34 /* f14_cozy_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BEE01F077E01508BC147A63 /* f14_cozy_walk.png */; };
+		7FDA69809795BAA717099DB7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8DAD85C7B17FA6E7C84D93 /* RootView.swift */; };
+		806D65E469D4B6B0378270DC /* m13_dreads_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 8FAC16A569BF566443E2E3F0 /* m13_dreads_walk.png */; };
+		8332A69F365080EF2369925F /* f08_mechanic_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 8E725A2DC3C0C67945367D7C /* f08_mechanic_walk.png */; };
+		8D264E0188AC08A609C0033B /* f07_royal_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = D852C2324D573DEA6C4E70B9 /* f07_royal_walk.png */; };
+		8E143784DEF43DB17253F2B7 /* t02_skater_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 0325B4F238BF6FA89968AE3D /* t02_skater_walk.png */; };
+		910975266461E9396FED6974 /* m01_explorer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 32A125D2D39D64A5264434F9 /* m01_explorer_walk.png */; };
+		91AFF496B50FB07E467E3717 /* SpaceGrotesk-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EBCD143BCD88A714EB3DCF4F /* SpaceGrotesk-Medium.ttf */; };
+		9424429642A67BC27912E17D /* CameraCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0296A3E09C9DBC2E15B192 /* CameraCapture.swift */; };
+		95A49EE066C0EAB1BDB3AB41 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8015039E32A55B59832BF8 /* Models.swift */; };
+		99534768A5C9534B3393CD98 /* m11_dapper_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = CE19AB22149E45DB1FAA37F5 /* m11_dapper_walk.png */; };
+		A0831B41169734DEBE5A46B8 /* InstrumentSerif-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F6DA5C930B67785C2BCE40C1 /* InstrumentSerif-Regular.ttf */; };
+		A2D98D59B7C9B8A77A6130F6 /* BackendClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 529EB9C266C0263E35D2C412 /* BackendClientTests.swift */; };
+		AB395181C28EFBDA22FE3678 /* MatchChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72660A8D0081DD8C3D1B057 /* MatchChatView.swift */; };
+		B34B1169F76F9A860BE89DD3 /* CormorantGaramond-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 91D692ADCE7130AA1E6D6524 /* CormorantGaramond-Regular.ttf */; };
+		B420B90AAB532323A0E7AEAD /* SoulCompassView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DEC6619371262F7C1310A6 /* SoulCompassView.swift */; };
+		B4DE182274A8295ABA07FDB3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0828983AE025D92147FE0AA6 /* PrivacyInfo.xcprivacy */; };
+		B601830116BB16B68A1E0526 /* PersonalitySpectrumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16DB1964DFE1EC5034ECFE0E /* PersonalitySpectrumView.swift */; };
+		BB908336175154CFE8C4ABE1 /* m08_scholar_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = B0088D46FD95C9BD70CEB44C /* m08_scholar_walk.png */; };
+		C28B8610E830C639694FAC2B /* SoulmateMatchesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4A3764C3A1FEFD7602CC5F6 /* SoulmateMatchesView.swift */; };
+		C62819BA0BEDB719284C1CE8 /* m02_artisan_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 8EA5C3E3477190FAB7B8F952 /* m02_artisan_walk.png */; };
+		C93DD9696E70B51B52C742B0 /* m10_hipster_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 2B22CADE5ABE00475E11270C /* m10_hipster_walk.png */; };
+		CEFA1414A8420B44A1B44A7D /* f12_natural_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 628918EDE9435B97127D1120 /* f12_natural_walk.png */; };
+		D118DEA41DF76AC863759B5F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC03595C6918B10C9F3806EF /* Assets.xcassets */; };
+		D59D63E825DEBDABCAC5B6B2 /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E9A27ABABC64E0F0040887F6 /* SpaceGrotesk-Regular.ttf */; };
+		DE0D437092C47E2C56B5F9B8 /* m05_gentleman_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 9FDDAF87DBA6E8E54EDA8E75 /* m05_gentleman_walk.png */; };
+		DECFC591E094F734FC04384F /* f10_adventurer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = E4438C5F3229BD6888BA85D7 /* f10_adventurer_walk.png */; };
+		E1B2BCAA46EE6B34950F28C1 /* m07_nomad_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = C453FEE3689FB3D89452DB56 /* m07_nomad_walk.png */; };
+		E3153F1A6C2BB864D97E2888 /* f09_artist_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 4DF4EBEA3EC668993DE58237 /* f09_artist_walk.png */; };
+		E3188987FD8D59460351EC6E /* f01_wanderer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 875EFAF58A3FEECB0BCEEB15 /* f01_wanderer_walk.png */; };
+		E3739A824414F0EAC1B6D969 /* f02_mystic_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 7D6BE2E28679D45A18014EB3 /* f02_mystic_walk.png */; };
+		EABD73DC63840212A6CC8A02 /* m06_farmer_walk.png in Resources */ = {isa = PBXBuildFile; fileRef = 818B95840631F78124701AD1 /* m06_farmer_walk.png */; };
+		EB17B1264C0527392982AFF3 /* SoulmateProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B82AF47AA08FBB5E7A20F2 /* SoulmateProfileSetupView.swift */; };
+		F05337CC2C23ADB9D0E14728 /* MessagePoller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57143A722314C028F3B8D551 /* MessagePoller.swift */; };
+		F5B87D6AF7B43133106FD86E /* MatchVisualizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DA3695DF67F4F94DB6C9963 /* MatchVisualizationView.swift */; };
+		F75D7A7DE3BF02B8D64F65AC /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9355BB67ABECE77C80B68D /* AppModelTests.swift */; };
+		F8DE24EF8DFF306E078E367B /* SpaceGrotesk-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 843462965B39E6EA13568295 /* SpaceGrotesk-Light.ttf */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2232E1B43AEA39D6A85DAE20 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CCF8A1AA1C55E2276798D7A0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FAB15C743361DC8CAE771784;
+			remoteInfo = Magpie;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0325B4F238BF6FA89968AE3D /* t02_skater_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = t02_skater_walk.png; sourceTree = "<group>"; };
+		0828983AE025D92147FE0AA6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0B02F83BD9BD7F26079957E2 /* TopValuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopValuesView.swift; sourceTree = "<group>"; };
+		0B16D211FFAED9D9B76764E2 /* CormorantGaramond-LightItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-LightItalic.ttf"; sourceTree = "<group>"; };
+		0B1F418574B5A84C89FFD612 /* f11_studious_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f11_studious_walk.png; sourceTree = "<group>"; };
+		0F567A0EC35EE4DDB140DA1C /* SoulConversationScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulConversationScreen.swift; sourceTree = "<group>"; };
+		101B63D3C83081F39F7E6BF7 /* m14_cowlick_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m14_cowlick_walk.png; sourceTree = "<group>"; };
+		1188540642C28FE067DE376D /* MagpieTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MagpieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		153C42FD0741A4B7FD65F037 /* f06_dancer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f06_dancer_walk.png; sourceTree = "<group>"; };
+		16DB1964DFE1EC5034ECFE0E /* PersonalitySpectrumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalitySpectrumView.swift; sourceTree = "<group>"; };
+		1B7C6DDC7D71C97047AEDB8C /* Magpie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Magpie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1C4A25A1E1C3655D5AAB9DC8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		26AE3EE15B82F6D553F6626C /* AIConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConsentView.swift; sourceTree = "<group>"; };
+		2B22CADE5ABE00475E11270C /* m10_hipster_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m10_hipster_walk.png; sourceTree = "<group>"; };
+		2C91DD7C00100EF06DF43DFF /* contracts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = contracts; sourceTree = SOURCE_ROOT; };
+		2D77F2EE38C55CBB4F35846F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		30E6C788795EAFE620EE7F55 /* m04_rebel_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m04_rebel_walk.png; sourceTree = "<group>"; };
+		31B82AF47AA08FBB5E7A20F2 /* SoulmateProfileSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulmateProfileSetupView.swift; sourceTree = "<group>"; };
+		32A125D2D39D64A5264434F9 /* m01_explorer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m01_explorer_walk.png; sourceTree = "<group>"; };
+		3CDBDD1FFDA28052A924B497 /* f03_scholar_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f03_scholar_walk.png; sourceTree = "<group>"; };
+		46E5BD4604EBB045EE42001B /* InstrumentSerif-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Italic.ttf"; sourceTree = "<group>"; };
+		4BAECBB34D8886A6B6D1F13A /* MatchReasoningSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchReasoningSheet.swift; sourceTree = "<group>"; };
+		4BEE01F077E01508BC147A63 /* f14_cozy_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f14_cozy_walk.png; sourceTree = "<group>"; };
+		4DF4EBEA3EC668993DE58237 /* f09_artist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f09_artist_walk.png; sourceTree = "<group>"; };
+		529EB9C266C0263E35D2C412 /* BackendClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClientTests.swift; sourceTree = "<group>"; };
+		53D5ACDDDBFAFFFF1A872F4C /* SoulFileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulFileScreen.swift; sourceTree = "<group>"; };
+		560A5931F90D460DF224386C /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		57143A722314C028F3B8D551 /* MessagePoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePoller.swift; sourceTree = "<group>"; };
+		5C8DAD85C7B17FA6E7C84D93 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		5E1ACA6A590A7E6596BAB8DE /* m12_surfer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m12_surfer_walk.png; sourceTree = "<group>"; };
+		628918EDE9435B97127D1120 /* f12_natural_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f12_natural_walk.png; sourceTree = "<group>"; };
+		69C30884C2431D84692552A7 /* m03_sage_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m03_sage_walk.png; sourceTree = "<group>"; };
+		7420D1812A4E8B26D3626C2F /* f13_sporty_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f13_sporty_walk.png; sourceTree = "<group>"; };
+		79AC250746DEF7C41B303F05 /* f04_punk_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f04_punk_walk.png; sourceTree = "<group>"; };
+		7D6BE2E28679D45A18014EB3 /* f02_mystic_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f02_mystic_walk.png; sourceTree = "<group>"; };
+		818B95840631F78124701AD1 /* m06_farmer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m06_farmer_walk.png; sourceTree = "<group>"; };
+		843462965B39E6EA13568295 /* SpaceGrotesk-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Light.ttf"; sourceTree = "<group>"; };
+		875EFAF58A3FEECB0BCEEB15 /* f01_wanderer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f01_wanderer_walk.png; sourceTree = "<group>"; };
+		88763E50BE2A0C89202AE770 /* BackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendClient.swift; sourceTree = "<group>"; };
+		8DA3695DF67F4F94DB6C9963 /* MatchVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchVisualizationView.swift; sourceTree = "<group>"; };
+		8E725A2DC3C0C67945367D7C /* f08_mechanic_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f08_mechanic_walk.png; sourceTree = "<group>"; };
+		8EA5C3E3477190FAB7B8F952 /* m02_artisan_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m02_artisan_walk.png; sourceTree = "<group>"; };
+		8FAC16A569BF566443E2E3F0 /* m13_dreads_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m13_dreads_walk.png; sourceTree = "<group>"; };
+		90450AB66DD61425A2040795 /* ForceUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceUpdateView.swift; sourceTree = "<group>"; };
+		91D692ADCE7130AA1E6D6524 /* CormorantGaramond-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Regular.ttf"; sourceTree = "<group>"; };
+		95D10E6519C8BDB91EA34D97 /* CormorantGaramond-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Light.ttf"; sourceTree = "<group>"; };
+		9792DE990BB6293C8214AC4C /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		9AB6568FC0F06C3A320ABDD9 /* t01_student_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = t01_student_walk.png; sourceTree = "<group>"; };
+		9BE3EDEFFA3312B7416A3144 /* MagpieApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagpieApp.swift; sourceTree = "<group>"; };
+		9DC16C9B39656B6D4CCC57E9 /* f05_botanist_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f05_botanist_walk.png; sourceTree = "<group>"; };
+		9FDDAF87DBA6E8E54EDA8E75 /* m05_gentleman_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m05_gentleman_walk.png; sourceTree = "<group>"; };
+		A5321AA86B45B237D0C00CC6 /* m09_athlete_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m09_athlete_walk.png; sourceTree = "<group>"; };
+		A54CF4725834BD0D33AF3EA6 /* BackendEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendEnvironment.swift; sourceTree = "<group>"; };
+		B0088D46FD95C9BD70CEB44C /* m08_scholar_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m08_scholar_walk.png; sourceTree = "<group>"; };
+		B4A3764C3A1FEFD7602CC5F6 /* SoulmateMatchesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulmateMatchesView.swift; sourceTree = "<group>"; };
+		B8DEC6619371262F7C1310A6 /* SoulCompassView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulCompassView.swift; sourceTree = "<group>"; };
+		BE2A98C8D54FCA93DAD0A66F /* ChatComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComponents.swift; sourceTree = "<group>"; };
+		BF34E28C885FCA32E6575495 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
+		C3EF631B6AF6FBE2264703DC /* Magpie.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Magpie.entitlements; sourceTree = "<group>"; };
+		C453FEE3689FB3D89452DB56 /* m07_nomad_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m07_nomad_walk.png; sourceTree = "<group>"; };
+		C645EC16208B84B5DEE29638 /* SoulCoverageConstellation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulCoverageConstellation.swift; sourceTree = "<group>"; };
+		CA713FC856BD9FC26B103D16 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		CB9355BB67ABECE77C80B68D /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		CC03595C6918B10C9F3806EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CE19AB22149E45DB1FAA37F5 /* m11_dapper_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = m11_dapper_walk.png; sourceTree = "<group>"; };
+		CFD367545742BEBE88ECA00C /* ContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractTests.swift; sourceTree = "<group>"; };
+		D13B6413CC96E841A43A7685 /* SoulMirrorTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoulMirrorTabView.swift; sourceTree = "<group>"; };
+		D1FFA46084ADEFBA6EDBC0CE /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
+		D852C2324D573DEA6C4E70B9 /* f07_royal_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f07_royal_walk.png; sourceTree = "<group>"; };
+		DAD198E6E8AEBB65285C5657 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		E32ADDBD481CADC3E5967B4F /* CormorantGaramond-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "CormorantGaramond-Medium.ttf"; sourceTree = "<group>"; };
+		E4438C5F3229BD6888BA85D7 /* f10_adventurer_walk.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = f10_adventurer_walk.png; sourceTree = "<group>"; };
+		E9A27ABABC64E0F0040887F6 /* SpaceGrotesk-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Regular.ttf"; sourceTree = "<group>"; };
+		EBCD143BCD88A714EB3DCF4F /* SpaceGrotesk-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Medium.ttf"; sourceTree = "<group>"; };
+		ED8015039E32A55B59832BF8 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		F6DA5C930B67785C2BCE40C1 /* InstrumentSerif-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "InstrumentSerif-Regular.ttf"; sourceTree = "<group>"; };
+		F72660A8D0081DD8C3D1B057 /* MatchChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchChatView.swift; sourceTree = "<group>"; };
+		FD0296A3E09C9DBC2E15B192 /* CameraCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCapture.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		54C4C58978EB4AADD2AC08B7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				CEBBD2D75227A071FE628E18 /* Sprites */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		6FA7DC1D53FD2BCF071E90B5 = {
+			isa = PBXGroup;
+			children = (
+				2C91DD7C00100EF06DF43DFF /* contracts */,
+				B5722FC4F81C8876A980761A /* Magpie */,
+				97D7676FC10BDD734D2D7DDF /* MagpieTests */,
+				949197DB4BAEC6C4EFAC08F8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		740E1CCD12BA08CC9D1BAA36 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				26AE3EE15B82F6D553F6626C /* AIConsentView.swift */,
+				2D77F2EE38C55CBB4F35846F /* AppModel.swift */,
+				88763E50BE2A0C89202AE770 /* BackendClient.swift */,
+				A54CF4725834BD0D33AF3EA6 /* BackendEnvironment.swift */,
+				FD0296A3E09C9DBC2E15B192 /* CameraCapture.swift */,
+				BE2A98C8D54FCA93DAD0A66F /* ChatComponents.swift */,
+				BF34E28C885FCA32E6575495 /* DebugView.swift */,
+				90450AB66DD61425A2040795 /* ForceUpdateView.swift */,
+				9BE3EDEFFA3312B7416A3144 /* MagpieApp.swift */,
+				F72660A8D0081DD8C3D1B057 /* MatchChatView.swift */,
+				4BAECBB34D8886A6B6D1F13A /* MatchReasoningSheet.swift */,
+				8DA3695DF67F4F94DB6C9963 /* MatchVisualizationView.swift */,
+				57143A722314C028F3B8D551 /* MessagePoller.swift */,
+				ED8015039E32A55B59832BF8 /* Models.swift */,
+				9792DE990BB6293C8214AC4C /* NotificationManager.swift */,
+				16DB1964DFE1EC5034ECFE0E /* PersonalitySpectrumView.swift */,
+				5C8DAD85C7B17FA6E7C84D93 /* RootView.swift */,
+				D1FFA46084ADEFBA6EDBC0CE /* SecureStore.swift */,
+				DAD198E6E8AEBB65285C5657 /* SettingsView.swift */,
+				B8DEC6619371262F7C1310A6 /* SoulCompassView.swift */,
+				0F567A0EC35EE4DDB140DA1C /* SoulConversationScreen.swift */,
+				C645EC16208B84B5DEE29638 /* SoulCoverageConstellation.swift */,
+				53D5ACDDDBFAFFFF1A872F4C /* SoulFileScreen.swift */,
+				B4A3764C3A1FEFD7602CC5F6 /* SoulmateMatchesView.swift */,
+				31B82AF47AA08FBB5E7A20F2 /* SoulmateProfileSetupView.swift */,
+				D13B6413CC96E841A43A7685 /* SoulMirrorTabView.swift */,
+				CA713FC856BD9FC26B103D16 /* SplashView.swift */,
+				560A5931F90D460DF224386C /* Theme.swift */,
+				0B02F83BD9BD7F26079957E2 /* TopValuesView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7B1206505346C49A3E946DE4 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				95D10E6519C8BDB91EA34D97 /* CormorantGaramond-Light.ttf */,
+				0B16D211FFAED9D9B76764E2 /* CormorantGaramond-LightItalic.ttf */,
+				E32ADDBD481CADC3E5967B4F /* CormorantGaramond-Medium.ttf */,
+				91D692ADCE7130AA1E6D6524 /* CormorantGaramond-Regular.ttf */,
+				46E5BD4604EBB045EE42001B /* InstrumentSerif-Italic.ttf */,
+				F6DA5C930B67785C2BCE40C1 /* InstrumentSerif-Regular.ttf */,
+				843462965B39E6EA13568295 /* SpaceGrotesk-Light.ttf */,
+				EBCD143BCD88A714EB3DCF4F /* SpaceGrotesk-Medium.ttf */,
+				E9A27ABABC64E0F0040887F6 /* SpaceGrotesk-Regular.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		949197DB4BAEC6C4EFAC08F8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1B7C6DDC7D71C97047AEDB8C /* Magpie.app */,
+				1188540642C28FE067DE376D /* MagpieTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		97D7676FC10BDD734D2D7DDF /* MagpieTests */ = {
+			isa = PBXGroup;
+			children = (
+				CB9355BB67ABECE77C80B68D /* AppModelTests.swift */,
+				529EB9C266C0263E35D2C412 /* BackendClientTests.swift */,
+				CFD367545742BEBE88ECA00C /* ContractTests.swift */,
+			);
+			path = MagpieTests;
+			sourceTree = "<group>";
+		};
+		B5722FC4F81C8876A980761A /* Magpie */ = {
+			isa = PBXGroup;
+			children = (
+				CC03595C6918B10C9F3806EF /* Assets.xcassets */,
+				1C4A25A1E1C3655D5AAB9DC8 /* Info.plist */,
+				C3EF631B6AF6FBE2264703DC /* Magpie.entitlements */,
+				0828983AE025D92147FE0AA6 /* PrivacyInfo.xcprivacy */,
+				740E1CCD12BA08CC9D1BAA36 /* App */,
+				7B1206505346C49A3E946DE4 /* Fonts */,
+				54C4C58978EB4AADD2AC08B7 /* Resources */,
+			);
+			path = Magpie;
+			sourceTree = "<group>";
+		};
+		CEBBD2D75227A071FE628E18 /* Sprites */ = {
+			isa = PBXGroup;
+			children = (
+				875EFAF58A3FEECB0BCEEB15 /* f01_wanderer_walk.png */,
+				7D6BE2E28679D45A18014EB3 /* f02_mystic_walk.png */,
+				3CDBDD1FFDA28052A924B497 /* f03_scholar_walk.png */,
+				79AC250746DEF7C41B303F05 /* f04_punk_walk.png */,
+				9DC16C9B39656B6D4CCC57E9 /* f05_botanist_walk.png */,
+				153C42FD0741A4B7FD65F037 /* f06_dancer_walk.png */,
+				D852C2324D573DEA6C4E70B9 /* f07_royal_walk.png */,
+				8E725A2DC3C0C67945367D7C /* f08_mechanic_walk.png */,
+				4DF4EBEA3EC668993DE58237 /* f09_artist_walk.png */,
+				E4438C5F3229BD6888BA85D7 /* f10_adventurer_walk.png */,
+				0B1F418574B5A84C89FFD612 /* f11_studious_walk.png */,
+				628918EDE9435B97127D1120 /* f12_natural_walk.png */,
+				7420D1812A4E8B26D3626C2F /* f13_sporty_walk.png */,
+				4BEE01F077E01508BC147A63 /* f14_cozy_walk.png */,
+				32A125D2D39D64A5264434F9 /* m01_explorer_walk.png */,
+				8EA5C3E3477190FAB7B8F952 /* m02_artisan_walk.png */,
+				69C30884C2431D84692552A7 /* m03_sage_walk.png */,
+				30E6C788795EAFE620EE7F55 /* m04_rebel_walk.png */,
+				9FDDAF87DBA6E8E54EDA8E75 /* m05_gentleman_walk.png */,
+				818B95840631F78124701AD1 /* m06_farmer_walk.png */,
+				C453FEE3689FB3D89452DB56 /* m07_nomad_walk.png */,
+				B0088D46FD95C9BD70CEB44C /* m08_scholar_walk.png */,
+				A5321AA86B45B237D0C00CC6 /* m09_athlete_walk.png */,
+				2B22CADE5ABE00475E11270C /* m10_hipster_walk.png */,
+				CE19AB22149E45DB1FAA37F5 /* m11_dapper_walk.png */,
+				5E1ACA6A590A7E6596BAB8DE /* m12_surfer_walk.png */,
+				8FAC16A569BF566443E2E3F0 /* m13_dreads_walk.png */,
+				101B63D3C83081F39F7E6BF7 /* m14_cowlick_walk.png */,
+				9AB6568FC0F06C3A320ABDD9 /* t01_student_walk.png */,
+				0325B4F238BF6FA89968AE3D /* t02_skater_walk.png */,
+			);
+			path = Sprites;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		63D9C1634A652D762AF4BDE4 /* MagpieTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C1B2B9F1BCF218E538091FE9 /* Build configuration list for PBXNativeTarget "MagpieTests" */;
+			buildPhases = (
+				64110F08A9E209F80603909C /* Sources */,
+				E863B3B6839C2A6F3239BDDD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EA6EB1C956D37C7697ACADFC /* PBXTargetDependency */,
+			);
+			name = MagpieTests;
+			packageProductDependencies = (
+			);
+			productName = MagpieTests;
+			productReference = 1188540642C28FE067DE376D /* MagpieTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FAB15C743361DC8CAE771784 /* Magpie */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 68D94158CF2474557D86C0AD /* Build configuration list for PBXNativeTarget "Magpie" */;
+			buildPhases = (
+				B68FCA56FEA15742558D5547 /* Sources */,
+				9C8BE836A46B789338C57761 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Magpie;
+			packageProductDependencies = (
+			);
+			productName = Magpie;
+			productReference = 1B7C6DDC7D71C97047AEDB8C /* Magpie.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CCF8A1AA1C55E2276798D7A0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 1AB47D8643EC2433FB19EBB1 /* Build configuration list for PBXProject "Magpie" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 6FA7DC1D53FD2BCF071E90B5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 949197DB4BAEC6C4EFAC08F8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FAB15C743361DC8CAE771784 /* Magpie */,
+				63D9C1634A652D762AF4BDE4 /* MagpieTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9C8BE836A46B789338C57761 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D118DEA41DF76AC863759B5F /* Assets.xcassets in Resources */,
+				4D672862D11E0682471E4C12 /* CormorantGaramond-Light.ttf in Resources */,
+				08ADD78F620B7B1BBFB94417 /* CormorantGaramond-LightItalic.ttf in Resources */,
+				0CFF0CF90DECEA225A753AAC /* CormorantGaramond-Medium.ttf in Resources */,
+				B34B1169F76F9A860BE89DD3 /* CormorantGaramond-Regular.ttf in Resources */,
+				71F04E39D686E9DABBBB68EC /* InstrumentSerif-Italic.ttf in Resources */,
+				A0831B41169734DEBE5A46B8 /* InstrumentSerif-Regular.ttf in Resources */,
+				B4DE182274A8295ABA07FDB3 /* PrivacyInfo.xcprivacy in Resources */,
+				F8DE24EF8DFF306E078E367B /* SpaceGrotesk-Light.ttf in Resources */,
+				91AFF496B50FB07E467E3717 /* SpaceGrotesk-Medium.ttf in Resources */,
+				D59D63E825DEBDABCAC5B6B2 /* SpaceGrotesk-Regular.ttf in Resources */,
+				E3188987FD8D59460351EC6E /* f01_wanderer_walk.png in Resources */,
+				E3739A824414F0EAC1B6D969 /* f02_mystic_walk.png in Resources */,
+				1A809BD1B25B2A883BD88FEE /* f03_scholar_walk.png in Resources */,
+				6AD82BD13B9085C6827BFAF2 /* f04_punk_walk.png in Resources */,
+				259A8266AEDF441707B74C70 /* f05_botanist_walk.png in Resources */,
+				2CD4C4C84F4A905D9271AE2C /* f06_dancer_walk.png in Resources */,
+				8D264E0188AC08A609C0033B /* f07_royal_walk.png in Resources */,
+				8332A69F365080EF2369925F /* f08_mechanic_walk.png in Resources */,
+				E3153F1A6C2BB864D97E2888 /* f09_artist_walk.png in Resources */,
+				DECFC591E094F734FC04384F /* f10_adventurer_walk.png in Resources */,
+				348054734CF74D7065AFE040 /* f11_studious_walk.png in Resources */,
+				CEFA1414A8420B44A1B44A7D /* f12_natural_walk.png in Resources */,
+				6E0E3CEAF41E5C764E15291D /* f13_sporty_walk.png in Resources */,
+				7E5E0374AD0DDBA99C835A34 /* f14_cozy_walk.png in Resources */,
+				910975266461E9396FED6974 /* m01_explorer_walk.png in Resources */,
+				C62819BA0BEDB719284C1CE8 /* m02_artisan_walk.png in Resources */,
+				09D2B14EF5660FCA29118DA8 /* m03_sage_walk.png in Resources */,
+				1151E4D11825F4BC34F6D59C /* m04_rebel_walk.png in Resources */,
+				DE0D437092C47E2C56B5F9B8 /* m05_gentleman_walk.png in Resources */,
+				EABD73DC63840212A6CC8A02 /* m06_farmer_walk.png in Resources */,
+				E1B2BCAA46EE6B34950F28C1 /* m07_nomad_walk.png in Resources */,
+				BB908336175154CFE8C4ABE1 /* m08_scholar_walk.png in Resources */,
+				79ABCF757F01F84551D699F8 /* m09_athlete_walk.png in Resources */,
+				C93DD9696E70B51B52C742B0 /* m10_hipster_walk.png in Resources */,
+				99534768A5C9534B3393CD98 /* m11_dapper_walk.png in Resources */,
+				488895005754B4BFD7988A73 /* m12_surfer_walk.png in Resources */,
+				806D65E469D4B6B0378270DC /* m13_dreads_walk.png in Resources */,
+				0B970663260A21463484AE3C /* m14_cowlick_walk.png in Resources */,
+				5A0CE6C67D13B17A8BA8BB8F /* t01_student_walk.png in Resources */,
+				8E143784DEF43DB17253F2B7 /* t02_skater_walk.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E863B3B6839C2A6F3239BDDD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				71CB4229E8473363CAD39674 /* contracts in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		64110F08A9E209F80603909C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F75D7A7DE3BF02B8D64F65AC /* AppModelTests.swift in Sources */,
+				A2D98D59B7C9B8A77A6130F6 /* BackendClientTests.swift in Sources */,
+				747D9271B7021A965D90996C /* ContractTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B68FCA56FEA15742558D5547 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				354244B1847E4E11D7DBB26D /* AIConsentView.swift in Sources */,
+				5EDA16E4EA73234DC8FD0FD9 /* AppModel.swift in Sources */,
+				0BDF04469525DF488D392CE4 /* BackendClient.swift in Sources */,
+				338151420E806C94910E586C /* BackendEnvironment.swift in Sources */,
+				9424429642A67BC27912E17D /* CameraCapture.swift in Sources */,
+				68335F9F39AEDC3CA3C989A5 /* ChatComponents.swift in Sources */,
+				39FBCA91116ABCA71B253789 /* DebugView.swift in Sources */,
+				0349566B1F9CF50C5F3E9B90 /* ForceUpdateView.swift in Sources */,
+				1A741C816DED9F447D8D32AB /* MagpieApp.swift in Sources */,
+				AB395181C28EFBDA22FE3678 /* MatchChatView.swift in Sources */,
+				7C86D83A4262B100E4C80798 /* MatchReasoningSheet.swift in Sources */,
+				F5B87D6AF7B43133106FD86E /* MatchVisualizationView.swift in Sources */,
+				F05337CC2C23ADB9D0E14728 /* MessagePoller.swift in Sources */,
+				95A49EE066C0EAB1BDB3AB41 /* Models.swift in Sources */,
+				0CBADC47F4E52F1BE99128C8 /* NotificationManager.swift in Sources */,
+				B601830116BB16B68A1E0526 /* PersonalitySpectrumView.swift in Sources */,
+				7FDA69809795BAA717099DB7 /* RootView.swift in Sources */,
+				65321FFF1183A84CE2892EB5 /* SecureStore.swift in Sources */,
+				3C93330FC88F5FD4835203D3 /* SettingsView.swift in Sources */,
+				B420B90AAB532323A0E7AEAD /* SoulCompassView.swift in Sources */,
+				34EA7E596F40F934FDD461DC /* SoulConversationScreen.swift in Sources */,
+				63CC8C8FAD6C5D5444724337 /* SoulCoverageConstellation.swift in Sources */,
+				2F3509DE3F82BA4E761460F1 /* SoulFileScreen.swift in Sources */,
+				622B641D4731B9FDAABDEC3E /* SoulMirrorTabView.swift in Sources */,
+				C28B8610E830C639694FAC2B /* SoulmateMatchesView.swift in Sources */,
+				EB17B1264C0527392982AFF3 /* SoulmateProfileSetupView.swift in Sources */,
+				62AB84798B2D14DADA5C0829 /* SplashView.swift in Sources */,
+				40FDA7A983402CFC69ABA09F /* Theme.swift in Sources */,
+				44D910BC9644200BD465DBCA /* TopValuesView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EA6EB1C956D37C7697ACADFC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FAB15C743361DC8CAE771784 /* Magpie */;
+			targetProxy = 2232E1B43AEA39D6A85DAE20 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4C772015F09F00788FA2724E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Magpie.app/Magpie";
+			};
+			name = Debug;
+		};
+		607858AD17BF89108D62C24B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Magpie/Magpie.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LYGZYH82G8;
+				INFOPLIST_FILE = Magpie/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		934D305B43B06CFA815FBEE9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 2.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trythumos.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.1;
+			};
+			name = Release;
+		};
+		9ED467995E2BCE0CB17170B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Magpie/Magpie.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = LYGZYH82G8;
+				INFOPLIST_FILE = Magpie/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.1;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		A1C956E7530C1E72ADDF10A8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 2.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trythumos.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.1;
+			};
+			name = Debug;
+		};
+		F4532E775373715542778B83 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Magpie.app/Magpie";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1AB47D8643EC2433FB19EBB1 /* Build configuration list for PBXProject "Magpie" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1C956E7530C1E72ADDF10A8 /* Debug */,
+				934D305B43B06CFA815FBEE9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		68D94158CF2474557D86C0AD /* Build configuration list for PBXNativeTarget "Magpie" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				607858AD17BF89108D62C24B /* Debug */,
+				9ED467995E2BCE0CB17170B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C1B2B9F1BCF218E538091FE9 /* Build configuration list for PBXNativeTarget "MagpieTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C772015F09F00788FA2724E /* Debug */,
+				F4532E775373715542778B83 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CCF8A1AA1C55E2276798D7A0 /* Project object */;
+}

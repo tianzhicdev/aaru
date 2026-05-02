@@ -143,8 +143,8 @@ describe("buildDepthGuidance", () => {
   it("returns guarded guidance for guarded openness", () => {
     const note = makeReflectionNote({ userOpenness: "guarded" });
     const guidance = buildDepthGuidance(note);
-    expect(guidance).toContain("light and warm");
-    expect(guidance).toContain("No probing");
+    expect(guidance).toContain("what they want in someone");
+    expect(guidance).toContain("no pressure");
   });
 
   it("returns warming guidance for warming openness", () => {
@@ -162,7 +162,7 @@ describe("buildDepthGuidance", () => {
   it("returns deep guidance for deep openness", () => {
     const note = makeReflectionNote({ userOpenness: "deep" });
     const guidance = buildDepthGuidance(note);
-    expect(guidance).toContain("as deep as they're going");
+    expect(guidance).toContain("partner desires");
   });
 
   it("defaults to warming when userOpenness is undefined", () => {
@@ -176,7 +176,7 @@ describe("buildDepthGuidance", () => {
       reflectionNote: makeReflectionNote({ userOpenness: "guarded" })
     }));
     expect(prompt).toContain("DEPTH GUIDANCE");
-    expect(prompt).toContain("light and warm");
+    expect(prompt).toContain("what they want in someone");
   });
 
   it("omits product curiosity section in spark phase", () => {
@@ -314,34 +314,34 @@ describe("productCuriosity", () => {
 });
 
 describe("matchingAwareness", () => {
-  it("is absent in spark phase", () => {
+  it("is present in spark phase", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({ conversationPhase: "spark" })
     }));
-    expect(prompt).not.toContain("MATCHING (only if they ask");
+    expect(prompt).toContain("MATCHING");
+    expect(prompt).toContain("find someone who gets it");
   });
 
   it("is present in kindling phase", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({ conversationPhase: "kindling" })
     }));
-    expect(prompt).toContain("MATCHING (only if they ask");
-    expect(prompt).toContain("seven life domains");
-    expect(prompt).toContain("Connect tab");
+    expect(prompt).toContain("MATCHING");
+    expect(prompt).toContain("find your person");
   });
 
   it("is present in flame phase", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({ conversationPhase: "flame" })
     }));
-    expect(prompt).toContain("MATCHING (only if they ask");
+    expect(prompt).toContain("MATCHING");
   });
 
   it("is present in hearth phase", () => {
     const prompt = buildSoulSystemPrompt(makeContext({
       reflectionNote: makeReflectionNote({ conversationPhase: "hearth" })
     }));
-    expect(prompt).toContain("MATCHING (only if they ask");
+    expect(prompt).toContain("MATCHING");
   });
 
   it("contains key phrases in en text", () => {
@@ -349,10 +349,9 @@ describe("matchingAwareness", () => {
       reflectionNote: makeReflectionNote({ conversationPhase: "kindling" }),
       language: "en"
     }));
-    expect(prompt).toContain("never bring this up yourself");
-    expect(prompt).toContain("seven life domains");
-    expect(prompt).toContain("Connect tab");
-    expect(prompt).toContain("Never say exact percentages");
+    expect(prompt).toContain("weave naturally");
+    expect(prompt).toContain("find someone who gets it");
+    expect(prompt).toContain("find your person");
     expect(prompt).toContain("the better I know you, the better the matches will be");
   });
 
@@ -364,9 +363,54 @@ describe("matchingAwareness", () => {
         language: lang
       }));
       expect(prompt, `matchingAwareness missing for language: ${lang}`).toMatch(
-        /MATCHING \(only if they ask|MATCHING \(nur wenn sie fragen|MATCHING \(solo si preguntan|MATCHING \(uniquement s'ils demandent|マッチング（聞かれた場合のみ|매칭 \(상대가 물어볼 때만|MATCHING \(só se perguntarem|匹配（只有在他们问的时候/i
+        /MATCHING|マッチング|매칭|匹配/i
       );
     }
+  });
+});
+
+describe("partner-frame design", () => {
+  it("system prompt contains question archetypes", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({}));
+    expect(prompt).toContain("Opening (preference)");
+    expect(prompt).toContain("Specifying");
+    expect(prompt).toContain("Inverting");
+    expect(prompt).toContain("Mirroring");
+    expect(prompt).toContain("Story");
+    expect(prompt).toContain("Tension");
+  });
+
+  it("system prompt contains three filters", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({}));
+    expect(prompt).toContain("Surface frame");
+    expect(prompt).toContain("Hidden yield");
+    expect(prompt).toContain("Reciprocity");
+  });
+
+  it("first-ever intro contains 'your person' and not 'tell me something about yourself'", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({
+      openingKind: "first_ever"
+    }));
+    // The handler firstEverIntro is not in the system prompt, but opening guidance is
+    expect(prompt).toContain("partner-frame starts from message one");
+    expect(prompt).not.toContain("tell me something about yourself");
+  });
+
+  it("domain questions are partner-framed", async () => {
+    // Check that at least one question per pool references partner concepts
+    const { getPrompts } = await import("../../src/domain/i18n/index.ts");
+    const prompts = getPrompts("en");
+    const partnerTerms = /person|partner|someone|looking for|together|your person/i;
+    for (const [domain, questions] of Object.entries(prompts.domains.openingPool) as [string, string[]][]) {
+      const hasPartnerFrame = questions.some((q: string) => partnerTerms.test(q));
+      expect(hasPartnerFrame, `domain ${domain} should have at least one partner-framed question`).toBe(true);
+    }
+  });
+
+  it("preamble describes the core move — ask about partner, listen for person", () => {
+    const prompt = buildSoulSystemPrompt(makeContext({}));
+    expect(prompt).toContain("ask about the partner they want");
+    expect(prompt).toContain("listen for who they are");
   });
 });
 

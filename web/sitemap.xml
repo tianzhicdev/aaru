@@ -1,43 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://trythumos.com/</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/about</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/about</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/compare</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/compare</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/blog</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/blog</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/blog/why-we-built-thumos</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/blog/why-we-built-magpie</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/blog/ai-conversations-vs-questionnaires</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/blog/ai-conversations-vs-questionnaires</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/blog/what-is-a-soul-portrait</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/blog/what-is-a-soul-portrait</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/support</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/support</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
   <url>
-    <loc>https://trythumos.com/privacy</loc>
-    <lastmod>2026-04-09</lastmod>
-  </url>
-  <url>
-    <loc>https://trythumos.com/llms.txt</loc>
-    <lastmod>2026-04-25</lastmod>
+    <loc>https://trymagpie.xyz/privacy</loc>
+    <lastmod>2026-05-02</lastmod>
   </url>
 </urlset>

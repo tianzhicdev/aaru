@@ -22,7 +22,8 @@ crons = ["0 6 * * *"]
 
 [env.production]
 name = "thumos-api"
-workers_dev = true
+workers_dev = false
+routes = [{ pattern = "api.trymagpie.xyz/*", zone_name = "trymagpie.xyz" }]
 
 [[env.production.queues.producers]]
 binding = "BACKGROUND_QUEUE"

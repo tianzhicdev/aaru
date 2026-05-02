@@ -149,7 +149,7 @@ const mockDeviceSession = {
 };
 
 function makeRequest(headers: Record<string, string> = {}, body?: unknown): Request {
-  return new Request("https://api.trythumos.com/test", {
+  return new Request("https://api.trymagpie.xyz/test", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body: body ? JSON.stringify(body) : undefined
@@ -323,14 +323,14 @@ describe("handleSoulConverse", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.role).toBe("assistant");
-    expect(body.content).toContain("Hey, I'm Thumos.");
-    expect(body.content).toContain("what you're looking for"); // intro ends with open prompt
+    expect(body.content).toContain("Hey — I'm Magpie.");
+    expect(body.content).toContain("your person"); // intro ends with partner-framed question
     expect(streamLlmText).not.toHaveBeenCalled();
     expect(insertSoulMessage).toHaveBeenCalledWith(
       mockSQL,
       "user-1",
       "assistant",
-      expect.stringContaining("Hey, I'm Thumos.")
+      expect.stringContaining("Hey — I'm Magpie.")
     );
   });
 });
@@ -382,7 +382,7 @@ describe("handleSoulSend", () => {
     // First-ever intro is split into separate messages (one per sentence)
     const insertCalls = vi.mocked(insertSoulMessage).mock.calls;
     expect(insertCalls.length).toBeGreaterThanOrEqual(2);
-    expect(insertCalls[0]).toEqual([mockSQL, "user-1", "assistant", expect.stringContaining("Hey, I'm Thumos.")]);
+    expect(insertCalls[0]).toEqual([mockSQL, "user-1", "assistant", expect.stringContaining("Hey — I'm Magpie.")]);
     // All calls should be assistant messages for user-1
     for (const call of insertCalls) {
       expect(call[1]).toBe("user-1");

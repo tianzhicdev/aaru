@@ -2,7 +2,7 @@
 
 ## Overview
 
-Static site at `trythumos.com`. Three purposes:
+Static site at `trymagpie.xyz`. Three purposes:
 1. **App Store compliance** — privacy policy + support URL (hard requirements)
 2. **Landing page** — SEO + social sharing + App Store marketing URL
 3. **Foundation** — can add blog later for organic traffic

@@ -5,7 +5,7 @@ I built an AI soul mirror — here's the journey from idea to App Store
 
 ## Post
 
-Hey IH! Shipping my first iOS app: **Thumos** — a soul mirror.
+Hey IH! Shipping my first iOS app: **Magpie** — a soul mirror.
 
 ### What it is
 
@@ -60,4 +60,4 @@ Not optimizing for revenue yet. Optimizing for the core experience.
 Try it. Have one conversation. Check your soul file. I'd love honest feedback — especially on whether the portrait feels accurate.
 
 iOS: [App Store link]
-Web: trythumos.com
+Web: trymagpie.xyz

@@ -26,8 +26,8 @@ describe("i18n", () => {
 
   it("getPrompts falls back to en for unknown language", () => {
     const p = getPrompts("sv");
-    expect(p.soul.preamble).toContain("Thumos");
-    expect(p.soul.preamble).toContain("helping people find love");
+    expect(p.soul.preamble).toContain("Magpie");
+    expect(p.soul.preamble).toContain("looking for");
   });
 
   it("Japanese prompts contain Japanese text", () => {
@@ -39,7 +39,7 @@ describe("i18n", () => {
 
   it("French prompts contain French text", () => {
     const p = getPrompts("fr");
-    expect(p.soul.preamble).toContain("Thumos");
+    expect(p.soul.preamble).toContain("Magpie");
     expect(typeof p.domains.labels.daily_rhythm).toBe("string");
     expect(p.domains.labels.daily_rhythm).toBeTruthy();
     expect(p.navigation.header).toContain("NAVIGATION");

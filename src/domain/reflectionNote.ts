@@ -104,7 +104,7 @@ export function getReflectionNoteJsonSchema(): Record<string, unknown> {
 
 function buildTranscript(messages: Array<{ role: string; content: string }>): string {
   return messages
-    .map((message) => `${message.role === "assistant" ? "Thumos" : "User"}: ${message.content}`)
+    .map((message) => `${message.role === "assistant" ? "Magpie" : "User"}: ${message.content}`)
     .join("\n");
 }
 

@@ -149,7 +149,7 @@ function systemPrompt(langCode: string): string {
     ? ""
     : `\n\nIMPORTANT: You MUST respond in the user's language. The user's language is: ${langCode}. Always respond in that language.`;
 
-  return `You are Thumos, a warm and perceptive friend who's genuinely excited about helping people find love. You talk like someone at a late-night gathering who asks the questions that make people lean forward — playful when it's light, real when it matters.
+  return `You are Magpie, a warm and perceptive friend who's genuinely excited about helping people find love. You talk like someone at a late-night gathering who asks the questions that make people lean forward — playful when it's light, real when it matters.
 
 CONVERSATION PRINCIPLES:
 - Reference love and partnership naturally — it's why they're here.
@@ -332,7 +332,7 @@ async function main() {
     for (const t of r.turns) {
       lines.push(`## ${t.role === "opening" ? "Opening" : `Turn ${t.turn}`} (${(t.latencyMs / 1000).toFixed(2)}s)`);
       if (t.turn > 0) lines.push(`**User:** ${r.lang.userMessages[t.turn - 1]}`);
-      lines.push(t.error ? `**Error:** ${t.error}` : `**Thumos:** ${t.text}`);
+      lines.push(t.error ? `**Error:** ${t.error}` : `**Magpie:** ${t.text}`);
       lines.push("");
     }
     fs.writeFileSync(path.join(outputDir, `${timestamp}-lang-${r.lang.code}.md`), lines.join("\n"));

@@ -1,4 +1,4 @@
-name: Thumos
+name: Magpie
 options:
   minimumXcodeGenVersion: 2.45.0
   deploymentTarget:
@@ -11,15 +11,15 @@ settings:
     PRODUCT_BUNDLE_IDENTIFIER: com.trythumos.app
     SWIFT_VERSION: 5.10
     CURRENT_PROJECT_VERSION: 1
-    MARKETING_VERSION: 1.1
+    MARKETING_VERSION: 2.1
 targets:
-  Thumos:
+  Magpie:
     type: application
     platform: iOS
     sources:
-      - path: Thumos
+      - path: Magpie
     info:
-      path: Thumos/Info.plist
+      path: Magpie/Info.plist
       properties:
         UIAppFonts:
           - CormorantGaramond-Light.ttf
@@ -33,8 +33,8 @@ targets:
           - InstrumentSerif-Italic.ttf
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSLocationWhenInUseUsageDescription: "Thumos uses your location to find soulmates near you."
-        NSCameraUsageDescription: "Thumos uses your camera so you can add photos to your match profile."
+        NSLocationWhenInUseUsageDescription: "Magpie uses your location to find soulmates near you."
+        NSCameraUsageDescription: "Magpie uses your camera so you can add photos to your match profile."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UILaunchScreen: {}
@@ -47,17 +47,21 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: Magpie/Magpie.entitlements
+      properties:
+        aps-environment: development
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       testTargets:
-        - ThumosTests
-  ThumosTests:
+        - MagpieTests
+  MagpieTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: ThumosTests
+      - path: MagpieTests
       - path: contracts
         buildPhase: resources
         type: folder
@@ -65,4 +69,4 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: Thumos
+      - target: Magpie

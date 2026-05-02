@@ -149,6 +149,7 @@ if [[ "$TARGET" == "dev" ]]; then
   APNS_TEAM_ID_VALUE="$(pick_first APNS_TEAM_ID_DEV APNS_TEAM_ID || true)"
   APNS_TOPIC_VALUE="$(pick_first APNS_TOPIC_DEV APNS_TOPIC || true)"
   APNS_USE_SANDBOX_VALUE="$(pick_first APNS_USE_SANDBOX_DEV APNS_USE_SANDBOX || true)"
+  ADMIN_TOKEN_VALUE="$(pick_first ADMIN_TOKEN_DEV ADMIN_TOKEN || true)"
 else
   WRANGLER_ENV="production"
   QUEUE_NAME="thumos-soul-synthesis"
@@ -170,6 +171,7 @@ else
   APNS_TEAM_ID_VALUE="$(pick_first APNS_TEAM_ID || true)"
   APNS_TOPIC_VALUE="$(pick_first APNS_TOPIC || true)"
   APNS_USE_SANDBOX_VALUE="$(pick_first APNS_USE_SANDBOX || true)"
+  ADMIN_TOKEN_VALUE="$(pick_first ADMIN_TOKEN || true)"
 fi
 
 [[ -n "$CLOUDFLARE_API_TOKEN_VALUE" ]] || die "Missing Cloudflare API token for $TARGET"
@@ -212,6 +214,7 @@ put_secret "APNS_KEY_ID" "$APNS_KEY_ID_VALUE"
 put_secret "APNS_TEAM_ID" "$APNS_TEAM_ID_VALUE"
 put_secret "APNS_TOPIC" "$APNS_TOPIC_VALUE"
 put_secret "APNS_USE_SANDBOX" "$APNS_USE_SANDBOX_VALUE"
+put_secret "ADMIN_TOKEN" "$ADMIN_TOKEN_VALUE"
 
 echo "Deploying Worker"
 (

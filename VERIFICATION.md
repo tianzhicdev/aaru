@@ -55,8 +55,8 @@ Prerequisite: Wrangler auth is configured, typically with `CLOUDFLARE_API_TOKEN`
 
 Verify:
 ```bash
-curl https://api.trythumos.com/ping
-curl -X POST https://api.trythumos.com/version \
+curl https://api.trymagpie.xyz/ping
+curl -X POST https://api.trymagpie.xyz/version \
   -H 'content-type: application/json' \
   -d '{"build_version":"1.0.0"}'
 ```

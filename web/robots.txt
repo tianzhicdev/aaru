@@ -69,4 +69,4 @@ User-agent: Bytespider
 Disallow: /
 
 # -------------------------------------------
-Sitemap: https://trythumos.com/sitemap.xml
+Sitemap: https://trymagpie.xyz/sitemap.xml

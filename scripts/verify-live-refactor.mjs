@@ -1,4 +1,4 @@
-const base = process.env.THUMOS_API_BASE_URL || "https://api.trythumos.com";
+const base = process.env.THUMOS_API_BASE_URL || "https://api.trymagpie.xyz";
 const debugToken = process.env.THUMOS_DEBUG_API_TOKEN
   || process.env.DEBUG_API_TOKEN
   || process.env.DEBUG_API_TOKEN_DEV;

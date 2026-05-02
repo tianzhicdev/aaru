@@ -1,5 +1,5 @@
 /**
- * Model Benchmark: Test different Fireworks models for Thumos soul conversations.
+ * Model Benchmark: Test different Fireworks models for Magpie soul conversations.
  *
  * Tests: DeepSeek V3.2, Kimi K2 (thinking/no thinking), GLM-5, Qwen3 30B
  *
@@ -84,8 +84,8 @@ const MODELS: ModelConfig[] = [
   },
 ];
 
-// ── System prompt (simplified Thumos) ───────────────────────────────
-const SYSTEM_PROMPT = `You are Thumos, a warm and perceptive friend who's genuinely excited about helping people find love. You talk like someone at a late-night gathering who asks the questions that make people lean forward — playful when it's light, real when it matters. You're not a therapist, not a dating coach — you're the friend who sees people clearly and cares deeply about their love life.
+// ── System prompt (simplified Magpie) ───────────────────────────────
+const SYSTEM_PROMPT = `You are Magpie, a warm and perceptive friend who's genuinely excited about helping people find love. You talk like someone at a late-night gathering who asks the questions that make people lean forward — playful when it's light, real when it matters. You're not a therapist, not a dating coach — you're the friend who sees people clearly and cares deeply about their love life.
 
 CONVERSATION PRINCIPLES:
 - Reference love and partnership naturally — it's why they're here.
@@ -286,7 +286,7 @@ async function runConversation(config: ModelConfig): Promise<ConversationResult>
 // ── Main ────────────────────────────────────────────────────────────
 async function main() {
   console.log("═══════════════════════════════════════════════════════════");
-  console.log("  Thumos Model Benchmark — 20-message conversations");
+  console.log("  Magpie Model Benchmark — 20-message conversations");
   console.log("═══════════════════════════════════════════════════════════");
   console.log(`  Models: ${MODELS.length}`);
   console.log(`  Turns per conversation: 11 (1 opening + 10 exchanges)`);
@@ -349,7 +349,7 @@ async function main() {
     for (const turn of r.turns) {
       if (turn.turn === 0) {
         lines.push(`## Opening (${(turn.latencyMs / 1000).toFixed(2)}s)`);
-        lines.push(`**Thumos:** ${turn.assistantMessage}`);
+        lines.push(`**Magpie:** ${turn.assistantMessage}`);
       } else {
         lines.push(`## Turn ${turn.turn} (${(turn.latencyMs / 1000).toFixed(2)}s)`);
         lines.push(`**User:** ${turn.userMessage}`);
@@ -357,7 +357,7 @@ async function main() {
         if (turn.error) {
           lines.push(`**Error:** ${turn.error}`);
         } else {
-          lines.push(`**Thumos:** ${turn.assistantMessage}`);
+          lines.push(`**Magpie:** ${turn.assistantMessage}`);
         }
       }
       lines.push("");

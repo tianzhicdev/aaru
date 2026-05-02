@@ -84,11 +84,11 @@ sudo node scripts/apply-db-migrations.mjs --env production --env-file /Users/biu
 Verify prod:
 
 ```bash
-curl -sS -X POST https://api.trythumos.com/ping \
+curl -sS -X POST https://api.trymagpie.xyz/ping \
   -H 'content-type: application/json' \
   -d '{}'
 
-curl -sS -X POST https://api.trythumos.com/bootstrap-soul \
+curl -sS -X POST https://api.trymagpie.xyz/bootstrap-soul \
   -H 'content-type: application/json' \
   -d "{\"device_id\":\"prod-smoke-$(date +%s)\"}"
 ```

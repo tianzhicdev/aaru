@@ -29,7 +29,7 @@ npx tsx scripts/dry-run-soul-files.ts --file scripts/characters.json --only char
 ### Prerequisites
 
 - `ANTHROPIC_API_KEY` in `.env` for the character simulator
-- Live Thumos API at `https://api.trythumos.com` or set `THUMOS_API_BASE`
+- Live Thumos API at `https://api.trymagpie.xyz` or set `THUMOS_API_BASE`
 - `pnpm install`
 
 ## Output

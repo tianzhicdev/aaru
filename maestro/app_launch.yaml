@@ -1,4 +1,4 @@
 appId: com.trythumos.app
 ---
 - launchApp
-- assertVisible: "Thumos"
+- assertVisible: "Magpie"

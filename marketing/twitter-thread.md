@@ -9,7 +9,7 @@ It doesn't try to be your friend. It doesn't roleplay. It doesn't label you.
 
 It just mirrors who you are.
 
-It's called Thumos. Here's what it does 🧵
+It's called Magpie. Here's what it does 🧵
 
 **2/7**
 You talk to it. It listens — really listens.
@@ -57,12 +57,12 @@ What it's NOT:
 It's the only AI app that builds a living portrait of who you are.
 
 **7/7**
-Thumos is free, no account needed.
+Magpie is free, no account needed.
 
 Powered by Claude (Anthropic). Your conversations are private — no human reads them.
 
 iOS: [App Store link]
-Web: trythumos.com
+Web: trymagpie.xyz
 
 The first soul file is always surprising. Try one conversation.
 
@@ -71,7 +71,7 @@ The first soul file is always surprising. Try one conversation.
 ## Standalone Tweets (for later)
 
 ### The mirror tweet
-Most AI wants to be your friend. Thumos just wants to show you who you are.
+Most AI wants to be your friend. Magpie just wants to show you who you are.
 
 "I'm not a therapist — I'm a mirror."
 
@@ -80,17 +80,17 @@ The most interesting thing about any person is the contradiction.
 
 The part that doesn't fit in a box. The tension between who you are at 2am and who you are at 2pm.
 
-That's what Thumos looks for.
+That's what Magpie looks for.
 
 ### The no-labels tweet
 Personality quizzes flatten you into a label. INTJ. Type 4. High openness.
 
 What if instead of a label, you got a portrait? Written in your own words. In second person. Like a character from a novel — except the character is you.
 
-That's what Thumos builds.
+That's what Magpie builds.
 
 ### The soul file tweet
-After 3 conversations with Thumos, my soul file said:
+After 3 conversations with Magpie, my soul file said:
 
 "You reach for metaphors before logic, and the metaphors are usually about water."
 

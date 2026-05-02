@@ -41,25 +41,25 @@ export const PHASE_CONFIGS: Record<ConversationPhase, PhaseConfig> = {
     name: "Spark",
     messageRange: [1, 15],
     allowedDomains: ["daily_rhythm", "play_and_joy"],
-    tone: "Light, fun, \"what makes you you\""
+    tone: "Light, fun, \"what are you looking for?\""
   },
   kindling: {
     name: "Kindling",
     messageRange: [15, 35],
     allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language"],
-    tone: "Warmer, \"how you connect\""
+    tone: "Warmer, \"what do you really need?\""
   },
   flame: {
     name: "Flame",
     messageRange: [35, 60],
     allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language", "conflict_and_repair", "vulnerability_and_trust"],
-    tone: "Real, \"the hard stuff\""
+    tone: "Real, \"what you want vs. how you show up\""
   },
   hearth: {
     name: "Hearth",
     messageRange: [60, null],
     allowedDomains: ["daily_rhythm", "play_and_joy", "values_and_worldview", "love_language", "conflict_and_repair", "vulnerability_and_trust", "partnership_vision"],
-    tone: "Deep, \"what you dream of\""
+    tone: "Deep, \"what partnership means to you\""
   }
 };
 

@@ -389,6 +389,36 @@ struct DeleteAccountResponse: Codable {
     let deleted: Bool
 }
 
+// MARK: - Clerk Auth
+
+struct ClerkAuthResponse: Codable {
+    let userId: String
+    let deviceId: String
+    let token: String
+    let visibleSoulFile: VisibleSoulFile?
+    let hasMessages: Bool
+    let language: String?
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case deviceId = "device_id"
+        case token
+        case visibleSoulFile = "visible_soul_file"
+        case hasMessages = "has_messages"
+        case language
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try c.decode(String.self, forKey: .userId)
+        deviceId = try c.decode(String.self, forKey: .deviceId)
+        token = try c.decode(String.self, forKey: .token)
+        visibleSoulFile = try c.decodeIfPresent(VisibleSoulFile.self, forKey: .visibleSoulFile)
+        hasMessages = try c.decodeIfPresent(Bool.self, forKey: .hasMessages) ?? false
+        language = try c.decodeIfPresent(String.self, forKey: .language)
+    }
+}
+
 // MARK: - Soulmate
 
 struct SoulmateProfile: Codable, Equatable {

@@ -279,6 +279,14 @@ final class BackendClient {
         return try await postRaw("match-messages", body: body)
     }
 
+    func clerkAuth(token: String) async throws -> ClerkAuthResponse {
+        return try await postRaw("auth/clerk", body: ["token": token])
+    }
+
+    func demoSignIn(email: String, password: String) async throws -> ClerkAuthResponse {
+        return try await postRaw("auth/demo-sign-in", body: ["email": email, "password": password])
+    }
+
     func registerPushToken(_ token: String) async throws {
         guard endpoint(named: "push-tokens/register") != nil else { return }
         let body: [String: Any] = ["token": token, "platform": "ios"]

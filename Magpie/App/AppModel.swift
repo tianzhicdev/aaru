@@ -266,12 +266,11 @@ final class AppModel: ObservableObject {
             logger.info("Soul bootstrap complete: hasMessages=\(self.hasMessages)")
 
             // Post-bootstrap: refresh soul file to get domain coverage,
-            // then load soulmate profile if matching is unlocked
+            // then load soulmate profile and matches
             Task {
                 await refreshSoulFile()
-                if matchingUnlocked {
-                    await loadSoulmateProfile()
-                }
+                await loadSoulmateProfile()
+                await loadSoulmateMatches()
             }
 
             // Post-bootstrap: schedule local notification + register for push
@@ -500,6 +499,66 @@ final class AppModel: ObservableObject {
         guard hasMessages else { return }
         guard shouldAutoRequestOpening() else { return }
         await beginSoulConversation()
+    }
+
+    // MARK: - Clerk Auth
+
+    func authenticateWithClerk(token: String) async throws {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let response = try await backend.clerkAuth(token: token)
+
+        // Store the device_id and session from the backend
+        let ns = backendConfiguration.storageNamespace
+        DeviceIdentity.save(response.deviceId, namespace: ns)
+        deviceID = response.deviceId
+        userID = UUID(uuidString: response.userId)
+        backend.sessionToken = response.token
+        SessionIdentity.save(response.token, namespace: ns)
+
+        visibleSoulFile = response.visibleSoulFile ?? .empty
+        hasMessages = response.hasMessages
+        if let lang = response.language {
+            language = lang
+        }
+        cacheVisibleSoulFile(visibleSoulFile)
+
+        // Sync messages and load soulmate data
+        await syncSoulMessages()
+        await loadSoulmateProfile()
+        await loadSoulmateMatches()
+
+        logger.info("Clerk auth complete: userId=\(response.userId, privacy: .public)")
+    }
+
+    func authenticateWithDemo(email: String, password: String) async throws {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let response = try await backend.demoSignIn(email: email, password: password)
+
+        let ns = backendConfiguration.storageNamespace
+        DeviceIdentity.save(response.deviceId, namespace: ns)
+        deviceID = response.deviceId
+        userID = UUID(uuidString: response.userId)
+        backend.sessionToken = response.token
+        SessionIdentity.save(response.token, namespace: ns)
+
+        visibleSoulFile = response.visibleSoulFile ?? .empty
+        hasMessages = response.hasMessages
+        if let lang = response.language {
+            language = lang
+        }
+        cacheVisibleSoulFile(visibleSoulFile)
+
+        await syncSoulMessages()
+        await loadSoulmateProfile()
+        await loadSoulmateMatches()
+
+        logger.info("Demo sign-in complete: userId=\(response.userId, privacy: .public)")
     }
 
     // MARK: - Language

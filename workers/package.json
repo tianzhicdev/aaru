@@ -10,10 +10,14 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "jose": "^6.2.3",
     "zod": "^4.1.11"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "workerd"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",

@@ -10,7 +10,7 @@ struct SoulmateMatchesView: View {
                 Theme.bg.ignoresSafeArea()
 
                 Group {
-                    if !model.matchingUnlocked {
+                    if !model.matchingUnlocked && model.soulmateMatches.isEmpty {
                         lockedView
                     } else if model.soulmateProfile == nil {
                         SoulmateProfileSetupView()
@@ -18,7 +18,11 @@ struct SoulmateMatchesView: View {
                         matchesListContent
                     }
                 }
-                .task { await model.refreshSoulFile() }
+                .task {
+                    await model.refreshSoulFile()
+                    await model.loadSoulmateProfile()
+                    await model.loadSoulmateMatches()
+                }
             }
             .navigationBarHidden(true)
             .navigationDestination(for: SoulmateMatch.self) { match in
@@ -31,53 +35,26 @@ struct SoulmateMatchesView: View {
     // MARK: - Header (inbox-style)
 
     private var inboxHeader: some View {
-        VStack(spacing: 12) {
-            HStack {
-                ZStack {
-                    Circle().fill(Theme.primarySoft).frame(width: 36, height: 36)
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.primaryDeep)
-                }
-
-                Spacer()
-
-                HStack(spacing: 6) {
-                    Image("MagpieLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 16, height: 16)
-                    Text("magpie")
-                        .font(Theme.wordmark(26))
-                        .foregroundStyle(Theme.primaryDeep)
-                        .kerning(-0.3)
-                }
-
-                Spacer()
-
-                Button { showEditProfile = true } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.primaryDeep)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Theme.primarySoft))
-                }
+        HStack {
+            HStack(spacing: 6) {
+                Image("MagpieLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                Text("magpie")
+                    .font(Theme.wordmark(26))
+                    .foregroundStyle(Theme.primaryDeep)
+                    .kerning(-0.3)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Connect")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .kerning(-0.8)
-                    Spacer()
-                }
-                HStack {
-                    Text(headerSubtitle)
-                        .font(.system(size: 14).italic())
-                        .foregroundStyle(Theme.textSecondary)
-                    Spacer()
-                }
+            Spacer()
+
+            Button { showEditProfile = true } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.primaryDeep)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Theme.primarySoft))
             }
         }
         .padding(.horizontal, 20)
@@ -85,13 +62,7 @@ struct SoulmateMatchesView: View {
         .padding(.bottom, 12)
     }
 
-    private var headerSubtitle: String {
-        let count = model.soulmateMatches.count
-        if count == 0 { return "magpie is still listening" }
-        return "\(count) souls are waiting to meet you"
-    }
-
-    private var searchPill: some View {
+private var searchPill: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 14))
@@ -151,19 +122,14 @@ struct SoulmateMatchesView: View {
             Spacer()
             ZStack {
                 Circle().fill(Theme.butterSoft).frame(width: 80, height: 80)
-                Image("MagpieLogo")
+                Image("MagpieSplash")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 32, height: 32)
+                    .frame(width: 160, height: 160)
             }
-            Text("Looking for your soulmate")
+            Text("Magpie is listening for them.")
                 .font(Theme.wordmark(24))
                 .foregroundStyle(Theme.primaryDeep)
-            Text("Magpie is listening for them.")
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -241,7 +207,7 @@ struct SoulmateMatchesView: View {
         if let reasoning = match.reasoning, !reasoning.isEmpty {
             return reasoning
         }
-        return "Tap to start a conversation"
+        return "Say hello"
     }
 
     private func rowTime(_ match: SoulmateMatch) -> String {

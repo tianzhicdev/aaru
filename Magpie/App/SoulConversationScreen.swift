@@ -4,6 +4,7 @@ struct SoulConversationScreen: View {
     @EnvironmentObject private var model: AppModel
     @State private var inputText = ""
     @State private var showSettings = false
+    @State private var showClerkSignIn = false
     @State private var shouldAutoScroll = true
     @State private var unreadCount = 0
     @State private var scrollToBottomTrigger = 0
@@ -72,6 +73,10 @@ struct SoulConversationScreen: View {
                     )
                 }
             }
+        }
+        .sheet(isPresented: $showClerkSignIn) {
+            ClerkSignInView()
+                .environmentObject(model)
         }
         .task {
             await model.pollSoulMessagesWhileVisible()
@@ -397,6 +402,12 @@ struct SoulConversationScreen: View {
                         Task { await model.beginSoulConversation() }
                     }
                     .padding(.horizontal, 40)
+
+                    Button { showClerkSignIn = true } label: {
+                        Text("Sign in with demo account")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
                 .padding(.bottom, 48)
             }

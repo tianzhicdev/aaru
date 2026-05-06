@@ -31,6 +31,9 @@ import { handleMonitoring } from "./handlers/monitoring.ts";
 import { handleSoulSend } from "./handlers/soul-send.ts";
 import { handleRegisterPushToken } from "./handlers/register-push-token.ts";
 import { handleAdminSendMessage } from "./handlers/admin-send-message.ts";
+import { handleClerkAuth } from "./handlers/clerk-auth.ts";
+import { handleDemoSignIn } from "./handlers/demo-sign-in.ts";
+import { handleSeedTestData } from "./handlers/seed-test-data.ts";
 import { enqueueMatchingRun } from "./backgroundJobsQueue.ts";
 import { requireDebugApiToken } from "./requestAuth.ts";
 import { jsonResponse } from "../../src/lib/http.ts";
@@ -157,6 +160,21 @@ export default {
       case "admin/send-message":
         return withErrorHandling(request, (payload, req) =>
           handleAdminSendMessage(sql, env, payload, req, _ctx)
+        );
+
+      case "admin/seed-test-data":
+        return withErrorHandling(request, (payload, req) =>
+          handleSeedTestData(sql, env, payload, req)
+        );
+
+      case "auth/clerk":
+        return withErrorHandling(request, (payload) =>
+          handleClerkAuth(sql, env, payload)
+        );
+
+      case "auth/demo-sign-in":
+        return withErrorHandling(request, (payload) =>
+          handleDemoSignIn(sql, env, payload)
         );
 
       default:

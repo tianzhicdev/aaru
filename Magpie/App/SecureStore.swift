@@ -75,6 +75,10 @@ enum DeviceIdentity {
         return created
     }
 
+    static func save(_ deviceId: String, namespace: String) {
+        SecureStore.write(deviceId, service: service, account: account(for: namespace))
+    }
+
     static func clear(namespace: String) {
         SecureStore.delete(service: service, account: account(for: namespace))
     }

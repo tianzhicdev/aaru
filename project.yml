@@ -21,6 +21,8 @@ targets:
     info:
       path: Magpie/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UIAppFonts:
           - CormorantGaramond-Light.ttf
           - CormorantGaramond-Regular.ttf

@@ -151,7 +151,8 @@ async function getActiveSoulmateUsers(sql: NeonSQL): Promise<ActiveSoulmateUser[
       ORDER BY version DESC
       LIMIT 1
     ) rs ON true
-    WHERE sp.active = true
+    WHERE u.is_test_user = false
+      AND sp.active = true
       AND vsf.version = (
         SELECT MAX(v2.version) FROM visible_soul_files v2
         WHERE v2.user_id = sp.user_id AND v2.status = 'ready'
@@ -208,6 +209,7 @@ async function getCandidates(
       LIMIT 1
     ) rs ON true
     WHERE sp2.user_id != ${user.user_id}
+      AND u2.is_test_user = false
       AND sp2.active = true
       -- Same language
       AND COALESCE(u2.language, 'en') = ${user.language}

@@ -35,32 +35,15 @@ struct SoulConversationScreen: View {
     }
 
     private var displayMessages: [DisplayMessage] {
-        model.soulMessages.flatMap { message in
-            if message.role == "assistant" && !message.isError {
-                return message.content
-                    .components(separatedBy: "\n")
-                    .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-                    .enumerated()
-                    .map { (i, part) in
-                        DisplayMessage(
-                            id: "\(message.id)-\(i)",
-                            role: message.role,
-                            content: part,
-                            isError: false,
-                            createdAt: message.createdAt,
-                            sourceMessage: message
-                        )
-                    }
-            } else {
-                return [DisplayMessage(
-                    id: message.id,
-                    role: message.role,
-                    content: message.content,
-                    isError: message.isError,
-                    createdAt: message.createdAt,
-                    sourceMessage: message
-                )]
-            }
+        model.soulMessages.map { message in
+            DisplayMessage(
+                id: message.id,
+                role: message.role,
+                content: message.content,
+                isError: message.isError,
+                createdAt: message.createdAt,
+                sourceMessage: message
+            )
         }
     }
 
@@ -368,17 +351,17 @@ struct SoulConversationScreen: View {
             Spacer()
 
             VStack(spacing: 24) {
-                Image("MagpieLogo")
+                Image("MagpieSplash")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 96, height: 96)
+                    .frame(width: 160, height: 160)
                     .clipShape(Circle())
 
                 Text("Welcome")
                     .font(Theme.wordmark(40))
                     .foregroundStyle(Theme.primaryDeep)
 
-                Text("This is a space for honest reflection.\nThere are no right answers — only yours.")
+                Text("Tell Magpie who you're looking for.")
                     .font(.system(size: 16))
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)

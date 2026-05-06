@@ -32,6 +32,12 @@ interface WaitUntilContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
+/** Delay in ms proportional to character count, simulating human thought/typing time. */
+export function responseDelay(charCount: number): number {
+  const seconds = Math.max(4, Math.min(10, charCount * 0.04));
+  return seconds * 1000;
+}
+
 const soulSendRequestSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("opening")
@@ -117,10 +123,9 @@ async function processInBackground(
       for (let i = 0; i < sentences.length; i++) {
         const currentRequestId = await getProcessingRequestId(sql, userId);
         if (currentRequestId !== requestId) return;
+        const delay = responseDelay(sentences[i].length);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         await insertSoulMessage(sql, userId, "assistant", sentences[i]);
-        if (i < sentences.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 4000));
-        }
       }
       return;
     }
@@ -173,6 +178,9 @@ async function processInBackground(
       console.info(`Soul-send skipped insert: request ${requestId} superseded by ${currentRequestId}`);
       return;
     }
+
+    // Simulate human thought/typing time before message appears
+    await new Promise((resolve) => setTimeout(resolve, responseDelay(replyContent.length)));
 
     try {
       await insertSoulMessage(sql, userId, "assistant", replyContent);

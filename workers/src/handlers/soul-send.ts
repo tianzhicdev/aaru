@@ -28,6 +28,20 @@ import {
 } from "./soul-converse.ts";
 import { z } from "zod";
 
+/** Retry an async operation up to `times` attempts with linear backoff (1s, 2s, ...). */
+async function withRetry<T>(times: number, label: string, fn: () => Promise<T>): Promise<T> {
+  for (let i = 0; i < times; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.error(`${label} attempt ${i + 1}/${times} failed:`, err);
+      if (i === times - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+  throw new Error("unreachable");
+}
+
 interface WaitUntilContext {
   waitUntil(promise: Promise<unknown>): void;
 }
@@ -116,16 +130,21 @@ async function processInBackground(
 
     const openingKind = body.mode === "opening" ? deriveOpeningKind(allMessages) : null;
 
+    // Notifications handle re-engagement now; skip spurious returning openings
+    if (openingKind === "returning") {
+      return;
+    }
+
     // First-ever opening: hardcoded intro split into separate messages with delays
+    // No request-ID check — these are hardcoded strings, not LLM calls
     if (openingKind === "first_ever") {
       const message = buildFirstEverMessage(language);
       const sentences = message.split("\n").filter((s) => s.trim().length > 0);
-      for (let i = 0; i < sentences.length; i++) {
-        const currentRequestId = await getProcessingRequestId(sql, userId);
-        if (currentRequestId !== requestId) return;
-        const delay = responseDelay(sentences[i].length);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        await insertSoulMessage(sql, userId, "assistant", sentences[i]);
+      for (const sentence of sentences) {
+        await new Promise((resolve) => setTimeout(resolve, responseDelay(sentence.length)));
+        await withRetry(3, "First-ever insert", () =>
+          insertSoulMessage(sql, userId, "assistant", sentence)
+        ).catch((err) => console.error("First-ever insert failed after 3 attempts:", err));
       }
       return;
     }
@@ -154,18 +173,20 @@ async function processInBackground(
 
     const llmContext = { profileId, task: "conversation" as const, userId };
     let fullResponse = "";
-    let attemptCount = 1;
+    let attemptCount = 0;
 
-    try {
-      fullResponse = await callLlmText(env, conversationConfig, systemPrompt, claudeMessages, llmContext);
-    } catch (error) {
-      console.error("Soul-send conversation call error:", error);
+    for (let i = 0; i < 5; i++) {
+      attemptCount = i + 1;
       try {
-        attemptCount = 2;
         fullResponse = await callLlmText(env, conversationConfig, systemPrompt, claudeMessages, llmContext);
-      } catch (retryError) {
-        console.error("Soul-send conversation call retry failed:", retryError);
-        return;
+        break;
+      } catch (error) {
+        console.error(`Soul-send LLM attempt ${i + 1}/5 failed:`, error);
+        if (i < 4) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
+        } else {
+          return; // all 5 attempts failed
+        }
       }
     }
 
@@ -183,14 +204,11 @@ async function processInBackground(
     await new Promise((resolve) => setTimeout(resolve, responseDelay(replyContent.length)));
 
     try {
-      await insertSoulMessage(sql, userId, "assistant", replyContent);
-    } catch (dbError) {
-      console.error("Soul-send DB write failed:", dbError);
-      try {
-        await insertSoulMessage(sql, userId, "assistant", replyContent);
-      } catch (retryDbError) {
-        console.error("Soul-send DB write retry failed:", retryDbError);
-      }
+      await withRetry(3, "Soul-send DB insert", () =>
+        insertSoulMessage(sql, userId, "assistant", replyContent)
+      );
+    } catch {
+      return; // all 3 DB insert attempts failed
     }
 
     // Post-response tasks (reflection snapshot, debug trace)
